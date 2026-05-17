@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! `#[axiom_harness]` — procedural macro for automatic harness registration.
 //!
 //! Decorating a function with this attribute leaves the original function

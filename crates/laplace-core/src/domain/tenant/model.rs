@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Extension traits for ResourceConfig and TenantMetadata (from laplace-interfaces)
 //!
 //! Migrated business logic for resource quotas, tenant identity, and tier management.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // ============================================================================
 // FILE: src/infrastructure/transport/mod.rs
 // Infrastructure module re-exports

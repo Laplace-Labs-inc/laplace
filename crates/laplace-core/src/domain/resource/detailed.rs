@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! DetailedTracker - Full Tracking for Verification
 //!
 //! This module provides a comprehensive resource tracking implementation designed

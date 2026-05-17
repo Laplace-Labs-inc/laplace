@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! NoOpTracker - Zero-Cost Production Implementation
 //!
 //! This module provides a tracking implementation optimized for production builds.

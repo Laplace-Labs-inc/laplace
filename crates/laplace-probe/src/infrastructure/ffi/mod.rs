@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! FFI Utilities
 //!
 //! Low-level utilities for converting between FFI types and Rust representations.

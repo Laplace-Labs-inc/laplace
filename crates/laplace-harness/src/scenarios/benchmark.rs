@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Benchmark stability snapshot harness.
 //!
 //! Models a stability analyzer racing with a writer thread over a shared

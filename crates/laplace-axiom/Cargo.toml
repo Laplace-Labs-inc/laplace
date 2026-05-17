@@ -3,7 +3,7 @@ name = "laplace-axiom"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+license = "Apache-2.0"
 description = "Laplace Axiom: formal specification and verification contracts"
 
 [lib]

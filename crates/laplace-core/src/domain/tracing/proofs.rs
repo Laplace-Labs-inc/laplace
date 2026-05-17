@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 #![cfg(kani)]
 
 //! Formal Verification Proofs for Tracing Subsystem

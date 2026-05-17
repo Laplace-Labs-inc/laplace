@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Thread-pool preemption fairness harness.
 //!
 //! Models a tiered pool: Free (T0), Standard (T1), Enterprise (T2).

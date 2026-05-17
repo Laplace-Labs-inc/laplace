@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! bytes lock-free refcount TOCTOU harnesses.
 //!
 //! R0 = shared allocation reference, R1 = is_unique/mutation intent.

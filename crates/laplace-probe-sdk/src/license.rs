@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! 라이선스 로더 — ~/.laplace/config.json에서 JWT payload를 읽어
 //! `max_depth` 상한을 결정한다.
 //!

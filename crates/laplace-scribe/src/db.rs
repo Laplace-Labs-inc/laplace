@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // src/db.rs
 // Compiled only when `db-ingest` feature is active.
 

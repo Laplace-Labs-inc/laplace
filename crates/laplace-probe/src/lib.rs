@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Laplace Probe — QUIC Mesh Sidecar
 //!
 //! Unified sidecar that combines QUIC transport (formerly `laplace-knul`) with

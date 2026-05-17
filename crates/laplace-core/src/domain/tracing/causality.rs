@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Zero-cost Causality Analysis
 //!
 //! This module provides tools for analyzing happens-before relationships

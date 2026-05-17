@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use rustls::ClientConfig;
 use rustls_pki_types::pem::PemObject;
 use rustls_pki_types::{CertificateDer, PrivateKeyDer};

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! laplace.toml 자동 탐색 + 파싱.
 //!
 //! `cargo test` 컨텍스트에서 프로젝트 루트의 `laplace.toml`을 찾아

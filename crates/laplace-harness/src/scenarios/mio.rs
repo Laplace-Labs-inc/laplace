@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! mio named_pipe mock-derived harnesses.
 //!
 //! R0 = io mutex, R1 = pool/connect state.

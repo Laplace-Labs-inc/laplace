@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! ProbeEventDecoder: translates `RawProbeEvent` (128 bytes, repr C) → `DecodedProbeEvent`.
 //!
 //! This module is gated behind the `std` feature since `DecodedProbeEvent` uses

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Journal Benchmark Suite
 //!
 //! Measures pure in-memory allocation and serialization performance of

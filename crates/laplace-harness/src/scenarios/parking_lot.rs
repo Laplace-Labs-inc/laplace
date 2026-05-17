@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! parking_lot external lock-ordering harnesses.
 //!
 //! 공개 이슈(#212, #489, #518)와 겹치지 않는 Condvar 교차 경로 + ABBA 경로를

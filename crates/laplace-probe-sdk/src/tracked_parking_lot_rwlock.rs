@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! `TrackedParkingLotRwLock<T>` — `parking_lot::RwLock` 래퍼.
 //!
 //! `TrackedStdRwLock`과 동일한 이벤트를 방출하되,

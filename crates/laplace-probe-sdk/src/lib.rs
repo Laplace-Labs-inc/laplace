@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 #![deny(clippy::all, clippy::pedantic)]
 
 //! Laplace Probe SDK — BYOC Phase 1 매크로 시스템 지원 크레이트.

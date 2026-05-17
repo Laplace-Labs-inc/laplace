@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Domain Utilities and Global State Registry
 //!
 //! This module contains the implementation of global singletons (Time, Entropy)

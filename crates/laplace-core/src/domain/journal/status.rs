@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Domain Model: Transaction Log Status
 //!
 //! Execution lifecycle states for tenant operations and their transitions.

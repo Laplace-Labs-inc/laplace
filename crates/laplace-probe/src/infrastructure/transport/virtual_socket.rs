@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Virtual Network Socket — Distributed Axiom in-memory routing layer.
 //!
 //! Provides a fully in-memory UDP-like network stack that replaces the real OS

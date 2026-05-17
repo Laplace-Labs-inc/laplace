@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Internal Seed Manager — proprietary derivation formula
 //!
 //! This module encapsulates the seed derivation formula that must NOT be

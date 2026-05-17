@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Adapter Layer
 //!
 //! Protocol-specific implementations of abstract transport and runtime interfaces.

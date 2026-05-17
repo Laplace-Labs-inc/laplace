@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! DPOR Scheduler Implementation (Classic Algorithm)
 //!
 //! This module implements the core Classic DPOR algorithm for state space

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Tracing domain contracts.
 //!
 //! Canonical type and trait definitions for deterministic event tracing in the

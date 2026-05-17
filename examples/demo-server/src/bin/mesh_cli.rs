@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Laplace Mesh CLI — Semantic Mesh Bidirectional Test Client (QUIC)
 //!
 //! Creates a test dictionary, encodes a target endpoint + payload into a single

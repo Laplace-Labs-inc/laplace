@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Harness 방식 — op_provider로 추상 락 순서 모델링
 //!
 //! [DX 관찰 포인트]:

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Simulation Integration Benchmarks
 //!
 //! Measures the performance of `domain::simulation` module components:

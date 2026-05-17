@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Resource Tracking and Deadlock Detection Module
 //!
 //! This module implements the ResourceOracle specification for tracking resource

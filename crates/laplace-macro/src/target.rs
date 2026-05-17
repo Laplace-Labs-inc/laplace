@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! `#[axiom_target]` — automated Ki-DPOR verification harness.
 //!
 //! The `#[axiom_target(threads = N)]` attribute automatically generates a test

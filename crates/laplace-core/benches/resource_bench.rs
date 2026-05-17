@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Resource Domain Benchmarks
 //!
 //! Measures performance characteristics of the `domain::resource` module:

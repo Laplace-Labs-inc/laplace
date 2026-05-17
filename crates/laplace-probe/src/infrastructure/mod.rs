@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Infrastructure Layer
 //!
 //! Low-level system abstractions and runtime management for the Laplace KNUL

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! VerdictEngine — ARD dump on violation (Non-Public, SDK Blacklist)
 //!
 //! This module contains the Schedule → ARD forensic report conversion logic.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! `TrackedMutex<T>` — `Mutex` 래퍼로 lock/unlock 시 `ProbeEvent`를 자동 전송.
 //!
 //! [GHOST CONSTRAINT]: `resource_name`은 동일 자원에 대해 항상 동일한 &'static str.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Prelude for Laplace SDK — common types and macros.
 //!
 //! Import this module to get convenient access to the most commonly used

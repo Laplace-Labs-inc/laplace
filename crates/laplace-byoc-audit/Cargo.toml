@@ -3,7 +3,7 @@ name = "laplace-byoc-audit"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+license = "Apache-2.0"
 description = "Unified BYOC and deadpool concurrency audit crate for Laplace Axiom"
 
 [lib]

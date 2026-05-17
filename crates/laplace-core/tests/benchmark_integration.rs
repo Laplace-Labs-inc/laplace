@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Integration test for Phase 4.2 CPI Engine
 
 use laplace_core::domain::{CPICalculator, EfficiencyTier, MockResourceMonitor};

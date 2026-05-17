@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Kani Formal Verification Harnesses
 //!
 //! Memory safety and layout correctness proofs for Sovereign Bridge ABI.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! `KnulRpcClient` — QUIC 양방향 스트림을 이용한 RPC 클라이언트.
 //!
 //! 각 `call()`은 새로운 QUIC 연결의 bi-stream 1개를 사용한다.

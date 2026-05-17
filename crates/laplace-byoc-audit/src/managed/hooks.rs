@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Hooks allowing to run code when creating and/or recycling objects.
 
 use std::{fmt, future::Future, pin::Pin};

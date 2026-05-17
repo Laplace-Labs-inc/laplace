@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Laplace Core
 //!
 //! Shared abstraction layer between Kernel and KNUL (Network Utility Link).

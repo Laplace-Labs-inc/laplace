@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Simulation Integration — The Zero-cost Razor Assembly
 //!
 //! This module brings together Clock and Memory through event-driven simulation

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! eBPF Lock Hunt — `pthread_mutex_lock/unlock` uprobe로 Lock 이벤트를 캡처하고
 //! AB-BA cycle 분석으로 deadlock을 탐지한다.
 //!

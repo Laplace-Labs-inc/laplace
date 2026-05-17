@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Request Scheduling Priority Levels
 //!
 //! Foundational enumeration types for context classification and request scheduling.

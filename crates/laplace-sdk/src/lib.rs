@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 #![deny(clippy::all, clippy::pedantic)]
 
 //! Laplace SDK — 결정론적 동시성 검증을 위한 단일 진입점.

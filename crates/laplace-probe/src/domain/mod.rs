@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Domain Layer
 //!
 //! Core domain data structures for KNUL network operations.

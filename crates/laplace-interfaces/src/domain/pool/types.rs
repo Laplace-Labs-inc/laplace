@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Pool domain type contracts
 
 use serde::{Deserialize, Serialize};

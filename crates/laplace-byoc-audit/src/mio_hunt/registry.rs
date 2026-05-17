@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Local harness registry for laplace-mio-hunt.
 
 use laplace_core::domain::resource::{ResourceId, ThreadId};

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Pool Management Policy
 //!
 //! Pure business logic for resource allocation, eviction, preemption, and storage routing.

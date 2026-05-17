@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! AB-BA deadlock harness — classic circular wait between two threads.
 //!
 //! # Deadlock Pattern

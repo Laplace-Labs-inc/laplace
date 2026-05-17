@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Verification backend for Kani-compatible formal verification.
 //!
 //! This module provides the `VerificationBackend`, optimized for bounded model

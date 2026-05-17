@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! CPI (Cost-Performance Index) 계산 모듈
 //!
 //! RPS(초당 처리량)와 투입 자원(CPU/Memory)을 바탕으로 실시간 가성비를 계산한다.

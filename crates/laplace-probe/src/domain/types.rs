@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Domain Types Module
 //!
 //! Core domain data structures for packet handling and statistics.

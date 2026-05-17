@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Quinn Transport Adapter
 //!
 //! Complete Quinn-based QUIC transport implementation of the SovereignTransport

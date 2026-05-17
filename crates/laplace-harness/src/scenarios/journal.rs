@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Journal concurrent log ordering harness.
 //!
 //! Three threads each write to their own dedicated log slot (r0, r1, r2).

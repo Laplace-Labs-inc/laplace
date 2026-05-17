@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Probe Listener — KNUL (QUIC) 수신 서버
 //!
 //! `start_listener(bind_addr)` 를 호출하면 해당 주소에서 QUIC 서버를 기동하고,

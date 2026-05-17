@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Deterministic context injected into QUIC stream frames.
 //!
 //! `LaplaceContext` carries the tracing, tenancy, and virtual-clock state

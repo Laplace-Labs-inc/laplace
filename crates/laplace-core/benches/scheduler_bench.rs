@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Scheduler Domain Benchmarks
 //!
 //! Measures performance characteristics of the `domain::scheduler` module:

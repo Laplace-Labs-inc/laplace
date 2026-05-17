@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! 개발용 자체서명 TLS 헬퍼.
 //!
 //! [GHOST CONSTRAINT]: SkipVerify/자체서명은 개발 전용.

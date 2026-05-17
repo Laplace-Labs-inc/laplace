@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # FFI Server Management Module
 //!
 //! Implements server lifecycle operations: creation, startup, and graceful shutdown.

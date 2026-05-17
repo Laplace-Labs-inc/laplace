@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Quinn QUIC Transport Implementation - Abstraction Barrier
 //!
 //! This module wraps the quinn QUIC library with domain trait implementations,

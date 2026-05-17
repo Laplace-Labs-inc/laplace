@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! QUIC Server Instance
 //!
 //! Quinn-based QUIC server implementation with interior mutability

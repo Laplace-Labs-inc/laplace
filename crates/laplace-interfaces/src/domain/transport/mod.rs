@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Transport Domain Module
 //!
 //! Authoritative trait contracts and type definitions for all network transport

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Entropy seed primitives for deterministic simulation
 //!
 //! Provides generalized entropy seed types shared across the platform:

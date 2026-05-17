@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Integration Tests - The Zero-cost Razor Final Assembly
 //!
 //! This test suite verifies that all domain components (Clock, Memory, Simulator)

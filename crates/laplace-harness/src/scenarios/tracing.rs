@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Tracing causality acyclicity harness.
 //!
 //! Models two threads creating a causal cycle:

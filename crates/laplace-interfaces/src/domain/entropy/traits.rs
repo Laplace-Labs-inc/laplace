@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Entropy trait contract
 
 use std::fmt;

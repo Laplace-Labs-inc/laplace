@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Scheduler liveness harness — round-robin fairness proof.
 //!
 //! Three threads share one scheduler slot (r0).  Under round-robin scheduling

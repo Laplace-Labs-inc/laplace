@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! External audit zone — formal concurrency audits of third-party crates.
 //!
 //! Each sub-module models an external crate's concurrency behaviour using

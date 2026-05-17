@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Registry Module
 //!
 //! Thread-safe server instance registry providing handle-based management

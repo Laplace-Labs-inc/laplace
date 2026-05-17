@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Dynamic Partial Order Reduction (DPOR) for Deterministic State Space Exploration
 //!
 //! This module provides two complementary approaches to concurrent program verification:

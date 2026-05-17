@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Runtime Domain
 //!
 //! Defines the contract for execution runtimes (isolate pools, WASM engines, etc.)

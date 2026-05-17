@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Shared Memory Metadata
 //!
 //! Synchronization and coordination structures for turbo-mode shared memory

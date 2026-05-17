@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Verification Memory Backend - Formally Verifiable with Kani
 //!
 //! This backend is engineered specifically for symbolic execution and formal

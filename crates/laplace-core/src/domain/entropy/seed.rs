@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Sovereign Seed Primitives — re-exported from `laplace-interfaces`
 //!
 //! All substantive type definitions now live in `laplace_interfaces::domain::entropy::types`.

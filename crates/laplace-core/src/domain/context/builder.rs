@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Context Builder
 //!
 //! Fluent API for ergonomic context construction with validation.

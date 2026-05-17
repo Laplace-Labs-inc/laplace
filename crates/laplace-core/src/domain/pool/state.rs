@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Pool State and Health Monitoring
 //!
 //! Observability and diagnostics for resource pool utilization and health.

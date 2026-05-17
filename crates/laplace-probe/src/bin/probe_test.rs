@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Phase 1 smoke-test: load eBPF bytecode, attach `sched:sched_switch`,
 //! and print decoded `RawProbeEvent`s from the ring buffer.
 //!

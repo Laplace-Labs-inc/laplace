@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Domain event types for the Laplace Probe.
 //!
 //! Defines the events captured by the probe and forwarded to the Axiom Console,

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Memory write serialization harness.
 //!
 //! Models the concurrent write scenario from `concurrency_test::test_write_serialization`:

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Scheduler backend trait — re-exported from `laplace-interfaces`
 //!
 //! The canonical `SchedulerBackend` trait and `EventId` type live in

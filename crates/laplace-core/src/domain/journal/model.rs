@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Domain Model: Transaction Log
 //!
 //! Complete audit trail for tenant operations including execution metrics

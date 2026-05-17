@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Managed version of the pool — patched for Axiom DPOR verification.
 //!
 //! This is a verbatim copy of `deadpool 0.10.0 src/managed/mod.rs` with a

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Simulated memory system with pluggable backends.
 //!
 //! This module provides the high-level `SimulatedMemory` abstraction that combines

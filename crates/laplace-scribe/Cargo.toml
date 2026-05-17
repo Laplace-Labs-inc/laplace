@@ -3,7 +3,7 @@ name = "laplace-scribe"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+license = "Apache-2.0"
 description = "AST-based knowledge extraction engine for the Laplace Knowledge Spaces (LKS)"
 
 [[bin]]

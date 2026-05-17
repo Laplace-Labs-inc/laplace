@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Simulation Hooks — Open Integration Interfaces
 //!
 //! This module defines the observer and plugin traits that allow external modules

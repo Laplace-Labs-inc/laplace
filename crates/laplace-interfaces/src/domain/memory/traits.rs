@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Memory Backend Trait Definitions
 //!
 //! Defines the abstract interfaces that all memory backend implementations must satisfy.

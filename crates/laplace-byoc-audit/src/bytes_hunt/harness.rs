@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! bytes lock-free refcount TOCTOU 하네스
 //!
 //! [DX 관찰 포인트]

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! DPOR Benchmark Suite - Classic vs Ki-DPOR
 //!
 //! This benchmark compares the performance of two DPOR implementations:

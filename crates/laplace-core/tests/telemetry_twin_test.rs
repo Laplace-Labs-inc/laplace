@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 #![cfg(feature = "twin")]
 //! Telemetry Axiom Integration Tests — Sprint 3 (S-TEL1 ~ S-TEL6)
 //!

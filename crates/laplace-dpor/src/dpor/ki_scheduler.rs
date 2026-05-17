@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Ki-DPOR Scheduler with Liveness Detection
 //!
 //! This module implements the intelligent state space explorer with

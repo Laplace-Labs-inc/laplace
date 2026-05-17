@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Entropy domain contracts — seed primitives and trait definitions
 
 pub mod traits;

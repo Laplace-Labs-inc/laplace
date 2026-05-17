@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Benchmark & Resource Monitoring
 //!
 //! Provides resource monitoring, efficiency analysis, and stability assessment for the simulation engine.

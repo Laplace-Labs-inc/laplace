@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Deterministic PRNG for Laplace Core Domain
 //!
 //! Provides a ChaCha8-based deterministic random number generator with

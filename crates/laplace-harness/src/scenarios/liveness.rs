@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Liveness / fairness harnesses — starvation and priority inversion scenarios.
 
 use laplace_core::domain::resource::{ResourceId, ThreadId};

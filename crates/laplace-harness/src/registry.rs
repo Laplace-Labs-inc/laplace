@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Harness registry — auto-discovered via `inventory` at link time.
 
 use laplace_core::domain::resource::{ResourceId, ThreadId};

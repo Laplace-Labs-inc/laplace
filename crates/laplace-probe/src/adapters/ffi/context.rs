@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # FFI Context Injection Module
 //!
 //! Implements `laplace_probe_inject_context` — the FFI entry point that allows

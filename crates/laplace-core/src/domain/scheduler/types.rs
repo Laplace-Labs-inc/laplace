@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Scheduler type definitions — re-exported from `laplace-interfaces`
 //!
 //! All canonical types live in `laplace_interfaces::domain::scheduler::types`.

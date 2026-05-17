@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Lock-Free Engine Metrics
 //!
 //! Provides high-frequency, zero-overhead counters for the simulation engine,

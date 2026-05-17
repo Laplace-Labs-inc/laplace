@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! VerificationSession — CQS-compliant Oracle entry point (K-3)
 //!
 //! 진입부/엔진 분리 설계:

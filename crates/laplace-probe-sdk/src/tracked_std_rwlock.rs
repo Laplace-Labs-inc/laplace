@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! `TrackedStdRwLock<T>` — `std::sync::RwLock` 래퍼 (동기 버전).
 //!
 //! read() → RwLockReadAcquired, write() → RwLockWriteAcquired 이벤트 전송.

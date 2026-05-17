@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! `meter_inner` resource acquisition order safety harnesses.
 //!
 //! `laplace-api` POST `/credits/meter` path acquires two DB resources in order:

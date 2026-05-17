@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Axiom Integration Tests — TwinSimulatorBuilder + Observer Pipeline
 //!
 //! These tests validate the full lifecycle of a `TwinSimulator`:

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Chaos injection infrastructure for Distributed Axiom network simulation.
 //!
 //! Provides [`ChaosInterceptor`], a [`PacketInterceptor`](laplace_interfaces::domain::transport::pluggable::PacketInterceptor)

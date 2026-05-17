@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # FFI I/O Operations Module
 //!
 //! Implements packet transmission and statistics retrieval operations.

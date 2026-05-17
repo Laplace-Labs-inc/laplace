@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Template harness — basic single-resource request/release round-trip.
 //!
 //! Each of 2 threads requests resource 0 then releases it, then terminates.

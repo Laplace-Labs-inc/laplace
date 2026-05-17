@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Axiom Oracle — Right Brain of the Axiom Verification System
 //!
 //! The Oracle is the exhaustive judgment engine.  Where Vanguard performs

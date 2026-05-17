@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! The Nerve: Stability Analysis Engine
 //!
 //! Analyzes tail latency (P50, P90, P99 percentiles) and event telemetry to assess

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! futures-util Ki-DPOR 하네스 — stale waiter starvation 모델
 //!
 //! [DX 관찰 포인트]:

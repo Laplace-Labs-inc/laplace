@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! CoreResourcePool harness — 3 threads competing for 2 resources.
 //!
 //! # Scenario

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Transport Layer Errors
 //!
 //! Connection-level errors returned by KNUL transport operations.

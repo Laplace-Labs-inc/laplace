@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! TrackedAtomic* — `std::sync::atomic` 래퍼들.
 //!
 //! load → AtomicLoad, store → AtomicStore, CAS/fetch_* → AtomicRmw 이벤트 전송.

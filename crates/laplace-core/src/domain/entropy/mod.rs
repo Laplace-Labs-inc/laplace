@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Entropy Abstraction Layer
 //!
 //! Provides a unified interface for random number generation that supports both

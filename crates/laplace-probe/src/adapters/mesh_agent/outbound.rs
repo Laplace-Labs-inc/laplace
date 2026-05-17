@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Outbound connection pool and batch flusher for `MeshAgent`.
 //!
 //! ## Batching strategy

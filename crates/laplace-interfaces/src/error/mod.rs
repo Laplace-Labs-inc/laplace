@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Error System Architecture
 //!
 //! Unified error handling for the Laplace platform with layered error taxonomy.

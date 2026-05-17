@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Transport Layer Errors
 //!
 //! Defines the complete taxonomy of transport-level errors that can occur

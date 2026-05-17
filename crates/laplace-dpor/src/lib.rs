@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Laplace Ki-DPOR — Deterministic Partial-Order Reduction Algorithms
 //!
 //! This crate provides the core concurrency verification algorithms:

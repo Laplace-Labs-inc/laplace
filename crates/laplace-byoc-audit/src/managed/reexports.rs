@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // This module is intentionally empty in the audit crate.
 // The macro-based re-exports from the original deadpool crate reference
 // `deadpool::managed::*` types which do not apply here.

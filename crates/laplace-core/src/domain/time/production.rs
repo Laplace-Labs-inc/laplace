@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Production-grade clock backend implementation.
 //!
 //! This module provides the `ProductionBackend`, optimized for high-performance

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 #![deny(clippy::all, clippy::pedantic)]
 
 //! Laplace Axiom: verification contracts, simulation, and oracle interface.

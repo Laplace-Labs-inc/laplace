@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Layer 1 semantic decoder: LEB128 VarInt ID + payload → endpoint string.
 //!
 //! ## Frame layout expected

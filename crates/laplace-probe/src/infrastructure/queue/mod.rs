@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Packet Queue Module
 //!
 //! Low-level queue infrastructure for zero-copy packet handoff between

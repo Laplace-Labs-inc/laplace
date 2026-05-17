@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Discrete Event Ring Buffer
 //!
 //! Provides a bounded, thread-safe queue for low-frequency telemetry events.

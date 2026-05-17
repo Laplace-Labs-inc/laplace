@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! [DX 관찰 포인트]
 //! - "버그 없음" 확인이 Ki-DPOR의 유효한 사용 사례인가?
 //! - CLEAN 결과는 "시간 낭비"인가 "안전 증명"인가?

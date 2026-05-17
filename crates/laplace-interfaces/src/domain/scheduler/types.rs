@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Scheduler type definitions.
 //!
 //! Canonical types for the Laplace thread scheduling subsystem.

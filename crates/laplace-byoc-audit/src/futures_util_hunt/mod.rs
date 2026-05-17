@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! futures-util Ki-DPOR 검증 — Harness + BYOC 비교 실험
 //!
 //! 타겟 버그: cancel(Future drop) + waiter slab 경로 starvation

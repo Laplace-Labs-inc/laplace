@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Time Abstraction Layer with TLA+ Formal Verification
 //!
 //! This module provides a unified interface for time sources that enables seamless

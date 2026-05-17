@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Memory Benchmark Suite
 //!
 //! Measures pure in-memory allocation, access-pattern, and snapshot performance

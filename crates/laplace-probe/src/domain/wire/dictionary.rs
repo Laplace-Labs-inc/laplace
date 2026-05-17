@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Layer 1: Static dictionary with LEB128 VarInt IDs.
 //!
 //! ## ID ranges

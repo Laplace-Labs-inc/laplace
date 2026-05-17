@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Domain Layer: Pure Business Logic
 //!
 //! Encapsulates all domain-specific logic and types that form the core

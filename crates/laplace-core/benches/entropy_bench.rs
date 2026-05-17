@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Benchmarks for `laplace_core::domain::entropy`
 //!
 //! Covers three benchmark groups:

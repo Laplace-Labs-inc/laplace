@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Extension trait for TenantTier (from laplace-interfaces)
 //!
 //! Migrated business logic for tier classification, capability checking, and progression.

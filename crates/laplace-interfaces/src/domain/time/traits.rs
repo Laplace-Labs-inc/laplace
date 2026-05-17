@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Clock backend trait definition.
 //!
 //! Defines the abstract interface that all time-backend implementations must satisfy.

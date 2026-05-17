@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Simulation Equivalence — 1:1 Correspondence with TLA+ Specification
 //!
 //! This module defines [`EquivalentTo<Spec>`], a trait that enforces a bijective

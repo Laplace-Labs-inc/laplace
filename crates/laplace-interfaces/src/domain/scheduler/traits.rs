@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Scheduler backend trait definition.
 //!
 //! Defines the abstract interface that all thread-state storage backends must implement.

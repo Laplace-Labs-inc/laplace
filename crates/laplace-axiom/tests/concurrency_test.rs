@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Concurrency Integration Tests - Multi-Core Memory Consistency
 //!
 //! This test suite validates that the simulator correctly models concurrent memory

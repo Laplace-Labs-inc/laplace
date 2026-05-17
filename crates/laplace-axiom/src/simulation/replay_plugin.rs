@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Schedule Replay Plugin — deterministic execution replay via captured schedules.
 //!
 //! Feed a [`ScheduleReplayPlugin`] into [`TwinSimulatorBuilder::inject`] to reproduce

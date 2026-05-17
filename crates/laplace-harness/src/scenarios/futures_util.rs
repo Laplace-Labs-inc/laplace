@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! futures-util async mutex harnesses.
 //!
 //! R0 = futures::lock::Mutex 외부 잠금 상태(IS_LOCKED 비트)

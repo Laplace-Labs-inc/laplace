@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! MeshAgent — Bidirectional QUIC Mesh Node
 //!
 //! Combines inbound QUIC server with outbound connection pool.

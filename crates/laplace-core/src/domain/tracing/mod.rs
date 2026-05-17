@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Deterministic event tracing for Laplace-Axiom simulation engine.
 //!
 //! This module provides zero-cost observability for the Laplace platform, capturing

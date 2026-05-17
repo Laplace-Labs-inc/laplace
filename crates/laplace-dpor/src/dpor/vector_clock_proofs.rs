@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 #![cfg(kani)]
 
 //! Kani Formal Verification Proofs — VectorClock Domain (DPOR)

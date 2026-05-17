@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! ChaosInterceptor — deterministic network chaos injection
 //!
 //! Implements [`PacketInterceptor`] by consulting a [`ChaosSchedule`] and a

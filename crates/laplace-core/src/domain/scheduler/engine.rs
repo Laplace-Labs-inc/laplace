@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! SchedulerEngine - Pure Scheduling Logic
 //!
 //! The engine implements the scheduling algorithm from the TLA+ specification,

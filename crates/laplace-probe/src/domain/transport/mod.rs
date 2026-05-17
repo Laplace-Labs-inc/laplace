@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 // ============================================================================
 // FILE: src/domain/transport/mod.rs
 // Re-exports for QUIC transport abstraction from laplace-interfaces

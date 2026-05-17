@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Vector Clock Implementation
 //!
 //! Vector clocks are used to track causality (happens-before relation)

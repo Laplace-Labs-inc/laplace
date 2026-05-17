@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Telemetry — Zero-Cost Observability Without Async Runtime
 //!
 //! Provides two complementary channels for feeding a TUI or monitoring system:

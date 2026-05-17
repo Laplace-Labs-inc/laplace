@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Benchmark: serde_json serialization vs Laplace-LZ 3-stage compression pipeline.
 //!
 //! Compares:

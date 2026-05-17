@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 /// This structure calls a function/closure when it is dropped.
 /// The [`DropGuard::disarm`] method stops this from happening.
 pub(crate) struct DropGuard<F: Fn()>(pub(crate) F);

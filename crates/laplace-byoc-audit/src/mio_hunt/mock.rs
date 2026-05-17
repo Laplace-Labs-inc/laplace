@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! mio NamedPipe Inner의 플랫폼 중립 모의(mock) 구현.
 //! 실제 mio의 named_pipe.rs 구조를 그대로 반영하되 Windows API 제거.
 

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Telemetry ring buffer concurrency harness.
 //!
 //! Models the concurrent push scenario from `telemetry_twin_test` (S-TEL3 / S-TEL4):

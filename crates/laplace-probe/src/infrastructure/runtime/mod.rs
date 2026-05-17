@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Global Runtime and Registry Management
 //!
 //! Manages the global tokio runtime and server registry for FFI async operations.

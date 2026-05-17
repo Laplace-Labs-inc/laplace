@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! `#[laplace::verify]` — improved Ki-DPOR verification harness.
 //!
 //! The `#[laplace::verify(threads = N)]` attribute is an enhanced version of

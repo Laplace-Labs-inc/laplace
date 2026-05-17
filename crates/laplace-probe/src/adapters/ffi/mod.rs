@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # FFI Adapter Layer - Laplace QUIC Interface
 //!
 //! This module provides the complete set of FFI entry points for communication between

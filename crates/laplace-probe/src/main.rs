@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Laplace Probe — FFI-driven QUIC sidecar.
 //!
 //! Production deployment uses the C ABI interface exposed in `adapters/ffi/`.

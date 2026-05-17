@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Pool Management Domain Layer
 //!
 //! Migrated from laplace-axiom to laplace-core (Phase R2: Brain Migration - Step 3).

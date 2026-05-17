@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Memory Model Abstraction Layer
 //!
 //! Provides a unified memory abstraction that supports both production and verification

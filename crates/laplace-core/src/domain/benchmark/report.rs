@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Benchmark Report Builder (Phase 2.3 - Step 8)
 //!
 //! Aggregates engine metrics, resource usage, and efficiency scores into a

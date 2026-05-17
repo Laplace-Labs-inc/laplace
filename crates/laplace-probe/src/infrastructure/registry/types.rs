@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Server Registry Types
 //!
 //! Thread-safe registry for managing QUIC server instances.

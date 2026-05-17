@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! `KnulRpcServer` — QUIC bi-stream 요청을 수락하는 서버 측 컴포넌트.
 
 use crate::{read_frame, write_result, RpcError};

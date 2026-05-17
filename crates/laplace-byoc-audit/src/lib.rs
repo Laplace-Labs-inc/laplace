@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Laplace BYOC Audit — unified external concurrency verification crate.
 //!
 //! This crate combines:

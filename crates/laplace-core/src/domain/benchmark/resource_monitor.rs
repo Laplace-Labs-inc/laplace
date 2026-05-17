@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Linux `/proc`-based Resource Monitor
 //!
 //! Reads CPU utilisation from `/proc/stat` and memory usage from `/proc/meminfo`

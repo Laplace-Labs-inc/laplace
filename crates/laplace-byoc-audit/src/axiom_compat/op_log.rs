@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Thread-local operation log for DPOR harness integration.
 //!
 //! Every `AxiomSemaphore` operation (acquire / try_acquire / release) pushes

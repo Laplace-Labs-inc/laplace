@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Verdict Engine
 //!
 //! Synthesizes CPI efficiency, tail-latency stability, error rate, and CPU usage

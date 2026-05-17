@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! MockPipeline: end-to-end orchestrator — `RawProbeEvent` → `OracleVerdict`.
 //!
 //! Wires together the full V1.0 mock pipeline:

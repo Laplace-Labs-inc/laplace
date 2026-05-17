@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Inbound QUIC accept loop for `MeshAgent`.
 //!
 //! Binds a QUIC server endpoint, accepts connections, and reads batched

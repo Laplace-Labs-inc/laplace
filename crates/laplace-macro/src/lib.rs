@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Laplace procedural macros.
 //!
 //! Provides attribute and derive macros for Ki-DPOR verification and

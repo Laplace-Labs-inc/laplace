@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Sovereign Bridge ABI v1.1.0
 //!
 //! Low-level FFI memory layout definitions for Rust-Deno zero-copy bridge.

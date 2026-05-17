@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Tracing Domain Benchmarks
 //!
 //! Measures performance characteristics of the `domain::tracing` module:

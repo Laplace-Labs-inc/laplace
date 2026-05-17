@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! ARD (Axiom Recorded Data) — Ultra-Deterministic Forensic Format
 //!
 //! ARD files capture a 21-step forensic window around a concurrency bug for

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # QUIC Transport Layer (KNUL) Contracts
 //!
 //! Defines the authoritative trait contracts for the Kernel Networking Utility Link (KNUL),

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # High-Level Transport Abstractions
 //!
 //! Defines the primary trait contracts that abstract network transport implementations.

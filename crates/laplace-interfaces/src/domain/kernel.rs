@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Kernel Domain
 //!
 //! Defines the kernel's exposed capabilities and APIs that runtime implementations

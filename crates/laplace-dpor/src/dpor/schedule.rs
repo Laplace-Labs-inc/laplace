@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Schedule — Serializable Bug-Schedule Extraction Type
 //!
 //! A `Schedule` is a snapshot of an execution path produced by DPOR schedulers

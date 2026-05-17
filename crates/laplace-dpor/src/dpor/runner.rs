@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! DPOR Runner — orchestrator that coordinates [`KiDporScheduler`] with simulators.
 //!
 //! `DporRunner` drives the DPOR A\*-based state space exploration loop.

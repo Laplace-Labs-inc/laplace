@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use std::time::{Duration, Instant};
 
 /// Statistics regarding an object returned by the pool

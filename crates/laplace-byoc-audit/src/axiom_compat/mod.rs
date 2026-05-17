@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! AxiomSync — surgical patch layer replacing `tokio::sync` in deadpool.
 //!
 //! This module provides drop-in replacements for the two `tokio::sync`

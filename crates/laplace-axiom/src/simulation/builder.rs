@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Simulation Builders — Fluent and Typestate Factory Patterns
 //!
 //! This module provides two complementary builder APIs:

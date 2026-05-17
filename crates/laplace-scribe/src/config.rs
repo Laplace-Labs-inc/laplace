@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use std::path::PathBuf;
 
 /// Maximum byte size per knowledge chunk (15 KB).

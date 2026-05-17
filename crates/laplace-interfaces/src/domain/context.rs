@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Sovereign Context
 //!
 //! Core context structure that flows through the entire Laplace stack.

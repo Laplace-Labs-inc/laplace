@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Context Benchmark Suite
 //!
 //! Measures pure data-shape and allocation performance of `SovereignContext`

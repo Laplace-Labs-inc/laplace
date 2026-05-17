@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! `ProbeSession` — 인메모리 이벤트 수집 + Ki-DPOR 실행.
 //!
 //! [GHOST CONSTRAINT]: `PROBE_SENDER`, `PROBE_THREAD_ID` thread-local은

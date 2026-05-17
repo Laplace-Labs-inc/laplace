@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Simulation Facade — Core Engine and TwinSimulator Wrapper
 //!
 //! This module contains:

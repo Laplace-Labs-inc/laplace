@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Production backend for high-performance event recording.
 //!
 //! This module provides the `ProductionBackend`, optimized for recording

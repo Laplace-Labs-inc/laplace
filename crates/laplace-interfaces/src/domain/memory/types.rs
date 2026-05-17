@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Memory Model Type Definitions
 //!
 //! Canonical types for the Laplace memory abstraction layer. These types correspond

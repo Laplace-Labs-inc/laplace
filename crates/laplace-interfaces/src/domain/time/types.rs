@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Time system type definitions.
 //!
 //! Canonical types representing temporal state in the Laplace simulation engine.

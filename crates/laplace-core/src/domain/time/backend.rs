@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Clock backend trait — re-exported from `laplace-interfaces`
 //!
 //! The canonical `ClockBackend` trait lives in `laplace_interfaces::domain::time::traits`.

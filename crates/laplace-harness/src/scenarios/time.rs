@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Lamport clock atomic increment harness.
 //!
 //! Two threads contend for the shared logical clock (r0).  Each thread acquires

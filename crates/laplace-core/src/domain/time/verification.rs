@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Verification-grade clock backend implementation with fixed-size array storage.
 //!
 //! This module provides the `VerificationBackend`, designed specifically for formal

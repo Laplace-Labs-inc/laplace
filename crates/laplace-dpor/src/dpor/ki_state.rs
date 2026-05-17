@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Ki-DPOR State Node (A* Node) with Liveness Tracking
 //!
 //! This module implements the ExecutionState from the TLA+ specification,

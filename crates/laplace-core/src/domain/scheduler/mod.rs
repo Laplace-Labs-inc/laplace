@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Scheduler Module - Thread-Aware Task Scheduling
 //!
 //! This module implements deterministic task scheduling for the Laplace platform,

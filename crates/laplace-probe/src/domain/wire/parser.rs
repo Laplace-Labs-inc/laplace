@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 use super::dictionary::StaticDictionary;
 use super::error::MeshError;
 use serde_json::Value;

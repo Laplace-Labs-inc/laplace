@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Core trace engine for recording simulation events with Lamport timestamps.
 //!
 //! This module provides the `TraceEngine`, the primary API for event recording.

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Tenant Policy Structs: Pure Business Rules
 //!
 //! Stateless policy objects implementing domain rules for path security,

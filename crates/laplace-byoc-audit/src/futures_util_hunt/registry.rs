@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Local harness registry for laplace-futures-util-hunt.
 
 use laplace_core::domain::resource::{ResourceId, ThreadId};

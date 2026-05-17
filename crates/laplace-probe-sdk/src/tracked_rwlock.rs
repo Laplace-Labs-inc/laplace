@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! `TrackedRwLock<T>` — `tokio::sync::RwLock` 래퍼.
 //!
 //! read() → RwLockReadAcquired, write() → RwLockWriteAcquired 이벤트 전송.

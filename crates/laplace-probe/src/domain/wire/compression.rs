@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Layer 2: Dynamic session dictionary and DictSync protocol.
 //!
 //! ## Overview

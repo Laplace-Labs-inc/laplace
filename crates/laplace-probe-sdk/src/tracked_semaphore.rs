@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! `TrackedSemaphore` — `tokio::sync::Semaphore` 래퍼.
 //!
 //! acquire → SemaphoreAcquired, Permit drop → SemaphoreReleased 이벤트 전송.

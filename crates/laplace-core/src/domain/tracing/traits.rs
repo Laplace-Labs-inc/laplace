@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! Tracer backend trait — re-exported from `laplace-interfaces`
 //!
 //! The canonical `TracerBackend` trait and `TracingError` type live in

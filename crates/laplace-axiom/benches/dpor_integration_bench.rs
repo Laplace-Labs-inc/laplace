@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! DPOR Integration Benchmark — Cross-Transfer Deadlock Detection
 //!
 //! Models the classic AB-BA (cross-transfer) deadlock:

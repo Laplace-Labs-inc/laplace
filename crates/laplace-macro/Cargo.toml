@@ -3,7 +3,7 @@ name = "laplace-macro"
 version.workspace = true
 edition.workspace = true
 authors.workspace = true
-license.workspace = true
+license = "Apache-2.0"
 description = "Procedural macros for Laplace verification harness auto-discovery"
 
 [lib]

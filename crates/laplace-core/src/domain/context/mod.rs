@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! # Context Module
 //!
 //! Core context infrastructure for the entire Laplace stack.

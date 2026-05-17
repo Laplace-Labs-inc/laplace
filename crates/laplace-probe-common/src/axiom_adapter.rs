@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: Apache-2.0
 //! AxiomStepBuilder: translates `DecodedProbeEvent` → DPOR-consumable `AxiomEvent`.
 //!
 //! This is the critical bridge between the probe observation layer and the Axiom
