@@ -25,8 +25,7 @@
 //! - [`ThreadRegistry`]: Maps kernel TIDs to compact DPOR thread indices.
 //! - [`ResourceRegistry`]: Maps kernel resource IDs to compact DPOR resource indices.
 
-// Re-export adapter types from laplace-probe-common
-pub use laplace_probe_common::{
+pub use crate::{
     AxiomEvent, AxiomOp, AxiomResourceId, AxiomStep, AxiomStepBuilder, AxiomThreadId,
     ResourceRegistry, ThreadRegistry, MAX_AXIOM_THREADS,
 };

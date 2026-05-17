@@ -17,7 +17,7 @@ laplace-macro = { path = "../laplace-macro", optional = true }
 inventory = { version = "0.3", optional = true }
 anyhow = "1.0"
 deadpool = { version = "0.10", optional = true }
-laplace-deadpool-audit = { path = "../deadpool-audit", optional = true }
+laplace-byoc-audit = { path = "../laplace-byoc-audit", optional = true }
 
 [features]
 default = ["twin"]
@@ -27,7 +27,7 @@ verification = [
     "dep:laplace-macro",
     "dep:inventory",
     "dep:deadpool",
-    "dep:laplace-deadpool-audit",
+    "dep:laplace-byoc-audit",
     "laplace-core/verification",
 ]
 internal-audit = []

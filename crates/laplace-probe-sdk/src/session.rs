@@ -459,7 +459,7 @@ mod cloud {
     use std::sync::OnceLock;
 
     use laplace_probe::ProbeEvent;
-    use laplace_probe_client::{ProbeClient, ProbeClientConfig, RawProbeEvent};
+    use crate::client::{ProbeClient, ProbeClientConfig, RawProbeEvent};
 
     pub(super) static GLOBAL_PROBE_CLIENT: OnceLock<ProbeClient> = OnceLock::new();
 

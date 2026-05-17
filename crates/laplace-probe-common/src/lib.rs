@@ -9,6 +9,9 @@ pub mod axiom_adapter;
 #[cfg(feature = "std")]
 pub mod mock;
 
+#[cfg(feature = "std")]
+pub mod adapter;
+
 #[cfg(feature = "pipeline")]
 pub mod pipeline;
 
@@ -20,11 +23,13 @@ pub use axiom_adapter::{
     AxiomEvent, AxiomOp, AxiomResourceId, AxiomStep, AxiomStepBuilder, AxiomThreadId,
     ResourceRegistry, ThreadRegistry, MAX_AXIOM_THREADS,
 };
+#[cfg(feature = "std")]
+pub use adapter::{to_resource_id, to_thread_id};
 
 /// Probe event type discriminant.
 ///
 /// [GHOST CONSTRAINT]: discriminant 1–11 are immutable. `laplace-api ProbeEventDto`,
-/// `laplace-probe-client`, and `RawProbeEvent decoder` all depend on these values.
+/// `laplace-probe-sdk`, and `RawProbeEvent decoder` all depend on these values.
 #[repr(u8)]
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ProbeEventType {

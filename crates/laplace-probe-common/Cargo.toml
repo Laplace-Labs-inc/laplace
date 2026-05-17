@@ -15,6 +15,7 @@ scribe_docs = []
 
 [dependencies]
 bytemuck = { version = "1.16", features = ["derive"], optional = true }
+laplace-interfaces = { path = "../laplace-interfaces" }
 laplace-axiom = { path = "../laplace-axiom", features = ["verification", "engine"], optional = true }
 laplace-core = { path = "../laplace-core", features = ["twin"], optional = true }
 laplace-macro = { path = "../laplace-macro" }

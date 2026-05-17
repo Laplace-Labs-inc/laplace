@@ -143,7 +143,7 @@ pub use laplace_probe_sdk::ProjectConfig;
 pub use laplace_probe_sdk::load_project_config;
 
 #[cfg(feature = "cloud")]
-pub use laplace_probe_client::ProbeClientConfig;
+pub use laplace_probe_sdk::client::ProbeClientConfig;
 /// 클라우드 Probe 관측 초기화.
 ///
 /// `probe agent start`와 동일한 효과를 programmatic하게 수행한다.

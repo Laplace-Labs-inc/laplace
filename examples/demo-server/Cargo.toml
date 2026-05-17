@@ -9,6 +9,11 @@ license.workspace = true
 name = "demo-server"
 path = "src/main.rs"
 
+[[bin]]
+name = "mesh-cli"
+path = "src/bin/mesh_cli.rs"
+required-features = ["mesh-cli-bin"]
+
 [dependencies]
 axum     = "0.8"
 tokio    = { workspace = true }
@@ -17,3 +22,10 @@ serde_json = { workspace = true }
 tracing  = { workspace = true }
 tracing-subscriber = { workspace = true }
 laplace-probe = { path = "../../crates/laplace-probe" }
+laplace-interfaces = { path = "../../crates/laplace-interfaces" }
+laplace-macro = { path = "../../crates/laplace-macro", optional = true }
+
+[features]
+default = []
+mesh-cli-bin = []
+scribe_docs = ["dep:laplace-macro"]

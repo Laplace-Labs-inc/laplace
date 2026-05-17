@@ -16,14 +16,13 @@ verification = [
     "laplace-probe-common/pipeline",
 ]
 parking_lot_tracking = ["dep:parking_lot"]
-cloud = ["dep:laplace-probe-client"]
+cloud = ["dep:futures-util", "dep:tokio-tungstenite"]
 
 [dependencies]
 laplace-probe-common = { path = "../laplace-probe-common" }
 laplace-probe        = { path = "../laplace-probe" }
 laplace-axiom        = { path = "../laplace-axiom" }
 laplace-core         = { path = "../laplace-core" }
-laplace-probe-client = { path = "../laplace-probe-client", optional = true }
 
 tokio      = { workspace = true }
 serde      = { workspace = true }
@@ -32,6 +31,8 @@ tracing    = { workspace = true }
 anyhow     = { workspace = true }
 once_cell  = "1.21"
 bytemuck   = { version = "1.16", features = ["derive"] }
+futures-util = { version = "0.3", optional = true }
+tokio-tungstenite = { version = "0.24", optional = true }
 
 # JWT payload 디코딩 (라이선스 max_depth 읽기)
 base64 = "0.22"
