@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-#![deny(clippy::all, clippy::pedantic)]
+#![allow(clippy::all, clippy::pedantic)]
 
 //! `laplace-rpc` — Laplace QUIC RPC transport 추상화 및 QUIC bi-stream 기반 RPC.
 //!

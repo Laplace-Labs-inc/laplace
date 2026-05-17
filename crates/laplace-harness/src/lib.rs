@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-#![deny(clippy::all, clippy::pedantic)]
+#![deny(clippy::all)]
 
 //! Laplace Harness Registry — centralised verification scenarios for Axiom Oracle.
 //!

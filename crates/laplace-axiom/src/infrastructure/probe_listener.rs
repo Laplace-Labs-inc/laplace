@@ -103,16 +103,11 @@ async fn accept_loop(endpoint: quinn::Endpoint, tx: mpsc::UnboundedSender<ProbeE
 // ── Per-connection stream acceptor ────────────────────────────────────────────
 
 async fn accept_streams(mut conn: Box<dyn KnulConnection>, tx: mpsc::UnboundedSender<ProbeEvent>) {
-    loop {
-        match conn.accept_stream().await {
-            Ok(stream) => {
-                let tx = tx.clone();
-                tokio::spawn(async move {
-                    read_one_event(stream, tx).await;
-                });
-            }
-            Err(_) => break,
-        }
+    while let Ok(stream) = conn.accept_stream().await {
+        let tx = tx.clone();
+        tokio::spawn(async move {
+            read_one_event(stream, tx).await;
+        });
     }
 }
 
@@ -129,7 +124,7 @@ async fn read_one_event(mut stream: Box<dyn KnulStream>, tx: mpsc::UnboundedSend
     // 1. Read 4-byte big-endian length prefix.
     let mut len_buf = [0u8; 4];
     match stream.read(&mut len_buf).await {
-        Ok(n) if n == 4 => {}
+        Ok(4) => {}
         Ok(_) => {
             tracing::debug!("probe_listener: short read on length prefix — ignored");
             return;
