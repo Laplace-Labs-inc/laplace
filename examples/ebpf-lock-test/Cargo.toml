@@ -1,0 +1,10 @@
+[package]
+name = "ebpf-lock-test"
+version = "0.1.0"
+edition = "2021"
+publish = false
+description = "eBPF Lock Hunt 교차 검증 — std::sync::Mutex AB-BA 패턴"
+
+[[bin]]
+name = "ebpf-lock-test"
+path = "src/main.rs"

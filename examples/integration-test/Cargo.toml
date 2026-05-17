@@ -1,0 +1,9 @@
+[package]
+name = "integration-test"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dev-dependencies]
+laplace-sdk = { path = "../../crates/laplace-sdk", features = ["verification"] }
+tokio = { workspace = true }

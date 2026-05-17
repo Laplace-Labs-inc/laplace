@@ -1,0 +1,14 @@
+[package]
+name = "smoke-test"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+laplace-harness = { path = "../../crates/laplace-harness", features = ["twin", "verification"] }
+laplace-axiom   = { path = "../../crates/laplace-axiom", features = ["twin", "verification"] }
+laplace-core    = { path = "../../crates/laplace-core", features = ["twin"] }
+laplace-interfaces = { path = "../../crates/laplace-interfaces", features = ["twin"] }
+
+tokio    = { workspace = true }
+tempfile = "3"

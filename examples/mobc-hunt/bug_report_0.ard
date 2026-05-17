@@ -1,0 +1,71 @@
+{
+  "header": {
+    "version": "1.0",
+    "axiom_seed": 11605788121205899265,
+    "target_id": "pool_get_put",
+    "timestamp_start": 0,
+    "snapshot_ref": "seed:0xa1100ace5eed0001"
+  },
+  "frames": [
+    {
+      "step_index": -5,
+      "thread_id": "t0",
+      "operation": "Request",
+      "input_dump": "resource=r0",
+      "output_dump": "ok",
+      "stack_trace": [
+        "dpor_depth=0"
+      ]
+    },
+    {
+      "step_index": -4,
+      "thread_id": "t1",
+      "operation": "Request",
+      "input_dump": "resource=r0",
+      "output_dump": "ok",
+      "stack_trace": [
+        "dpor_depth=1"
+      ]
+    },
+    {
+      "step_index": -3,
+      "thread_id": "t1",
+      "operation": "Release",
+      "input_dump": "resource=r0",
+      "output_dump": "ok",
+      "stack_trace": [
+        "dpor_depth=2"
+      ]
+    },
+    {
+      "step_index": -2,
+      "thread_id": "t0",
+      "operation": "Release",
+      "input_dump": "resource=r0",
+      "output_dump": "ok",
+      "stack_trace": [
+        "dpor_depth=3"
+      ]
+    },
+    {
+      "step_index": -1,
+      "thread_id": "t1",
+      "operation": "Request",
+      "input_dump": "resource=r0",
+      "output_dump": "ok",
+      "stack_trace": [
+        "dpor_depth=4"
+      ]
+    },
+    {
+      "step_index": 0,
+      "thread_id": "t0",
+      "operation": "Request",
+      "input_dump": "resource=r0",
+      "output_dump": "Deadlock { cycle: [ThreadId(0), ThreadId(1)] }",
+      "stack_trace": [
+        "dpor_depth=5"
+      ]
+    }
+  ]
+}

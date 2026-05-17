@@ -1,0 +1,11 @@
+[package]
+name = "deadpool-hunt"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dev-dependencies]
+deadpool = { version = "*", features = ["laplace", "managed"] }
+laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk", features = ["verification"] }
+tokio = { workspace = true }
+async-trait = "0.1"
