@@ -53,9 +53,6 @@
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 pub mod classic;
-pub mod ki_scheduler;
-pub mod ki_state;
-pub mod runner;
 pub mod schedule;
 pub mod vector_clock;
 
@@ -91,26 +88,11 @@ pub use classic::{DporScheduler, DporStats, Operation, StepRecord, TinyBitSet};
 pub use vector_clock::VectorClock;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-// Public Re-exports: Ki-DPOR (Intelligent DPOR)
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-pub use ki_state::{KiState, ThreadStatus};
-
-pub use ki_scheduler::{KiDporScheduler, LivenessViolation};
-
-pub use schedule::Schedule;
-
-pub use runner::DporRunner;
-
-// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Formal Verification Harnesses
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 #[cfg(kani)]
 mod classic_proofs;
-
-#[cfg(kani)]
-mod ki_proofs;
 
 #[cfg(kani)]
 mod vector_clock_proofs;
@@ -138,7 +120,5 @@ mod tests {
         // Verify that all expected types are exported
         let _vec_clock = VectorClock::new();
         let _scheduler = DporScheduler::new(2);
-        let _ki_scheduler = KiDporScheduler::new(2, 2);
-        let _ki_state = KiState::initial(2, 2);
     }
 }

@@ -41,7 +41,9 @@ use laplace_macro::laplace_meta;
 #[cfg(feature = "verification")]
 use crate::simulation::TwinSimulator;
 #[cfg(feature = "verification")]
-use laplace_dpor::{DporRunner, KiDporScheduler, Operation, Schedule};
+use laplace_dpor::Operation;
+#[cfg(feature = "verification")]
+use laplace_ki_dpor::{DporRunner, KiDporScheduler, LivenessViolation, Schedule};
 
 #[cfg(feature = "engine")]
 mod engine;
@@ -293,7 +295,7 @@ impl DporRunnerExt for DporRunner {
 
             // ── Invariant check ──────────────────────────────────────────────
             if let Some(msg) = invariant_checker(simulator) {
-                scheduler.set_violation(laplace_dpor::LivenessViolation::InvariantViolation {
+                scheduler.set_violation(LivenessViolation::InvariantViolation {
                     description: msg,
                 });
                 if let Some(schedule) = scheduler.extract_schedule() {

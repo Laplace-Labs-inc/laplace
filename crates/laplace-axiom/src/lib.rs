@@ -3,9 +3,13 @@
 
 //! Laplace Axiom: verification contracts, simulation, and oracle interface.
 
-// DPOR algorithms are now in laplace-dpor.
-pub use laplace_dpor::dpor;
-pub use laplace_dpor::{
+pub mod dpor {
+    pub use laplace_dpor::dpor::*;
+    pub use laplace_dpor::{DporScheduler, DporStats, Operation, StepRecord, TinyBitSet, VectorClock};
+    pub use laplace_ki_dpor::{DporRunner, KiDporScheduler, KiState, LivenessViolation, Schedule, ThreadStatus};
+}
+
+pub use dpor::{
     DporRunner, DporScheduler, DporStats, KiDporScheduler, KiState, LivenessViolation, Operation,
     Schedule, StepRecord, ThreadStatus, TinyBitSet, VectorClock,
 };

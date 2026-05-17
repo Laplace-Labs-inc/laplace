@@ -13,6 +13,7 @@ path = "src/lib.rs"
 [dependencies]
 laplace-core = { path = "../laplace-core", features = ["twin"] }
 laplace-dpor = { path = "../laplace-dpor" }
+laplace-ki-dpor = { path = "../../../closed/crates/laplace-ki-dpor" }
 laplace-probe = { path = "../laplace-probe" }
 laplace-interfaces = { path = "../laplace-interfaces" }
 laplace-harness = { path = "../laplace-harness", features = ["verification"] }

@@ -8,7 +8,7 @@
 
 use super::{OracleConfig, OracleVerdict};
 use laplace_core::domain::journal::{ArdHeader, ForensicFrame, ForensicWindow};
-use laplace_dpor::Schedule;
+use laplace_ki_dpor::Schedule;
 
 #[cfg(feature = "scribe_docs")]
 use laplace_macro::laplace_meta;

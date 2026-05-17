@@ -9,6 +9,5 @@
 pub mod dpor;
 
 pub use dpor::{
-    DporRunner, DporScheduler, DporStats, KiDporScheduler, KiState, LivenessViolation, Operation,
-    Schedule, StepRecord, ThreadStatus, TinyBitSet, VectorClock,
+    DporScheduler, DporStats, Operation, StepRecord, TinyBitSet, VectorClock,
 };
