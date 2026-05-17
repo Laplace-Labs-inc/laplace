@@ -295,9 +295,7 @@ impl DporRunnerExt for DporRunner {
 
             // ── Invariant check ──────────────────────────────────────────────
             if let Some(msg) = invariant_checker(simulator) {
-                scheduler.set_violation(LivenessViolation::InvariantViolation {
-                    description: msg,
-                });
+                scheduler.set_violation(LivenessViolation::InvariantViolation { description: msg });
                 if let Some(schedule) = scheduler.extract_schedule() {
                     let desc = schedule
                         .violation

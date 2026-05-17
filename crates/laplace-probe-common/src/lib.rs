@@ -20,12 +20,12 @@ pub mod pipeline;
 pub use decoder::{DecodedProbeEvent, ProbeEventDecoder};
 
 #[cfg(feature = "std")]
+pub use adapter::{to_resource_id, to_thread_id};
+#[cfg(feature = "std")]
 pub use axiom_adapter::{
     AxiomEvent, AxiomOp, AxiomResourceId, AxiomStep, AxiomStepBuilder, AxiomThreadId,
     ResourceRegistry, ThreadRegistry, MAX_AXIOM_THREADS,
 };
-#[cfg(feature = "std")]
-pub use adapter::{to_resource_id, to_thread_id};
 
 /// Probe event type discriminant.
 ///

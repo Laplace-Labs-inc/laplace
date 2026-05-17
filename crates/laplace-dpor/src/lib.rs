@@ -8,6 +8,4 @@
 
 pub mod dpor;
 
-pub use dpor::{
-    DporScheduler, DporStats, Operation, StepRecord, TinyBitSet, VectorClock,
-};
+pub use dpor::{DporScheduler, DporStats, Operation, StepRecord, TinyBitSet, VectorClock};

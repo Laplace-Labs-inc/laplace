@@ -459,8 +459,8 @@ pub fn run_verification_from(
 mod cloud {
     use std::sync::OnceLock;
 
-    use laplace_probe::ProbeEvent;
     use crate::client::{ProbeClient, ProbeClientConfig, RawProbeEvent};
+    use laplace_probe::ProbeEvent;
 
     pub(super) static GLOBAL_PROBE_CLIENT: OnceLock<ProbeClient> = OnceLock::new();
 

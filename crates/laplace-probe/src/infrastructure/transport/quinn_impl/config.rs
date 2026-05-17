@@ -25,8 +25,8 @@ pub fn verified_client_config(
     let _ = rustls::crypto::ring::default_provider().install_default();
 
     let mut root_store = rustls::RootCertStore::empty();
-    let certs: Vec<CertificateDer<'static>> = CertificateDer::pem_slice_iter(ca_cert_pem)
-        .collect::<Result<Vec<_>, _>>()?;
+    let certs: Vec<CertificateDer<'static>> =
+        CertificateDer::pem_slice_iter(ca_cert_pem).collect::<Result<Vec<_>, _>>()?;
     for cert in certs {
         root_store.add(cert)?;
     }
@@ -46,8 +46,8 @@ pub fn load_server_tls(
     cert_pem: &[u8],
     key_pem: &[u8],
 ) -> Result<quinn::ServerConfig, Box<dyn std::error::Error>> {
-    let cert_chain: Vec<CertificateDer<'static>> = CertificateDer::pem_slice_iter(cert_pem)
-        .collect::<Result<Vec<_>, _>>()?;
+    let cert_chain: Vec<CertificateDer<'static>> =
+        CertificateDer::pem_slice_iter(cert_pem).collect::<Result<Vec<_>, _>>()?;
 
     if cert_chain.is_empty() {
         return Err("No certificate found in PEM".into());

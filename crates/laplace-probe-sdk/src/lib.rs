@@ -17,11 +17,11 @@
 
 pub use laplace_probe::ProbeEvent;
 
+#[cfg(feature = "cloud")]
+pub mod client;
 pub mod config;
 pub mod license;
 pub mod session;
-#[cfg(feature = "cloud")]
-pub mod client;
 pub mod tracked;
 pub mod tracked_atomic;
 #[cfg(feature = "parking_lot_tracking")]
@@ -57,9 +57,9 @@ pub use tracked_std_rwlock::{
 pub use session::run_verification_from;
 
 #[cfg(feature = "cloud")]
-pub use session::init_cloud_probe;
-#[cfg(feature = "cloud")]
 pub use client::ProbeClientConfig;
+#[cfg(feature = "cloud")]
+pub use session::init_cloud_probe;
 
 #[cfg(feature = "verification")]
 pub use laplace_axiom::oracle::OracleVerdict;

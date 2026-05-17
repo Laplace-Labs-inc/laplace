@@ -5,8 +5,12 @@
 
 pub mod dpor {
     pub use laplace_dpor::dpor::*;
-    pub use laplace_dpor::{DporScheduler, DporStats, Operation, StepRecord, TinyBitSet, VectorClock};
-    pub use laplace_ki_dpor::{DporRunner, KiDporScheduler, KiState, LivenessViolation, Schedule, ThreadStatus};
+    pub use laplace_dpor::{
+        DporScheduler, DporStats, Operation, StepRecord, TinyBitSet, VectorClock,
+    };
+    pub use laplace_ki_dpor::{
+        DporRunner, KiDporScheduler, KiState, LivenessViolation, Schedule, ThreadStatus,
+    };
 }
 
 pub use dpor::{
