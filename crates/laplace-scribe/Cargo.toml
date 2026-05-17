@@ -1,0 +1,26 @@
+[package]
+name = "laplace-scribe"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "AST-based knowledge extraction engine for the Laplace Knowledge Spaces (LKS)"
+
+[[bin]]
+name = "laplace-scribe"
+path = "src/main.rs"
+
+[dependencies]
+walkdir    = "2"
+clap       = { version = "4", features = ["derive", "env"] }
+regex      = "1"
+thiserror  = { workspace = true }
+syn        = { version = "2", features = ["full", "visit-mut"] }
+quote      = "1"
+proc-macro2 = { version = "1", features = ["span-locations"] }
+prettyplease = "0.2"
+postgres    = { version = "0.19", optional = true }
+
+[features]
+default = []
+db-ingest = ["dep:postgres"]

@@ -1,0 +1,20 @@
+[package]
+name = "laplace-sdk"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Laplace SDK — one-line import for deterministic concurrency verification"
+repository.workspace = true
+keywords = ["concurrency", "verification", "dpor", "determinism"]
+categories = ["development-tools::testing", "concurrency"]
+
+[features]
+default = ["verification"]
+verification = ["laplace-probe-sdk/verification"]
+cloud = ["laplace-probe-sdk/cloud", "dep:laplace-probe-client"]
+
+[dependencies]
+laplace-probe-sdk = { path = "../laplace-probe-sdk" }
+laplace-macro = { path = "../laplace-macro" }
+laplace-probe-client = { path = "../laplace-probe-client", optional = true }

@@ -1,0 +1,32 @@
+[package]
+name = "laplace-parking-lot-hunt"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+laplace = [
+    "parking_lot/laplace",
+    "dep:inventory",
+    "dep:laplace-probe-sdk",
+    "dep:laplace-core",
+    "dep:laplace-axiom",
+    "dep:laplace-dpor",
+    "laplace-core/twin",
+    "laplace-axiom/twin",
+    "laplace-axiom/verification",
+]
+
+[dependencies]
+parking_lot = { path = "../../../vendor/parking_lot-patched" }
+inventory = { version = "0.3", optional = true }
+laplace-core = { path = "../laplace-core", optional = true }
+laplace-axiom = { path = "../laplace-axiom", optional = true }
+laplace-probe-sdk = { path = "../laplace-probe-sdk", optional = true }
+laplace-macro = { path = "../laplace-macro" }
+laplace-dpor = { path = "../laplace-dpor", optional = true }
+tokio = { workspace = true }
+
+[[test]]
+name = "byoc"
+path = "tests/byoc.rs"

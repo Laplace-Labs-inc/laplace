@@ -1,0 +1,15 @@
+[package]
+name = "laplace-macro"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Procedural macros for Laplace verification harness auto-discovery"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2", features = ["full"] }
+quote = "1"
+proc-macro2 = "1"

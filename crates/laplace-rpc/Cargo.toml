@@ -1,0 +1,20 @@
+[package]
+name = "laplace-rpc"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Laplace QUIC RPC transport — KnulRpcClient + KnulRpcServer (quinn wrapper)"
+
+[dependencies]
+# QUIC transport (quinn API 변경 격리 담당)
+quinn       = { version = "0.11", features = ["rustls"] }
+rustls      = { version = "0.23", features = ["std"] }
+rcgen       = "0.14"
+
+# 직렬화
+serde_json  = "1"
+
+# 비동기
+tokio       = { version = "1", features = ["net", "io-util"] }
+thiserror   = "1"

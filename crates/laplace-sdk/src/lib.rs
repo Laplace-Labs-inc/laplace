@@ -1,0 +1,151 @@
+#![deny(clippy::all, clippy::pedantic)]
+
+//! Laplace SDK — 결정론적 동시성 검증을 위한 단일 진입점.
+//!
+//! 사용자는 `Cargo.toml`에 1줄만 추가하면 전체 Laplace 검증 생태계를 사용할 수 있다.
+//!
+//! # 빠른 시작
+//!
+//! ```toml
+//! [dev-dependencies]
+//! laplace-sdk = { path = "path/to/crates/sdk/laplace-sdk" }
+//! ```
+//!
+//! ```rust,ignore
+//! use laplace_sdk::prelude::*;
+//!
+//! #[laplace_tracked]
+//! pub struct MyService {
+//!     #[track]
+//!     cache: Mutex<HashMap<String, String>>,
+//!     config: Config,
+//! }
+//!
+//! #[laplace_sdk::verify(threads = 2)]
+//! async fn test_concurrent_access(state: &MyService) {
+//!     let mut cache = state.cache.lock().await;
+//!     cache.insert("key".into(), "value".into());
+//! }
+//! ```
+
+pub mod prelude;
+
+// ── 매크로 재수출 ────────────────────────────────────────────────────────────
+
+/// Attribute macro for automatic Tracked* type substitution.
+///
+/// Transforms `#[track]` fields from standard sync primitives to Tracked* equivalents.
+pub use laplace_macro::laplace_tracked;
+
+/// 프로덕션 관측용 구조체 매크로 (cloud Probe 전송 활성 버전).
+///
+/// `#[laplace_tracked]`와 동일한 타입 변환 + 클라우드 관측 활성 시 이벤트 전달.
+pub use laplace_macro::laplace_probe;
+
+/// Improved Ki-DPOR verification harness attribute.
+///
+/// Supports both `&T` references and `Arc<T>` state parameters.
+pub use laplace_macro::laplace_verify as verify;
+
+/// Register a function as a verification harness via `inventory`.
+///
+/// Lower-level alternative to `#[laplace_sdk::verify(...)]` for advanced use cases.
+pub use laplace_macro::axiom_harness;
+
+/// Automated Ki-DPOR verification harness (legacy API).
+///
+/// Use `#[laplace_sdk::verify(...)]` for new code.
+pub use laplace_macro::axiom_target;
+
+/// Marker attribute for documentation purposes (zero runtime cost).
+pub use laplace_macro::laplace_meta;
+
+// ── Tracked 프리미티브 재수출 ────────────────────────────────────────────────
+
+/// Async-based Mutex wrapper with automatic event tracking.
+pub use laplace_probe_sdk::TrackedMutex;
+
+/// Read guard for TrackedMutex (Deref only).
+pub use laplace_probe_sdk::TrackedGuard;
+
+/// Sync-based Mutex wrapper with automatic event tracking.
+pub use laplace_probe_sdk::TrackedStdMutex;
+
+/// Read guard for TrackedStdMutex (Deref only).
+pub use laplace_probe_sdk::TrackedStdGuard;
+
+/// Async-based RwLock wrapper with automatic event tracking.
+pub use laplace_probe_sdk::TrackedRwLock;
+
+/// Shared (read) guard for TrackedRwLock (Deref only).
+pub use laplace_probe_sdk::TrackedRwLockReadGuard;
+
+/// Exclusive (write) guard for TrackedRwLock (Deref + DerefMut).
+pub use laplace_probe_sdk::TrackedRwLockWriteGuard;
+
+/// Sync-based RwLock wrapper with automatic event tracking.
+pub use laplace_probe_sdk::TrackedStdRwLock;
+
+/// Shared (read) guard for TrackedStdRwLock (Deref only).
+pub use laplace_probe_sdk::TrackedStdRwLockReadGuard;
+
+/// Exclusive (write) guard for TrackedStdRwLock (Deref + DerefMut).
+pub use laplace_probe_sdk::TrackedStdRwLockWriteGuard;
+
+/// Atomic bool wrapper with load/store/CAS tracking.
+pub use laplace_probe_sdk::TrackedAtomicBool;
+
+/// Atomic u32 wrapper with load/store/CAS/fetch_add/fetch_sub tracking.
+pub use laplace_probe_sdk::TrackedAtomicU32;
+
+/// Atomic u64 wrapper with load/store/CAS/fetch_add/fetch_sub tracking.
+pub use laplace_probe_sdk::TrackedAtomicU64;
+
+/// Atomic usize wrapper with load/store/CAS/fetch_add/fetch_sub tracking.
+pub use laplace_probe_sdk::TrackedAtomicUsize;
+
+/// Semaphore wrapper with acquire/release event tracking.
+pub use laplace_probe_sdk::TrackedSemaphore;
+
+/// Permit guard for TrackedSemaphore (auto-release on drop).
+pub use laplace_probe_sdk::TrackedSemaphorePermit;
+
+// ── 검증 인프라 재수출 ────────────────────────────────────────────────────────
+
+/// Set the probe event sender for the current thread.
+pub use laplace_probe_sdk::set_probe_sender;
+
+/// Set the thread ID for probe event correlation.
+pub use laplace_probe_sdk::set_probe_thread_id;
+
+/// Configuration for Ki-DPOR verification sessions.
+pub use laplace_probe_sdk::ProbeSessionConfig;
+
+/// Enumeration of all probe event types.
+pub use laplace_probe_sdk::ProbeEvent;
+
+/// Verification result with verdicts and assertions.
+#[cfg(feature = "verification")]
+pub use laplace_probe_sdk::VerifyResult;
+
+/// Run Ki-DPOR verification on a stream of probe events.
+#[cfg(feature = "verification")]
+pub use laplace_probe_sdk::run_verification_from;
+
+/// Ki-DPOR final verdict: CLEAN (no deadlock) or BUG DETECTED.
+#[cfg(feature = "verification")]
+pub use laplace_probe_sdk::OracleVerdict;
+
+/// Project-level configuration loaded from laplace.toml.
+pub use laplace_probe_sdk::ProjectConfig;
+
+/// Load project configuration from laplace.toml.
+pub use laplace_probe_sdk::load_project_config;
+
+#[cfg(feature = "cloud")]
+pub use laplace_probe_client::ProbeClientConfig;
+/// 클라우드 Probe 관측 초기화.
+///
+/// `probe agent start`와 동일한 효과를 programmatic하게 수행한다.
+#[cfg(feature = "cloud")]
+pub use laplace_probe_sdk::init_cloud_probe;

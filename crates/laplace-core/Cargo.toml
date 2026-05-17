@@ -1,0 +1,175 @@
+[package]
+name = "laplace-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Laplace Core: Sovereign kernel and runtime contract implementations with unified error handling and transport abstractions"
+
+[lib]
+name = "laplace_core"
+path = "src/lib.rs"
+
+[dependencies]
+# ============================================================================
+# Laplace Ecosystem (Interface Contracts)
+# ============================================================================
+
+# Centralized type and trait contracts (always required)
+laplace-interfaces = { path = "../laplace-interfaces" }
+laplace-macro = { path = "../laplace-macro" }
+
+# ============================================================================
+# Workspace-Managed Dependencies
+# ============================================================================
+
+# Async and trait support
+async-trait = { workspace = true }
+
+# Serialization and type schema
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+
+# Error handling
+thiserror = { workspace = true }
+
+# ============================================================================
+# Feature-Gated Dependencies (Roadmap Tier 0, 1, 2)
+# ============================================================================
+
+# Tier 0: Tracing (Event Causality)
+dashmap = { version = "5.5", optional = true }
+
+# Tier 1: Verification (Sampling & Deadlock Detection)
+parking_lot  = { version = "0.12", optional = true }
+hdrhistogram = { version = "7.5",  optional = true }
+
+# Tier 2: Axiom (Deterministic Simulation & Full Search)
+rand_chacha = { version = "0.3", optional = true } # Deterministic RNG
+tokio = { workspace = true, optional = true }      # Async Runtime for Simulation
+
+# ============================================================================
+# Local Dependencies (Not in Workspace)
+# ============================================================================
+
+rand = "0.10.0"
+
+# Binary serialization for ARD forensic format
+postcard = { version = "1", features = ["use-std"] }
+
+[dev-dependencies]
+# Performance and property-based testing
+criterion = { version = "0.5", features = ["html_reports"] }
+proptest = "1.9.0"
+
+# Full tokio runtime for tests
+tokio = { workspace = true }
+
+[features]
+# Default is minimal (Pure Core)
+default = ["std"]
+
+# Standard library support
+std = []
+
+# ============================================================================
+# Feature Tiers (Hierarchical)
+# ============================================================================
+
+# Tier 0: Tracing
+# Enables concurrent maps for event tracking and causality logging
+tracing = ["dep:dashmap"]
+
+# Tier 1: Verification
+# Includes tracing, adds parking_lot for deadlock detection and lock introspection,
+# and hdrhistogram for precise tail-latency percentile tracking
+verification = ["tracing", "dep:parking_lot", "dep:hdrhistogram"]
+
+# Tier 2: Axiom
+# Includes verification, adds deterministic RNG (rand_chacha) and full tokio runtime for simulation
+# Also enables the twin feature in laplace-interfaces to expose Kraken domain contracts
+twin = ["verification", "dep:rand_chacha", "dep:tokio", "laplace-interfaces/twin"]
+
+# Legacy aliases (to be deprecated or mapped to new tiers)
+tokio-runtime = ["twin"] 
+
+scribe_docs = []
+
+
+# ============================================================================
+# Profile Settings
+# ============================================================================
+
+# Profiles are managed by workspace root, but we keep overrides here if needed.
+# (Removed to enforce workspace sovereignty as per Phase R1)
+
+# ============================================================================
+# Documentation Settings
+# ============================================================================
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
+
+# ============================================================================
+# Lint Configuration
+# ============================================================================
+
+[lints.rust]
+# Allow custom cfg attributes used by Kani verification harnesses
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+
+# ============================================================================
+# Benchmark Configuration
+# ============================================================================
+
+[[bench]]
+name = "context_bench"
+harness = false
+required-features = ["twin"]
+
+[[bench]]
+name = "journal_bench"
+harness = false
+required-features = ["twin"]
+
+[[bench]]
+name = "memory_bench"
+harness = false
+required-features = ["twin"]
+
+[[bench]]
+name = "pool_bench"
+harness = false
+required-features = ["twin"]
+
+[[bench]]
+name = "resource_bench"
+harness = false
+required-features = ["twin"]
+
+[[bench]]
+name = "scheduler_bench"
+harness = false
+required-features = ["twin"]
+
+[[bench]]
+name = "entropy_bench"
+harness = false
+required-features = ["twin"]
+
+[[bench]]
+name = "tenant_bench"
+harness = false
+required-features = ["twin"]
+
+[[bench]]
+name = "time_bench"
+harness = false
+required-features = ["twin"]
+
+[[bench]]
+name = "tracing_bench"
+harness = false
+required-features = ["twin"]

@@ -1,0 +1,24 @@
+[package]
+name = "laplace-probe-common"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Shared eBPF/user-space types for Laplace Probe"
+
+[features]
+default = ["std"]
+std = ["bytemuck"]
+pipeline = ["std", "laplace-axiom", "laplace-core"]
+scribe_docs = []
+
+[dependencies]
+bytemuck = { version = "1.16", features = ["derive"], optional = true }
+laplace-axiom = { path = "../laplace-axiom", features = ["verification", "engine"], optional = true }
+laplace-core = { path = "../laplace-core", features = ["twin"], optional = true }
+laplace-macro = { path = "../laplace-macro" }
+
+[lib]
+name = "laplace_probe_common"
+path = "src/lib.rs"

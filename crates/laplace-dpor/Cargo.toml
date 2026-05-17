@@ -1,0 +1,24 @@
+[package]
+name = "laplace-dpor"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Laplace Ki-DPOR: deterministic partial-order reduction algorithms for concurrency verification"
+
+[lib]
+name = "laplace_dpor"
+path = "src/lib.rs"
+
+[dependencies]
+laplace-macro    = { path = "../laplace-macro" }
+laplace-interfaces = { path = "../laplace-interfaces" }
+serde            = { version = "1.0", features = ["derive"] }
+tracing          = "0.1"
+
+[features]
+default = []
+scribe_docs = []
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }

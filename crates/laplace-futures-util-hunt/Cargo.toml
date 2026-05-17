@@ -1,0 +1,33 @@
+[package]
+name = "laplace-futures-util-hunt"
+version = "0.1.0"
+edition = "2021"
+
+[features]
+default = []
+laplace = [
+    "futures-util/laplace",
+    "dep:inventory",
+    "dep:laplace-probe-sdk",
+    "dep:laplace-core",
+    "dep:laplace-axiom",
+    "dep:laplace-dpor",
+    "laplace-core/twin",
+    "laplace-axiom/twin",
+    "laplace-axiom/verification",
+]
+
+[dependencies]
+futures-util = { path = "../../../vendor/futures-util-patched" }
+futures = "0.3"
+inventory = { version = "0.3", optional = true }
+laplace-core = { path = "../laplace-core", optional = true }
+laplace-axiom = { path = "../laplace-axiom", optional = true }
+laplace-probe-sdk = { path = "../laplace-probe-sdk", optional = true }
+laplace-macro = { path = "../laplace-macro" }
+laplace-dpor = { path = "../laplace-dpor", optional = true }
+tokio = { workspace = true }
+
+[[test]]
+name = "byoc_async"
+path = "tests/byoc_async.rs"

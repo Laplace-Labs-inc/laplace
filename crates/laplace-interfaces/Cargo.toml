@@ -1,0 +1,33 @@
+[package]
+name = "laplace-interfaces"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Pure interface definitions for Laplace (FFI, Types, Traits)"
+
+[lib]
+name = "laplace_interfaces"
+path = "src/lib.rs"
+
+[dependencies]
+laplace-macro = { path = "../laplace-macro" }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+async-trait = { workspace = true }
+
+[features]
+default = []
+# Enables Kraken (digital twin / load test) domain contracts
+twin = []
+
+scribe_docs = []
+
+[build-dependencies]
+prost-build = "0.14.3"
+
+[lints.rust]
+# Allow custom cfg attributes used by Kani verification harnesses
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }

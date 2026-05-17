@@ -1,0 +1,362 @@
+// Protocol Buffers v3 - Laplace Error Types
+// Version: 1.1.0 (Single Source of Truth Aligned)
+//
+// AUTHORITATIVE SOURCE:
+// This Protobuf definition derives from the canonical Rust enumeration
+// at crates/laplace-interfaces/src/error.rs
+//
+// ERROR CODE INVARIANT:
+// The integer values of the ErrorCode enum MUST match the Rust LaplaceError
+// enum 1:1 to ensure correct serialization across the FFI boundary.
+// Any changes to error codes must be coordinated with the Rust source.
+
+syntax = "proto3";
+
+package laplace.core;
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ErrorCode Enumeration
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/// Laplace error codes for FFI boundary.
+///
+/// Maps 1:1 to the Rust LaplaceError enumeration. All error codes are u32
+/// and compatible with C FFI and Protobuf serialization.
+///
+/// Error codes are organized by ranges representing error categories:
+/// - 0: Success
+/// - 1000-1999: Internal system errors
+/// - 2000-2999: Timeout errors
+/// - 3000-3999: Resource exhaustion errors
+/// - 4000-4999: Validation/authorization errors
+/// - 5000-5999: Network errors
+/// - 6000-6999: Domain-specific errors (verification, scheduling)
+enum ErrorCode {
+  reserved 1, 2, 10 to 13, 20, 21, 30 to 32, 90 to 92;
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Success (0)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  /// Successful operation.
+  ERROR_CODE_SUCCESS = 0;
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Internal Errors (1000-1999)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Unrecoverable system failures that prevent operation completion.
+  // Generally cannot be retried without external intervention.
+
+  /// Generic internal error (e.g., panic, unrecoverable state).
+  ERROR_CODE_INTERNAL = 1000;
+
+  /// Context is missing or invalid.
+  ERROR_CODE_INVALID_CONTEXT = 1001;
+
+  /// ABI version mismatch detected.
+  ERROR_CODE_ABI_MISMATCH = 1002;
+
+  /// Memory layout violation or alignment error.
+  ERROR_CODE_MEMORY_ALIGNMENT = 1003;
+
+  /// Pointer validation failed (null, out of bounds, etc.).
+  ERROR_CODE_INVALID_POINTER = 1004;
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Timeout Errors (2000-2999)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Operation exceeded time limits. All timeout errors are retryable with
+  // exponential backoff and longer deadlines.
+
+  /// Operation exceeded deadline (Watchdog triggered).
+  ERROR_CODE_TIMEOUT = 2000;
+
+  /// Kernel operation timeout.
+  ERROR_CODE_KERNEL_TIMEOUT = 2001;
+
+  /// SDK operation timeout.
+  ERROR_CODE_SDK_TIMEOUT = 2002;
+
+  /// Lock acquisition timeout.
+  ERROR_CODE_LOCK_TIMEOUT = 2003;
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Resource Errors (3000-3999)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Resource exhaustion or quota violations. May be retryable if resources
+  // are freed, or may require scaling or SLA upgrade.
+
+  /// Resource quota exceeded (Resource Guard violation).
+  ERROR_CODE_QUOTA_EXCEEDED = 3000;
+
+  /// Memory allocation failed.
+  ERROR_CODE_OUT_OF_MEMORY = 3001;
+
+  /// CPU credit exhausted.
+  ERROR_CODE_CPU_QUOTA_EXCEEDED = 3002;
+
+  /// Concurrent request limit reached.
+  ERROR_CODE_CONCURRENCY_LIMIT_EXCEEDED = 3003;
+
+  /// Connection pool exhausted.
+  ERROR_CODE_POOL_EXHAUSTED = 3004;
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Validation Errors (4000-4999)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Request validation or authorization failures. Generally permanent and
+  // should not be retried without fixing the underlying issue.
+
+  /// Handshake failed (ABI capability mismatch).
+  ERROR_CODE_HANDSHAKE_FAILED = 4000;
+
+  /// Invalid request format or schema.
+  ERROR_CODE_INVALID_REQUEST = 4001;
+
+  /// Unsupported operation version.
+  ERROR_CODE_VERSION_MISMATCH = 4002;
+
+  /// Tenant not found or inactive.
+  ERROR_CODE_TENANT_NOT_FOUND = 4003;
+
+  /// Authorization check failed.
+  ERROR_CODE_UNAUTHORIZED = 4004;
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Network Errors (5000-5999)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Communication or serialization failures. Most are transient and retryable
+  // with exponential backoff.
+
+  /// Network communication failure.
+  ERROR_CODE_NETWORK_ERROR = 5000;
+
+  /// Connection refused or reset.
+  ERROR_CODE_CONNECTION_FAILED = 5001;
+
+  /// Serialization/deserialization failed.
+  ERROR_CODE_SERIALIZATION_ERROR = 5002;
+
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Domain-Specific Errors (6000-6999)
+  // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  // Errors specific to Laplace domain operations (verification, scheduling, isolation).
+
+  /// Axiom/formal verification error.
+  ERROR_CODE_VERIFICATION_ERROR = 6000;
+
+  /// Kernel isolate pool error.
+  ERROR_CODE_ISOLATE_POOL_ERROR = 6001;
+
+  /// Scheduler error (DPOR, Ki-DPOR, etc.).
+  ERROR_CODE_SCHEDULER_ERROR = 6002;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// ErrorCategory Enumeration
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/// Error category for client-side retry and handling logic.
+///
+/// Categorizes errors to guide client behavior (retry, backoff, escalate).
+enum ErrorCategory {
+  ERROR_CATEGORY_UNKNOWN = 0;
+
+  /// Transient error, retry recommended.
+  /// Examples: Timeout, ConnectionFailed, PoolExhausted.
+  ERROR_CATEGORY_TRANSIENT = 1;
+
+  /// Rate limit or throttling, retry with exponential backoff.
+  /// Examples: QuotaExceeded, CpuQuotaExceeded.
+  ERROR_CATEGORY_THROTTLING = 2;
+
+  /// Client error, do not retry without fixing request.
+  /// Examples: InvalidRequest, Unauthorized, VersionMismatch.
+  ERROR_CATEGORY_CLIENT = 3;
+
+  /// Server error, retry possible after recovery.
+  /// Examples: Internal, IsolatePoolError, SchedulerError.
+  ERROR_CATEGORY_SERVER = 4;
+
+  /// Timeout error, retry with longer deadline.
+  /// Examples: Timeout, KernelTimeout, LockTimeout.
+  ERROR_CATEGORY_TIMEOUT = 5;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// MessageType Enumeration
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/// FFI envelope message type identifier.
+///
+/// Indicates the semantic meaning of the payload within FfiEnvelope.
+enum MessageType {
+  MESSAGE_TYPE_UNKNOWN = 0;
+
+  /// Context-only message (SovereignContext serialization).
+  MESSAGE_TYPE_CONTEXT = 1;
+
+  /// Kernel initialization request.
+  MESSAGE_TYPE_INIT_REQUEST = 2;
+
+  /// Kernel initialization response.
+  MESSAGE_TYPE_INIT_RESPONSE = 3;
+
+  /// General execution response (non-turbo).
+  MESSAGE_TYPE_EXECUTE_RESPONSE = 4;
+
+  /// FFI response wrapper (FfiResponse message).
+  MESSAGE_TYPE_FFI_RESPONSE = 5;
+
+  /// Turbo-mode batch request (zero-copy).
+  MESSAGE_TYPE_TURBO_BATCH_REQUEST = 100;
+
+  /// Turbo-mode batch response (zero-copy).
+  MESSAGE_TYPE_TURBO_BATCH_RESPONSE = 101;
+
+  /// KNUL (Kernel Networking Utility Link) packet.
+  MESSAGE_TYPE_KNUL_PACKET = 200;
+
+  /// KNUL stream initialization.
+  MESSAGE_TYPE_KNUL_STREAM_INIT = 201;
+}
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Messages
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+/// Resource snapshot for quota and monitoring.
+///
+/// Provides real-time metrics for monitoring and resource decision-making.
+/// All counters are atomic snapshots—no blocking or coordination required.
+message ResourceSnapshot {
+  /// Current number of concurrent requests.
+  uint32 current_concurrent = 1;
+
+  /// Maximum allowed concurrent requests (tenant quota).
+  uint32 max_concurrent = 2;
+
+  /// Heap memory used by this tenant (bytes).
+  uint64 heap_used_bytes = 3;
+
+  /// Heap memory limit for this tenant (bytes).
+  uint64 heap_limit_bytes = 4;
+
+  /// Elapsed time in current execution (milliseconds).
+  uint64 elapsed_ms = 5;
+
+  /// Time limit for current operation (milliseconds).
+  uint64 limit_ms = 6;
+
+  /// Turbo pool utilization percentage (0-100).
+  /// Only meaningful for turbo-mode contexts.
+  uint32 turbo_utilization = 7;
+}
+
+/// Error metadata and retry information.
+///
+/// Provides guidance for client-side error handling and retry logic.
+message ErrorMeta {
+  /// Whether this error is retryable (client should attempt retry).
+  bool retryable = 1;
+
+  /// Error category (transient, throttling, client, server, timeout).
+  ErrorCategory category = 2;
+
+  /// Suggested delay before retry (milliseconds).
+  /// Zero means immediate retry; -1 means do not retry.
+  uint64 retry_after_ms = 3;
+
+  /// Current attempt number (1-indexed).
+  uint32 attempt = 4;
+
+  /// Maximum recommended attempts for this error.
+  uint32 max_attempts = 5;
+
+  /// Resource snapshot at time of error.
+  /// Useful for quota diagnostics.
+  ResourceSnapshot resource_snapshot = 10;
+
+  /// Implementation-specific extensions.
+  /// Format: vendor-specific key-value pairs.
+  map<string, string> extensions = 15;
+}
+
+/// Laplace error message.
+///
+/// Represents an error that occurred during kernel operation.
+/// Serialized in FfiResponse when result is an error.
+message LaplaceError {
+  /// Error code (maps to ErrorCode enum).
+  ErrorCode code = 1;
+
+  /// Human-readable error message.
+  string message = 2;
+
+  /// Error metadata and retry guidance.
+  ErrorMeta meta = 3;
+
+  /// Tenant that generated the error (for audit/debugging).
+  string tenant_id = 10;
+
+  /// Request that triggered the error (for tracing).
+  string request_id = 11;
+
+  /// Trace ID for distributed tracing (for correlation).
+  string trace_id = 12;
+
+  /// Timestamp when error occurred (Unix milliseconds).
+  int64 timestamp = 13;
+
+  /// Stack trace (debug/development only; omitted in production).
+  string stack_trace = 20;
+
+  /// Error source (e.g., "kernel::scheduler", "sdk::ffi").
+  string source = 21;
+}
+
+/// FFI Response wrapper.
+///
+/// The primary message type for kernel-to-SDK responses.
+/// Contains either a success payload or an error.
+message FfiResponse {
+  /// Response payload (either success or error).
+  oneof result {
+    /// Success payload (serialized operation result).
+    bytes success_payload = 1;
+
+    /// Error response.
+    LaplaceError error = 2;
+  }
+
+  /// Request identifier (for correlation with request).
+  string request_id = 10;
+
+  /// Trace ID (for distributed tracing).
+  string trace_id = 11;
+
+  /// Operation duration (microseconds).
+  uint64 duration_us = 12;
+
+  /// FFI protocol version (for compatibility checking).
+  uint32 protocol_version = 15;
+}
+
+/// FFI Envelope for all cross-boundary messages.
+///
+/// Wraps all messages crossing the Rust-Deno FFI boundary.
+/// Provides versioning, type identification, and extensibility.
+message FfiEnvelope {
+  /// FFI protocol version (for compatibility).
+  uint32 protocol_version = 1;
+
+  /// Message type (identifies payload semantics).
+  MessageType message_type = 2;
+
+  /// Serialized message payload (depends on message_type).
+  bytes payload = 3;
+
+  /// Implementation-specific extensions.
+  /// Format: vendor-specific key-value pairs.
+  map<string, bytes> extensions = 10;
+}

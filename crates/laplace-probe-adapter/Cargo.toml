@@ -1,0 +1,20 @@
+[package]
+name = "laplace-probe-adapter"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Laplace Probe Adapter: bridges kernel observation layer to DPOR verification engine"
+
+[features]
+default = ["std"]
+std = ["laplace-probe-common/std"]
+
+[dependencies]
+laplace-probe-common = { path = "../laplace-probe-common" }
+laplace-interfaces = { path = "../laplace-interfaces" }
+
+[lib]
+name = "laplace_probe_adapter"
+path = "src/lib.rs"

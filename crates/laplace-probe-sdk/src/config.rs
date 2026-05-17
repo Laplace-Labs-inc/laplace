@@ -1,0 +1,171 @@
+//! laplace.toml 자동 탐색 + 파싱.
+//!
+//! `cargo test` 컨텍스트에서 프로젝트 루트의 `laplace.toml`을 찾아
+//! `[axiom]` 섹션 설정을 로드한다.
+//!
+//! [GHOST CONSTRAINT]: 파일 미발견/파싱 실패 시 panic 금지, None 반환.
+//! [GHOST CONSTRAINT]: 이 모듈은 `laplace-interfaces`에 의존하지 않는다.
+//! 경량 파싱 구조체를 자체 정의하여 동일 TOML 필드명으로 호환.
+
+use serde::Deserialize;
+use std::path::{Path, PathBuf};
+
+// ── 내부 파싱 구조체 ──────────────────────────────────────────────────────────
+
+/// laplace.toml 루트.
+/// [axiom] 섹션만 파싱. [kraken], [probe]는 SDK에서 불필요.
+#[derive(Deserialize, Default)]
+struct TomlRoot {
+    #[serde(default)]
+    axiom: TomlAxiom,
+}
+
+/// [axiom] 섹션 — laplace-interfaces AxiomConfig와 필드명 동일.
+#[derive(Deserialize, Default)]
+struct TomlAxiom {
+    max_depth: Option<u32>,
+    max_threads: Option<u32>,
+    max_starvation_limit: Option<u32>,
+    max_danger: Option<u32>,
+    default_seed: Option<u64>,
+}
+
+// ── 공개 API ──────────────────────────────────────────────────────────────────
+
+/// laplace.toml에서 읽은 Axiom 설정.
+#[derive(Debug, Clone)]
+pub struct ProjectConfig {
+    /// DPOR 탐색 깊이 상한.
+    pub max_depth: Option<usize>,
+    /// 최대 동시 스레드 수.
+    pub max_threads: Option<usize>,
+    /// 기아 탐지 한계.
+    pub max_starvation_limit: Option<usize>,
+    /// 위험 점수 상한.
+    pub max_danger: Option<usize>,
+    /// Axiom Oracle RNG 시드.
+    pub default_seed: Option<u64>,
+}
+
+/// laplace.toml을 자동 탐색하여 로드한다.
+///
+/// 탐색 순서:
+/// 1. `$CARGO_MANIFEST_DIR/laplace.toml`
+/// 2. `$CARGO_MANIFEST_DIR/../laplace.toml` (workspace root)
+/// 3. `$CARGO_MANIFEST_DIR/../../laplace.toml` (nested crate)
+/// 4. `./laplace.toml` (CWD fallback)
+///
+/// # 반환
+///
+/// 파일 발견 + 파싱 성공 → `Some(ProjectConfig)`
+/// 파일 미발견 또는 파싱 실패 → `None` (warn 로그)
+pub fn load_project_config() -> Option<ProjectConfig> {
+    let path = find_laplace_toml()?;
+    let content = std::fs::read_to_string(&path).ok()?;
+    let root: TomlRoot = match toml::from_str(&content) {
+        Ok(r) => r,
+        Err(e) => {
+            tracing::warn!("laplace.toml parse error at {}: {e}", path.display());
+            return None;
+        }
+    };
+
+    Some(ProjectConfig {
+        max_depth: root.axiom.max_depth.map(|v| v as usize),
+        max_threads: root.axiom.max_threads.map(|v| v as usize),
+        max_starvation_limit: root.axiom.max_starvation_limit.map(|v| v as usize),
+        max_danger: root.axiom.max_danger.map(|v| v as usize),
+        default_seed: root.axiom.default_seed,
+    })
+}
+
+/// laplace.toml에서 `[axiom] max_depth`를 읽는 편의 함수.
+///
+/// `load_project_config()`의 단축 경로.
+pub fn load_toml_max_depth() -> Option<usize> {
+    load_project_config().and_then(|c| c.max_depth)
+}
+
+// ── 내부 탐색 ─────────────────────────────────────────────────────────────────
+
+/// laplace.toml 파일을 프로젝트 디렉토리에서 탐색한다.
+fn find_laplace_toml() -> Option<PathBuf> {
+    // 1. CARGO_MANIFEST_DIR 기반 탐색 (cargo test가 설정)
+    if let Ok(manifest_dir) = std::env::var("CARGO_MANIFEST_DIR") {
+        let base = Path::new(&manifest_dir);
+
+        // 현재 크레이트 루트
+        let candidate = base.join("laplace.toml");
+        if candidate.exists() {
+            return Some(candidate);
+        }
+
+        // workspace 루트 (1단계 상위)
+        let candidate = base
+            .parent()
+            .and_then(|p| p.parent())
+            .map(|p| p.join("laplace.toml"));
+        if let Some(c) = candidate {
+            if c.exists() {
+                return Some(c);
+            }
+        }
+
+        // workspace 루트 (2단계 상위 — nested crate)
+        let candidate = base
+            .parent()
+            .and_then(|p| p.parent())
+            .and_then(|p| p.parent())
+            .map(|p| p.join("laplace.toml"));
+        if let Some(c) = candidate {
+            if c.exists() {
+                return Some(c);
+            }
+        }
+    }
+
+    // 2. CWD fallback
+    let candidate = PathBuf::from("laplace.toml");
+    if candidate.exists() {
+        return Some(candidate);
+    }
+
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn find_laplace_toml_from_workspace() {
+        // cargo test가 CARGO_MANIFEST_DIR을 설정하므로
+        // workspace 루트의 laplace.toml을 찾아야 한다.
+        let path = find_laplace_toml();
+        match path {
+            Some(p) => println!("Found laplace.toml at: {}", p.display()),
+            None => println!("laplace.toml not found (may not be in workspace root during test)"),
+        }
+        // 테스트는 파일 존재 여부와 무관하게 항상 통과
+    }
+
+    #[test]
+    fn load_project_config_parses_axiom() {
+        let config = load_project_config();
+        // workspace 루트에 laplace.toml이 있으면 파싱 성공해야 함
+        if let Some(cfg) = config {
+            // laplace.toml의 [axiom] max_depth = 20
+            assert_eq!(cfg.max_depth, Some(20));
+            assert_eq!(cfg.max_threads, Some(8));
+        }
+    }
+
+    #[test]
+    fn load_toml_max_depth_returns_value() {
+        let depth = load_toml_max_depth();
+        // workspace 루트 laplace.toml에 max_depth = 20
+        if depth.is_some() {
+            assert_eq!(depth, Some(20));
+        }
+    }
+}

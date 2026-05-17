@@ -1,0 +1,44 @@
+[package]
+name = "laplace-probe-sdk"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+description = "Laplace SDK — TrackedMutex + embedded Ki-DPOR oracle for cargo test verification"
+
+[features]
+default = ["verification", "parking_lot_tracking"]
+verification = [
+    "laplace-axiom/twin",
+    "laplace-axiom/verification",
+    "laplace-core/twin",
+    "laplace-probe-common/std",
+    "laplace-probe-common/pipeline",
+]
+parking_lot_tracking = ["dep:parking_lot"]
+cloud = ["dep:laplace-probe-client"]
+
+[dependencies]
+laplace-probe-common = { path = "../laplace-probe-common" }
+laplace-probe        = { path = "../laplace-probe" }
+laplace-axiom        = { path = "../laplace-axiom" }
+laplace-core         = { path = "../laplace-core" }
+laplace-probe-client = { path = "../laplace-probe-client", optional = true }
+
+tokio      = { workspace = true }
+serde      = { workspace = true }
+serde_json = { workspace = true }
+tracing    = { workspace = true }
+anyhow     = { workspace = true }
+once_cell  = "1.21"
+bytemuck   = { version = "1.16", features = ["derive"] }
+
+# JWT payload 디코딩 (라이선스 max_depth 읽기)
+base64 = "0.22"
+dirs   = "5"
+
+# laplace.toml 파싱
+toml = "0.8"
+
+# parking_lot RwLock for reentrant read support
+parking_lot = { version = "0.12", optional = true }
