@@ -69,28 +69,31 @@ pub enum ProbeEventType {
 #[derive(Debug, Clone, Copy)]
 #[cfg_attr(feature = "std", derive(bytemuck::Pod, bytemuck::Zeroable))]
 pub struct RawProbeEvent {
-    pub timestamp_ns: u64,   // 8
-    pub tid: u32,            // 4
-    pub pid: u32,            // 4
-    pub event_type: u8,      // 1
-    pub l4_proto: u8,        // 1
-    pub status_code: u16,    // 2
-    pub _pad0: u32,          // 4
-    pub resource_id: u64,    // 8
-    pub peer_addr: u64,      // 8
-    pub peer_port: u32,      // 4
-    pub local_port: u32,     // 4
-    pub payload_hash: u64,   // 8
-    pub payload_len: u32,    // 4
+    pub timestamp_ns: u64, // 8
+    pub tid: u32,          // 4
+    pub pid: u32,          // 4
+    pub event_type: u8,    // 1
+    pub l4_proto: u8,      // 1
+    pub status_code: u16,  // 2
+    #[doc = "padding fields MUST be zeroed before submission"]
+    pub _pad0: u32, // 4
+    pub resource_id: u64,  // 8
+    pub peer_addr: u64,    // 8
+    pub peer_port: u32,    // 4
+    pub local_port: u32,   // 4
+    pub payload_hash: u64, // 8
+    pub payload_len: u32,  // 4
     pub operation_hash: u32, // 4
-    pub latency_ns: u64,     // 8
-    pub _pad1: u64,          // 8
+    pub latency_ns: u64,   // 8
+    #[doc = "padding fields MUST be zeroed before submission"]
+    pub _pad1: u64, // 8
     pub correlation_id: u64, // 8
-    pub cpu_id: u32,         // 4
-    pub depth: u32,          // 4
-    pub comm: [u8; 16],      // 16
-    pub parent_tid: u64,     // 8
-    pub _reserved: u64,      // 8
+    pub cpu_id: u32,       // 4
+    pub depth: u32,        // 4
+    pub comm: [u8; 16],    // 16
+    pub parent_tid: u64,   // 8
+    #[doc = "padding fields MUST be zeroed before submission"]
+    pub _reserved: u64, // 8
 }
 // Total: 8+4+4+1+1+2+4+8+8+4+4+8+4+4+8+8+8+4+4+16+8+8 = 128 bytes
 

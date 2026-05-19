@@ -7,5 +7,7 @@
 //! - Kani formal proofs (cfg kani)
 
 pub mod dpor;
+pub mod error;
 
 pub use dpor::{DporScheduler, DporStats, Operation, StepRecord, TinyBitSet, VectorClock};
+pub use error::LaplaceError;

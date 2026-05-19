@@ -18,3 +18,7 @@ serde_json  = "1"
 # 비동기
 tokio       = { version = "1", features = ["net", "io-util"] }
 thiserror   = "1"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

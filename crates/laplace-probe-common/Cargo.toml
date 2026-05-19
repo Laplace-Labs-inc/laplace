@@ -23,3 +23,7 @@ laplace-macro = { path = "../laplace-macro" }
 [lib]
 name = "laplace_probe_common"
 path = "src/lib.rs"
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

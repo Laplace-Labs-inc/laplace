@@ -257,7 +257,7 @@ fn bench_abba_deadlock(c: &mut Criterion) {
     // Classic DPOR
     group.bench_function("classic", |b| {
         b.iter(|| {
-            let dpor = DporScheduler::new(2);
+            let dpor = DporScheduler::new(2).expect("valid thread count");
             let (states, backtracks, deadlock) =
                 run_classic_exploration(dpor, 2, 2, abba_operation, 100);
 
@@ -287,7 +287,7 @@ fn bench_dining_philosophers(c: &mut Criterion) {
         // Classic DPOR
         group.bench_with_input(BenchmarkId::new("classic", n), n, |b, &n| {
             b.iter(|| {
-                let dpor = DporScheduler::new(n);
+                let dpor = DporScheduler::new(n).expect("valid thread count");
                 let (states, backtracks, _) = run_classic_exploration(
                     dpor,
                     n,
@@ -326,7 +326,7 @@ fn bench_independent_operations(c: &mut Criterion) {
         // Classic DPOR
         group.bench_with_input(BenchmarkId::new("classic", n), n, |b, &n| {
             b.iter(|| {
-                let dpor = DporScheduler::new(n);
+                let dpor = DporScheduler::new(n).expect("valid thread count");
                 let (states, backtracks, _) =
                     run_classic_exploration(dpor, n, n, independent_op, 1000);
 
@@ -356,7 +356,7 @@ fn bench_sequential_bottleneck(c: &mut Criterion) {
         // Classic DPOR
         group.bench_with_input(BenchmarkId::new("classic", n), n, |b, &n| {
             b.iter(|| {
-                let dpor = DporScheduler::new(n);
+                let dpor = DporScheduler::new(n).expect("valid thread count");
                 let (states, backtracks, _) = run_classic_exploration(
                     dpor,
                     n,

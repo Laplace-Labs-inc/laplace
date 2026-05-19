@@ -314,56 +314,63 @@ pub fn make_client_endpoint(
 ) -> Result<quinn::Endpoint, MeshAgentError> {
     let _ = rustls::crypto::ring::default_provider().install_default();
 
-    use rustls::client::danger::{HandshakeSignatureValid, ServerCertVerified};
-    use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
-    use rustls::{DigitallySignedStruct, SignatureScheme};
-
+    #[cfg(any(test, feature = "dev_insecure_tls"))]
     #[derive(Debug)]
     struct SkipVerify;
 
+    #[cfg(any(test, feature = "dev_insecure_tls"))]
     impl rustls::client::danger::ServerCertVerifier for SkipVerify {
         fn verify_server_cert(
             &self,
-            _: &CertificateDer<'_>,
-            _: &[CertificateDer<'_>],
-            _: &ServerName<'_>,
+            _: &rustls::pki_types::CertificateDer<'_>,
+            _: &[rustls::pki_types::CertificateDer<'_>],
+            _: &rustls::pki_types::ServerName<'_>,
             _: &[u8],
-            _: UnixTime,
-        ) -> Result<ServerCertVerified, rustls::Error> {
-            Ok(ServerCertVerified::assertion())
+            _: rustls::pki_types::UnixTime,
+        ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
+            Ok(rustls::client::danger::ServerCertVerified::assertion())
         }
         fn verify_tls12_signature(
             &self,
             _: &[u8],
-            _: &CertificateDer<'_>,
-            _: &DigitallySignedStruct,
-        ) -> Result<HandshakeSignatureValid, rustls::Error> {
-            Ok(HandshakeSignatureValid::assertion())
+            _: &rustls::pki_types::CertificateDer<'_>,
+            _: &rustls::DigitallySignedStruct,
+        ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+            Ok(rustls::client::danger::HandshakeSignatureValid::assertion())
         }
         fn verify_tls13_signature(
             &self,
             _: &[u8],
-            _: &CertificateDer<'_>,
-            _: &DigitallySignedStruct,
-        ) -> Result<HandshakeSignatureValid, rustls::Error> {
-            Ok(HandshakeSignatureValid::assertion())
+            _: &rustls::pki_types::CertificateDer<'_>,
+            _: &rustls::DigitallySignedStruct,
+        ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
+            Ok(rustls::client::danger::HandshakeSignatureValid::assertion())
         }
-        fn supported_verify_schemes(&self) -> Vec<SignatureScheme> {
+        fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
             vec![
-                SignatureScheme::RSA_PKCS1_SHA256,
-                SignatureScheme::RSA_PKCS1_SHA384,
-                SignatureScheme::RSA_PKCS1_SHA512,
-                SignatureScheme::ECDSA_NISTP256_SHA256,
-                SignatureScheme::ECDSA_NISTP384_SHA384,
-                SignatureScheme::ED25519,
+                rustls::SignatureScheme::RSA_PKCS1_SHA256,
+                rustls::SignatureScheme::RSA_PKCS1_SHA384,
+                rustls::SignatureScheme::RSA_PKCS1_SHA512,
+                rustls::SignatureScheme::ECDSA_NISTP256_SHA256,
+                rustls::SignatureScheme::ECDSA_NISTP384_SHA384,
+                rustls::SignatureScheme::ED25519,
             ]
         }
     }
 
+    #[cfg(any(test, feature = "dev_insecure_tls"))]
     let client_config = rustls::ClientConfig::builder()
         .dangerous()
         .with_custom_certificate_verifier(Arc::new(SkipVerify))
         .with_no_client_auth();
+
+    #[cfg(not(any(test, feature = "dev_insecure_tls")))]
+    let client_config = {
+        let roots = rustls::RootCertStore::empty();
+        rustls::ClientConfig::builder()
+            .with_root_certificates(roots)
+            .with_no_client_auth()
+    };
 
     let quinn_client_config = quinn::ClientConfig::new(Arc::new(
         quinn::crypto::rustls::QuicClientConfig::try_from(client_config)

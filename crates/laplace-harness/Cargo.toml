@@ -31,3 +31,7 @@ verification = [
     "laplace-core/verification",
 ]
 internal-audit = []
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

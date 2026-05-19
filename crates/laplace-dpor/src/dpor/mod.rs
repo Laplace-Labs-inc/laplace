@@ -56,6 +56,8 @@ pub mod classic;
 pub mod schedule;
 pub mod vector_clock;
 
+use static_assertions::const_assert;
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Constants
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -78,6 +80,9 @@ pub const MAX_THREADS: usize = 8;
 /// For typical verification workloads (verifying 3-5 concurrent components),
 /// 20 steps is sufficient to expose most concurrency bugs.
 pub const MAX_DEPTH: usize = 20;
+
+const_assert!(MAX_THREADS <= 64);
+const_assert!(MAX_DEPTH <= 1024);
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Public Re-exports: Classic DPOR
@@ -121,6 +126,6 @@ mod tests {
     fn test_module_structure() {
         // Verify that all expected types are exported
         let _vec_clock = VectorClock::new();
-        let _scheduler = DporScheduler::new(2);
+        let _scheduler = DporScheduler::new(2).expect("valid thread count");
     }
 }

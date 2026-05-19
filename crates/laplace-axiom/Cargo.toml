@@ -30,7 +30,7 @@ criterion = { version = "0.5", features = ["html_reports"] }
 tokio = { workspace = true }
 
 [features]
-default = ["twin"]
+default = ["twin", "verification"]
 twin = ["laplace-core/twin", "dep:quinn"]
 verification = ["laplace-core/verification"]
 engine = []
@@ -50,3 +50,7 @@ harness = false
 [[bench]]
 name = "simulation_bench"
 harness = false
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

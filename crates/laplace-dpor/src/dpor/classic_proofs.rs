@@ -474,7 +474,7 @@ fn proof_vector_clock_concurrent() {
 /// ```
 #[kani::proof]
 fn proof_dpor_dependency_logic() {
-    let scheduler = DporScheduler::new(2);
+    let scheduler = DporScheduler::new(2).expect("valid thread count");
 
     // Step 1: Thread 0 requests Resource 0
     let step1 = StepRecord {
@@ -539,7 +539,7 @@ fn proof_dpor_dependency_logic() {
 /// different threads are dependent.
 #[kani::proof]
 fn proof_dpor_dependency_all_combinations() {
-    let scheduler = DporScheduler::new(2);
+    let scheduler = DporScheduler::new(2).expect("valid thread count");
 
     let combinations = [
         (Operation::Request, Operation::Request),
@@ -579,7 +579,7 @@ fn proof_dpor_dependency_all_combinations() {
 /// Concurrency is the absence of a happens-before relationship in either direction.
 #[kani::proof]
 fn proof_dpor_concurrency_logic() {
-    let scheduler = DporScheduler::new(2);
+    let scheduler = DporScheduler::new(2).expect("valid thread count");
 
     let mut vc1 = VectorClock::new();
     let mut vc2 = VectorClock::new();
@@ -621,7 +621,7 @@ fn proof_dpor_concurrency_logic() {
 /// This establishes the starting point for correct DPOR exploration.
 #[kani::proof]
 fn proof_scheduler_initialization() {
-    let scheduler = DporScheduler::new(2);
+    let scheduler = DporScheduler::new(2).expect("valid thread count");
 
     assert_eq!(scheduler.current_depth(), 0, "Initial depth should be 0");
 
@@ -649,7 +649,7 @@ fn proof_scheduler_initialization() {
 #[kani::proof]
 #[kani::unwind(16)]
 fn proof_scheduler_depth_tracking() {
-    let mut scheduler = DporScheduler::new(2);
+    let mut scheduler = DporScheduler::new(2).expect("valid thread count");
 
     assert_eq!(scheduler.current_depth(), 0, "Initial depth is 0");
 
@@ -740,7 +740,7 @@ fn proof_step_record_metadata_preservation() {
 /// ```
 #[kani::proof]
 fn proof_sleep_set_wakeup_on_dependent_operation() {
-    let scheduler = DporScheduler::new(3);
+    let scheduler = DporScheduler::new(3).expect("valid thread count");
 
     // Model: Sleep Set at depth d as a TinyBitSet.
     // Thread 0: sleeping, pending op on Resource 0 — will be woken up.
@@ -843,7 +843,7 @@ fn proof_sleep_set_wakeup_on_dependent_operation() {
 /// ```
 #[kani::proof]
 fn proof_sleep_set_propagation_to_child_state() {
-    let scheduler = DporScheduler::new(4);
+    let scheduler = DporScheduler::new(4).expect("valid thread count");
 
     // Parent Sleep Set contains threads {0, 1, 2} at depth d.
     let mut parent_sleep = TinyBitSet::new(64);
@@ -965,7 +965,7 @@ fn proof_sleep_set_propagation_to_child_state() {
 #[kani::proof]
 #[kani::unwind(5)]
 fn proof_backtrack_expansion_on_race() {
-    let scheduler = DporScheduler::new(2);
+    let scheduler = DporScheduler::new(2).expect("valid thread count");
 
     // ── Case 1: Same resource, different threads → race → expand backtrack ──
     let race_step_a = StepRecord {

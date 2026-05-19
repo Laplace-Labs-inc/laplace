@@ -17,3 +17,7 @@ cloud = ["laplace-probe-sdk/cloud"]
 [dependencies]
 laplace-probe-sdk = { path = "../laplace-probe-sdk" }
 laplace-macro = { path = "../laplace-macro" }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

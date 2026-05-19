@@ -43,3 +43,7 @@ toml = "0.8"
 
 # parking_lot RwLock for reentrant read support
 parking_lot = { version = "0.12", optional = true }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

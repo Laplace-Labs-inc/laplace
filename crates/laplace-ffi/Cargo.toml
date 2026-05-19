@@ -1,6 +1,6 @@
 [package]
 name = "laplace-ffi"
-version = "0.1.0"
+version.workspace = true
 edition = "2021"
 description = "Laplace FFI barrier for Wasm/native interop"
 license = "Apache-2.0"
@@ -8,3 +8,7 @@ license = "Apache-2.0"
 [dependencies]
 laplace-interfaces = { path = "../laplace-interfaces" }
 laplace-probe-common = { path = "../laplace-probe-common" }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

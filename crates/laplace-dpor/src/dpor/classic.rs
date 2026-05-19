@@ -6,6 +6,7 @@
 
 use super::vector_clock::VectorClock;
 use super::{MAX_DEPTH, MAX_THREADS};
+use crate::error::LaplaceError;
 use laplace_interfaces::domain::resource::{ResourceId, ThreadId};
 use std::fmt;
 
@@ -287,9 +288,9 @@ impl DporScheduler {
     ///
     /// * `num_threads` - Number of threads to schedule (must be <= 64)
     ///
-    /// # Panics
+    /// # Errors
     ///
-    /// Panics if `num_threads > MAX_THREADS` or `num_threads > 64`
+    /// Returns [`LaplaceError::ResourceLimit`] if `num_threads` exceeds DPOR limits.
     ///
     /// # TLA+ Correspondence
     ///
@@ -302,13 +303,21 @@ impl DporScheduler {
     ///     /\ done_sets = [d \in 0..MaxDepth |-> {}]
     ///     /\ clock_vectors = [t1 \in Threads |-> [t2 \in Threads |-> 0]]
     /// ```
-    pub fn new(num_threads: usize) -> Self {
-        assert!(
-            num_threads <= MAX_THREADS,
-            "Too many threads: {}",
-            num_threads
-        );
-        assert!(num_threads <= 64, "TinyBitSet supports max 64 threads");
+    pub fn new(num_threads: usize) -> Result<Self, LaplaceError> {
+        if num_threads > MAX_THREADS {
+            return Err(LaplaceError::ResourceLimit {
+                resource: "threads",
+                limit: MAX_THREADS,
+                requested: num_threads,
+            });
+        }
+        if num_threads > 64 {
+            return Err(LaplaceError::ResourceLimit {
+                resource: "threads",
+                limit: 64,
+                requested: num_threads,
+            });
+        }
 
         // Initialize backtrack_sets with first depth containing all threads
         let mut backtrack_sets = Vec::with_capacity(MAX_DEPTH);
@@ -325,14 +334,14 @@ impl DporScheduler {
         // Initialize vector clocks
         let clock_vectors = vec![VectorClock::new(); num_threads];
 
-        Self {
+        Ok(Self {
             stack: Vec::with_capacity(MAX_DEPTH),
             backtrack_sets,
             done_sets,
             clock_vectors,
             num_threads,
             stats: DporStats::default(),
-        }
+        })
     }
 
     /// Get the current depth in the exploration tree
@@ -389,8 +398,22 @@ impl DporScheduler {
     ///         ELSE backtrack_sets[d]
     ///     ]
     /// ```
-    pub fn commit_step(&mut self, thread: ThreadId, operation: Operation, resource: ResourceId) {
+    pub fn commit_step(
+        &mut self,
+        thread: ThreadId,
+        operation: Operation,
+        resource: ResourceId,
+    ) -> Result<(), LaplaceError> {
         let depth = self.current_depth();
+        let next_depth = depth + 1;
+
+        if next_depth >= MAX_DEPTH {
+            return Err(LaplaceError::ResourceLimit {
+                resource: "depth",
+                limit: MAX_DEPTH,
+                requested: next_depth,
+            });
+        }
 
         // Ensure we have sets for current depth
         while self.backtrack_sets.len() <= depth {
@@ -439,29 +462,28 @@ impl DporScheduler {
         // Initialize NEXT depth (critical for AB-BA deadlock detection!)
         // We are entering a new node in the state space.
         // We must ensure the sets for next_depth are clean and initialized.
-        let next_depth = depth + 1;
-        if next_depth < MAX_DEPTH {
-            // Ensure capacity
-            while self.backtrack_sets.len() <= next_depth {
-                self.backtrack_sets.push(TinyBitSet::new(self.num_threads));
-            }
-            while self.done_sets.len() <= next_depth {
-                self.done_sets.push(TinyBitSet::new(self.num_threads));
-            }
+        // Ensure capacity
+        while self.backtrack_sets.len() <= next_depth {
+            self.backtrack_sets.push(TinyBitSet::new(self.num_threads));
+        }
+        while self.done_sets.len() <= next_depth {
+            self.done_sets.push(TinyBitSet::new(self.num_threads));
+        }
 
-            // CLEAR stale data from previous explorations at this depth
-            self.backtrack_sets[next_depth].clear();
-            self.done_sets[next_depth].clear();
+        // CLEAR stale data from previous explorations at this depth
+        self.backtrack_sets[next_depth].clear();
+        self.done_sets[next_depth].clear();
 
-            // Add all threads to next depth's backtrack set (Conservative DPOR)
-            for t in 0..self.num_threads {
-                self.backtrack_sets[next_depth].insert(t);
-            }
+        // Add all threads to next depth's backtrack set (Conservative DPOR)
+        for t in 0..self.num_threads {
+            self.backtrack_sets[next_depth].insert(t);
         }
 
         // Update stats
         self.stats.explored_states += 1;
         self.stats.max_depth = self.stats.max_depth.max(depth + 1);
+
+        Ok(())
     }
 
     /// Backtrack to previous depth
@@ -675,23 +697,25 @@ mod tests {
 
     #[test]
     fn test_scheduler_init() {
-        let scheduler = DporScheduler::new(3);
+        let scheduler = DporScheduler::new(3).expect("valid thread count");
         assert_eq!(scheduler.current_depth(), 0);
         assert_eq!(scheduler.num_threads, 3);
     }
 
     #[test]
     fn test_next_step() {
-        let mut scheduler = DporScheduler::new(2);
+        let mut scheduler = DporScheduler::new(2).expect("valid thread count");
         let thread = scheduler.next_step();
         assert!(thread.is_some());
     }
 
     #[test]
     fn test_commit_step() {
-        let mut scheduler = DporScheduler::new(2);
+        let mut scheduler = DporScheduler::new(2).expect("valid thread count");
 
-        scheduler.commit_step(ThreadId(0), Operation::Request, ResourceId(0));
+        scheduler
+            .commit_step(ThreadId(0), Operation::Request, ResourceId(0))
+            .expect("within max depth");
 
         assert_eq!(scheduler.current_depth(), 1);
         assert_eq!(scheduler.stats().explored_states, 1);
@@ -699,9 +723,11 @@ mod tests {
 
     #[test]
     fn test_backtrack() {
-        let mut scheduler = DporScheduler::new(2);
+        let mut scheduler = DporScheduler::new(2).expect("valid thread count");
 
-        scheduler.commit_step(ThreadId(0), Operation::Request, ResourceId(0));
+        scheduler
+            .commit_step(ThreadId(0), Operation::Request, ResourceId(0))
+            .expect("within max depth");
         assert_eq!(scheduler.current_depth(), 1);
 
         scheduler.backtrack();
@@ -711,7 +737,7 @@ mod tests {
 
     #[test]
     fn test_dependency_detection() {
-        let scheduler = DporScheduler::new(2);
+        let scheduler = DporScheduler::new(2).expect("valid thread count");
 
         let step1 = StepRecord {
             thread: ThreadId(0),
@@ -740,6 +766,44 @@ mod tests {
         };
 
         assert!(!scheduler.is_dependent(&step1, &step3));
+    }
+
+    #[test]
+    fn test_scheduler_thread_limit_error() {
+        let err = match DporScheduler::new(MAX_THREADS + 1) {
+            Ok(_) => panic!("thread limit should fail"),
+            Err(err) => err,
+        };
+        assert_eq!(
+            err,
+            LaplaceError::ResourceLimit {
+                resource: "threads",
+                limit: MAX_THREADS,
+                requested: MAX_THREADS + 1,
+            }
+        );
+    }
+
+    #[test]
+    fn test_commit_step_depth_limit_error() {
+        let mut scheduler = DporScheduler::new(1).expect("valid thread count");
+        for _ in 1..MAX_DEPTH {
+            scheduler
+                .commit_step(ThreadId(0), Operation::Request, ResourceId(0))
+                .expect("within max depth");
+        }
+
+        let err = scheduler
+            .commit_step(ThreadId(0), Operation::Request, ResourceId(0))
+            .expect_err("depth limit should fail");
+        assert_eq!(
+            err,
+            LaplaceError::ResourceLimit {
+                resource: "depth",
+                limit: MAX_DEPTH,
+                requested: MAX_DEPTH,
+            }
+        );
     }
 
     #[test]

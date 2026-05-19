@@ -24,3 +24,7 @@ postgres    = { version = "0.19", optional = true }
 [features]
 default = []
 db-ingest = ["dep:postgres"]
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

@@ -8,6 +8,7 @@
 //! Query:   verdict/stats/is_complete — &self, side-effect 없음
 
 use laplace_interfaces::AxiomConfig;
+use std::fmt;
 
 use crate::oracle::{OracleConfig, OracleVerdict};
 
@@ -15,7 +16,6 @@ use crate::oracle::{OracleConfig, OracleVerdict};
 
 /// VerificationSession::run()에 전달하는 불변 설정값.
 /// Command 호출 전 완전히 구성되어야 한다.
-#[derive(Debug, Clone)]
 pub struct VerificationConfig {
     /// ARD 헤더 및 로그 레이블.
     pub target_id: String,
@@ -28,13 +28,30 @@ pub struct VerificationConfig {
     /// ARD 파일 쓰기 여부. feature = "engine" 가 없으면 무시된다.
     pub write_ard: bool,
     /// (thread_idx, pc) → (Operation, ResourceId) 매핑. HarnessConfig에서 주입.
-    pub op_provider: fn(
-        laplace_core::domain::resource::ThreadId,
-        usize,
-    ) -> Option<(
-        laplace_dpor::Operation,
-        laplace_core::domain::resource::ResourceId,
-    )>,
+    pub op_provider: Box<
+        dyn FnMut(
+            laplace_core::domain::resource::ThreadId,
+            usize,
+        ) -> Option<(
+            laplace_dpor::Operation,
+            laplace_core::domain::resource::ResourceId,
+        )>,
+    >,
+}
+
+impl fmt::Debug for VerificationConfig {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("VerificationConfig")
+            .field("target_id", &self.target_id)
+            .field("num_threads", &self.num_threads)
+            .field("num_resources", &self.num_resources)
+            .field("max_depth", &self.max_depth)
+            .field("axiom_seed", &self.axiom_seed)
+            .field("output_dir", &self.output_dir)
+            .field("write_ard", &self.write_ard)
+            .field("op_provider", &"<FnMut>")
+            .finish()
+    }
 }
 
 impl VerificationConfig {
@@ -53,7 +70,7 @@ impl VerificationConfig {
             axiom_seed: AxiomConfig::default().default_seed,
             output_dir: ".".to_string(),
             write_ard,
-            op_provider: h.op_provider,
+            op_provider: Box::new(h.op_provider),
         }
     }
 }
@@ -96,7 +113,7 @@ impl VerificationSession {
     ///
     /// [Ghost Constraint]: async fn 금지. tokio::task::spawn_blocking 불필요.
     #[cfg(all(feature = "twin", feature = "verification"))]
-    pub fn run(&mut self, config: VerificationConfig) {
+    pub fn run(&mut self, mut config: VerificationConfig) {
         use crate::oracle::AxiomOracle;
         use crate::simulation::TwinSimulatorBuilder;
         use laplace_core::domain::memory::{Address, CoreId, Value};
@@ -130,7 +147,7 @@ impl VerificationSession {
             &config.target_id,
             &mut simulator,
             config.max_depth,
-            config.op_provider,
+            &mut *config.op_provider,
             |_sim| None,
         );
 
