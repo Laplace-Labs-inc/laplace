@@ -115,7 +115,10 @@ fn bench_init(c: &mut Criterion) {
         let mut backend = make_prod(4, 256);
         populate_main(&mut backend, 256);
         group.bench_function("clear_all_production", |b| {
-            b.iter(|| black_box(backend.clear_all()))
+            b.iter(|| {
+                backend.clear_all();
+                black_box(());
+            })
         });
     }
 
@@ -139,9 +142,8 @@ fn bench_read_write(c: &mut Criterion) {
         let mut backend = make_prod(2, 64);
         group.bench_function("main_write/production", |b| {
             b.iter(|| {
-                black_box(
-                    backend.write_main(black_box(Address::new(0x1000)), black_box(Value::new(42))),
-                )
+                backend.write_main(black_box(Address::new(0x1000)), black_box(Value::new(42)));
+                black_box(());
             })
         });
     }
@@ -170,7 +172,8 @@ fn bench_read_write(c: &mut Criterion) {
         let mut backend = make_veri();
         group.bench_function("main_write/verification", |b| {
             b.iter(|| {
-                black_box(backend.write_main(black_box(Address::new(0)), black_box(Value::new(99))))
+                backend.write_main(black_box(Address::new(0)), black_box(Value::new(99)));
+                black_box(());
             })
         });
     }

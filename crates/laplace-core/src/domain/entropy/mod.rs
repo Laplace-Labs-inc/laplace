@@ -332,7 +332,7 @@ mod tests {
 
         for (i, &count) in counts.iter().enumerate() {
             assert!(
-                count >= 800 && count <= 1200,
+                (800..=1200).contains(&count),
                 "Slot {} had {} occurrences (expected ~1000)",
                 i,
                 count

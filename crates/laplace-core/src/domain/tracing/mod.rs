@@ -145,7 +145,9 @@ mod tests {
         let _fence = FenceType::SeqCst;
 
         // Verify constants are accessible
-        assert!(MAX_THREADS > 0);
-        assert!(DEFAULT_MAX_EVENTS > 0);
+        let max_threads = std::hint::black_box(MAX_THREADS);
+        let default_max_events = std::hint::black_box(DEFAULT_MAX_EVENTS);
+        assert!(max_threads > 0);
+        assert!(default_max_events > 0);
     }
 }

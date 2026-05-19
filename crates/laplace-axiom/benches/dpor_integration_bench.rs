@@ -58,7 +58,8 @@ fn run_cross_transfer(max_iterations: usize) -> (usize, bool) {
     let mut iterations = 0;
 
     while !scheduler.is_complete() && iterations < max_iterations {
-        if scheduler.next_state().is_some() {
+        scheduler.advance();
+        if scheduler.current().is_some() {
             scheduler.expand_current(cross_transfer_op);
         }
         iterations += 1;
@@ -120,7 +121,8 @@ fn bench_evasion_latency(c: &mut Criterion) {
             |mut scheduler| {
                 let mut iterations = 0usize;
                 while !scheduler.is_complete() && iterations < 1_000 {
-                    if scheduler.next_state().is_some() {
+                    scheduler.advance();
+                    if scheduler.current().is_some() {
                         scheduler.expand_current(cross_transfer_op);
                     }
                     iterations += 1;

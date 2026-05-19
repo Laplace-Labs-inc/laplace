@@ -455,7 +455,7 @@ mod tests {
 
         let deserialized: TransactionLog = serde_json::from_str(&json).unwrap();
         assert_eq!(deserialized.request_id, "req-789");
-        assert_eq!(deserialized.is_turbo, true);
+        assert!(deserialized.is_turbo);
         assert_eq!(deserialized.turbo_slot_index, Some(5));
         assert_eq!(deserialized.duration_us, Some(350));
     }

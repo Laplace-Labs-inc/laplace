@@ -4,9 +4,9 @@
 //! Smoke Test — End-to-end verification of Laplace core product pipeline.
 //!
 //! This crate provides library-level testing of:
-//! 1. **Verification**: All 18 registered harnesses via AxiomOracle
+//! 1. **Verification**: All 18 registered harnesses via `AxiomOracle`
 //! 2. **Forensics**: ARD (Axiom Report Dump) file generation and lifecycle
-//! 3. **Depth Control**: max_depth parameter enforcement
+//! 3. **Depth Control**: `max_depth` parameter enforcement
 
 pub use laplace_axiom::oracle::OracleVerdict;
 
@@ -18,10 +18,10 @@ use laplace_harness::registry::{HarnessConfig, Registry};
 /// Run a single harness and return its verdict.
 ///
 /// This function mirrors the pattern from `laplace-cli/src/commands/verify.rs:run_harness()`.
-/// It creates a TwinSimulator, seeds its memory, and runs the harness through AxiomOracle.
+/// It creates a `TwinSimulator`, seeds its memory, and runs the harness through `AxiomOracle`.
 ///
 /// # Parameters
-/// - `name`: Harness name (e.g., "template_harness", "resource_abba_deadlock")
+/// - `name`: Harness name (e.g., "`template_harness`", "`resource_abba_deadlock`")
 /// - `max_depth`: DPOR exploration budget
 /// - `write_ard`: Whether to write .ard files on bug discovery
 /// - `output_dir`: Directory for .ard output
@@ -31,6 +31,7 @@ use laplace_harness::registry::{HarnessConfig, Registry};
 ///
 /// # Panics
 /// Panics if harness is not found in registry.
+#[must_use]
 pub fn run_harness_smoke(
     name: &str,
     max_depth: usize,
@@ -38,7 +39,7 @@ pub fn run_harness_smoke(
     output_dir: &str,
 ) -> OracleVerdict {
     let resolved =
-        Registry::get(name).unwrap_or_else(|_| panic!("Harness '{}' not found in registry", name));
+        Registry::get(name).unwrap_or_else(|_| panic!("Harness '{name}' not found in registry"));
 
     // Create TwinSimulator with appropriate thread and resource counts
     let mut simulator = TwinSimulatorBuilder::new()
@@ -78,11 +79,13 @@ pub fn run_harness_smoke(
 }
 
 /// Collect all harness configs from registry.
+#[must_use]
 pub fn get_all_harnesses() -> Vec<(&'static str, HarnessConfig)> {
     Registry::get_all()
 }
 
-/// Convert expected verdict string to OracleVerdict for comparison.
+/// Convert expected verdict string to `OracleVerdict` for comparison.
+#[must_use]
 pub fn parse_expected(expected: &str) -> Option<&str> {
     match expected {
         "clean" | "bug" => Some(expected),
@@ -91,12 +94,12 @@ pub fn parse_expected(expected: &str) -> Option<&str> {
 }
 
 /// Check if verdict matches expected result.
+#[must_use]
 pub fn verdict_matches_expected(verdict: &OracleVerdict, expected: &str) -> bool {
-    match (verdict, expected) {
-        (OracleVerdict::Clean, "clean") => true,
-        (OracleVerdict::BugFound { .. }, "bug") => true,
-        _ => false,
-    }
+    matches!(
+        (verdict, expected),
+        (OracleVerdict::Clean, "clean") | (OracleVerdict::BugFound { .. }, "bug")
+    )
 }
 
 #[cfg(test)]
@@ -115,8 +118,7 @@ mod tests {
         let verdict = run_harness_smoke("template_harness", 1000, false, ".");
         assert!(
             verdict_matches_expected(&verdict, "clean"),
-            "template_harness should be CLEAN, got {:?}",
-            verdict
+            "template_harness should be CLEAN, got {verdict:?}"
         );
     }
 }

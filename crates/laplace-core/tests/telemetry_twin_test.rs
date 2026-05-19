@@ -207,16 +207,13 @@ async fn telemetry_snapshot_consistency() {
             );
             // Every element in the snapshot must be a valid, fully-formed event
             for event in &snap {
-                match event {
-                    TelemetryEvent::StateChanged(ctx, state) => {
-                        // Both fields must be coherent (non-empty state name)
-                        let _ = ctx.as_u64();
-                        assert!(
-                            !state.is_empty(),
-                            "State name must not be empty (torn read)"
-                        );
-                    }
-                    _ => {} // other variants are always valid
+                if let TelemetryEvent::StateChanged(ctx, state) = event {
+                    // Both fields must be coherent (non-empty state name)
+                    let _ = ctx.as_u64();
+                    assert!(
+                        !state.is_empty(),
+                        "State name must not be empty (torn read)"
+                    );
                 }
             }
         }

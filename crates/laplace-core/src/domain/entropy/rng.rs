@@ -281,7 +281,7 @@ mod tests {
         let mut rng = make_rng(1, 12345);
         for _ in 0..100 {
             let val = rng.next_range_inclusive(10, 20);
-            assert!(val >= 10 && val < 20);
+            assert!((10..20).contains(&val));
         }
     }
 

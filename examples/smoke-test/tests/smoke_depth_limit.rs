@@ -1,17 +1,17 @@
 #![deny(clippy::all, clippy::pedantic)]
 
-//! Smoke Test: max_depth parameter enforcement.
+//! Smoke Test: `max_depth` parameter enforcement.
 //!
-//! Verifies that the max_depth parameter correctly limits DPOR exploration:
-//! - Low max_depth may prevent bug discovery
-//! - max_depth=0 should return Clean immediately
-//! - Higher max_depth allows deeper exploration
+//! Verifies that the `max_depth` parameter correctly limits DPOR exploration:
+//! - Low `max_depth` may prevent bug discovery
+//! - `max_depth=0` should return Clean immediately
+//! - Higher `max_depth` allows deeper exploration
 
 use smoke_test::{run_harness_smoke, verdict_matches_expected, OracleVerdict};
 
-/// Verify that max_depth=0 always returns Clean (no exploration).
+/// Verify that `max_depth=0` always returns Clean (no exploration).
 ///
-/// With max_depth=0, DPOR should not execute any steps.
+/// With `max_depth=0`, DPOR should not execute any steps.
 /// Therefore, all harnesses should return Clean verdict.
 #[test]
 fn smoke_max_depth_zero_returns_clean() {
@@ -20,20 +20,19 @@ fn smoke_max_depth_zero_returns_clean() {
 
     assert!(
         verdict_matches_expected(&verdict, "clean"),
-        "max_depth=0 should always return clean (no exploration), got {:?}",
-        verdict
+        "max_depth=0 should always return clean (no exploration), got {verdict:?}"
     );
 }
 
-/// Verify that low max_depth constrains exploration.
+/// Verify that low `max_depth` constrains exploration.
 ///
-/// This test runs a harness with two different max_depth values:
+/// This test runs a harness with two different `max_depth` values:
 /// - Low depth (e.g., 5): May not find bugs due to search constraints
 /// - High depth (e.g., 10000): Should find bugs if they exist
 ///
-/// GHOST CONSTRAINT: We cannot assert that low_depth == Clean, because
+/// GHOST CONSTRAINT: We cannot assert that `low_depth` == Clean, because
 /// efficient DPOR might find bugs in very few steps. Instead, we verify
-/// that max_depth affects the search space.
+/// that `max_depth` affects the search space.
 #[test]
 fn smoke_max_depth_limits_exploration() {
     let harness_name = "resource_abba_deadlock";
@@ -58,16 +57,13 @@ fn smoke_max_depth_limits_exploration() {
         }
     }
 
-    println!(
-        "Low budget verdict: {:?}, High budget verdict: {:?}",
-        low_verdict, high_verdict
-    );
+    println!("Low budget verdict: {low_verdict:?}, High budget verdict: {high_verdict:?}");
 }
 
-/// Verify that Clean harness remains clean even with max_depth=0.
+/// Verify that Clean harness remains clean even with `max_depth=0`.
 ///
 /// This is a sanity check: Clean harnesses should never produce bugs
-/// regardless of max_depth.
+/// regardless of `max_depth`.
 #[test]
 fn smoke_max_depth_zero_clean_harness() {
     let verdict = run_harness_smoke("template_harness", 0, false, ".");
@@ -80,7 +76,7 @@ fn smoke_max_depth_zero_clean_harness() {
 
 /// Verify that normal depth (500) finds bugs reliably.
 ///
-/// This establishes a baseline: with reasonable max_depth,
+/// This establishes a baseline: with reasonable `max_depth`,
 /// bug-finding harnesses should consistently find bugs.
 #[test]
 fn smoke_max_depth_500_finds_bugs() {

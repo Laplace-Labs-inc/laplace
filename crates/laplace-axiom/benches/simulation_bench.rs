@@ -4,15 +4,15 @@
 //! Measures the performance of `domain::simulation` module components:
 //!
 //! - `simulation/init`       — Builder construction: `ProductionSimulatorBuilder`,
-//!                             `VerificationSimulatorBuilder`, with and without tracer.
+//!   `VerificationSimulatorBuilder`, with and without tracer.
 //! - `simulation/step`       — Single `step()` call with 1 pre-queued event.
-//!                             Compares MemoryWriteSync, MemoryFence, and passthrough
-//!                             (`Test`) payloads across production and verification engines.
+//!   Compares MemoryWriteSync, MemoryFence, and passthrough
+//!   (`Test`) payloads across production and verification engines.
 //! - `simulation/batch`      — `run_until_idle()` throughput with 10 / 100 / 1000 events
-//!                             for production; 4 events for verification (backend limit).
+//!   for production; 4 events for verification (backend limit).
 //! - `simulation/reset`      — `reset()` cost on a fresh vs. post-run simulator.
 //! - `simulation/dispatcher` — Direct `EventDispatcher` construction and `process_event` /
-//!                             `process_all` calls, isolating the ZST routing overhead.
+//!   `process_all` calls, isolating the ZST routing overhead.
 //!
 //! **Zero-Implementation Rule**: all benchmarks call only the existing public API.
 //! No custom scheduling logic, no OS thread spawning, no external event loops.
@@ -40,7 +40,7 @@ use laplace_core::domain::time::EventPayload;
 /// and up to 256 unique addresses.
 fn prod_sim_with_writes(n: usize) -> ProductionSimulator {
     let cores = 4usize;
-    let buf = (n.max(1) + cores - 1) / cores; // ceil(n / cores)
+    let buf = n.max(1).div_ceil(cores);
     let mut sim = ProductionSimulatorBuilder::new()
         .num_cores(cores)
         .buffer_size(buf)
@@ -247,7 +247,7 @@ fn bench_simulation_step(c: &mut Criterion) {
     // (Fence is scheduled before WriteSync events so buffer is non-empty at dispatch time)
     group.bench_function("step/prod/fence", |b| {
         b.iter_batched(
-            || prod_sim_with_early_fence(),
+            prod_sim_with_early_fence,
             |mut sim| black_box(sim.step()),
             BatchSize::SmallInput,
         )
@@ -257,7 +257,7 @@ fn bench_simulation_step(c: &mut Criterion) {
     // Proves zero-cost "assembly-level" routing overhead for passthrough events
     group.bench_function("step/prod/passthrough", |b| {
         b.iter_batched(
-            || prod_sim_with_passthrough(),
+            prod_sim_with_passthrough,
             |mut sim| black_box(sim.step()),
             BatchSize::SmallInput,
         )
@@ -275,7 +275,7 @@ fn bench_simulation_step(c: &mut Criterion) {
 
     group.bench_function("step/verif/fence", |b| {
         b.iter_batched(
-            || verif_sim_with_early_fence(),
+            verif_sim_with_early_fence,
             |mut sim| black_box(sim.step()),
             BatchSize::SmallInput,
         )
@@ -283,7 +283,7 @@ fn bench_simulation_step(c: &mut Criterion) {
 
     group.bench_function("step/verif/passthrough", |b| {
         b.iter_batched(
-            || verif_sim_with_passthrough(),
+            verif_sim_with_passthrough,
             |mut sim| black_box(sim.step()),
             BatchSize::SmallInput,
         )
@@ -358,7 +358,10 @@ fn bench_simulation_reset(c: &mut Criterion) {
                     .buffer_size(2)
                     .build()
             },
-            |mut sim| black_box(sim.reset()),
+            |mut sim| {
+                sim.reset();
+                black_box(());
+            },
             BatchSize::SmallInput,
         )
     });
@@ -371,7 +374,10 @@ fn bench_simulation_reset(c: &mut Criterion) {
                 sim.run_until_idle();
                 sim
             },
-            |mut sim| black_box(sim.reset()),
+            |mut sim| {
+                sim.reset();
+                black_box(());
+            },
             BatchSize::SmallInput,
         )
     });
@@ -380,8 +386,11 @@ fn bench_simulation_reset(c: &mut Criterion) {
 
     group.bench_function("reset/verif/empty", |b| {
         b.iter_batched(
-            || VerificationSimulatorBuilder::build(),
-            |mut sim| black_box(sim.reset()),
+            VerificationSimulatorBuilder::build,
+            |mut sim| {
+                sim.reset();
+                black_box(());
+            },
             BatchSize::SmallInput,
         )
     });
@@ -393,7 +402,10 @@ fn bench_simulation_reset(c: &mut Criterion) {
                 sim.run_until_idle();
                 sim
             },
-            |mut sim| black_box(sim.reset()),
+            |mut sim| {
+                sim.reset();
+                black_box(());
+            },
             BatchSize::SmallInput,
         )
     });
@@ -434,7 +446,7 @@ fn bench_simulation_dispatcher(c: &mut Criterion) {
     // Direct process_event with passthrough payload — zero-cost routing proof
     group.bench_function("process_event/prod/passthrough", |b| {
         b.iter_batched(
-            || prod_sim_with_passthrough(),
+            prod_sim_with_passthrough,
             |mut sim| black_box(dispatcher.process_event(sim.memory_mut())),
             BatchSize::SmallInput,
         )
@@ -461,7 +473,7 @@ fn bench_simulation_dispatcher(c: &mut Criterion) {
     // Direct process_event with verification passthrough
     group.bench_function("process_event/verif/passthrough", |b| {
         b.iter_batched(
-            || verif_sim_with_passthrough(),
+            verif_sim_with_passthrough,
             |mut sim| black_box(dispatcher.process_event(sim.memory_mut())),
             BatchSize::SmallInput,
         )

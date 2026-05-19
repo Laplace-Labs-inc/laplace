@@ -207,7 +207,10 @@ fn bench_resource_tracking(c: &mut Criterion) {
                 t.request(ThreadId(0), ResourceId(0)).unwrap();
                 t
             },
-            |mut t| black_box(t.release(ThreadId(0), ResourceId(0)).unwrap()),
+            |mut t| {
+                t.release(ThreadId(0), ResourceId(0)).unwrap();
+                black_box(());
+            },
             BatchSize::SmallInput,
         )
     });
@@ -221,7 +224,8 @@ fn bench_resource_tracking(c: &mut Criterion) {
             |mut t| {
                 t.request(ThreadId(0), ResourceId(0)).unwrap();
                 t.release(ThreadId(0), ResourceId(0)).unwrap();
-                black_box(t.on_finish(ThreadId(0)).unwrap())
+                t.on_finish(ThreadId(0)).unwrap();
+                black_box(());
             },
             BatchSize::SmallInput,
         )
@@ -341,7 +345,10 @@ fn bench_resource_contention(c: &mut Criterion) {
         group.bench_with_input(BenchmarkId::new("release_wake_waiter", n), &n, |b, &n| {
             b.iter_batched(
                 || tracker_with_n_waiters(n),
-                |mut t| black_box(t.release(ThreadId(0), ResourceId(0)).unwrap()),
+                |mut t| {
+                    t.release(ThreadId(0), ResourceId(0)).unwrap();
+                    black_box(());
+                },
                 BatchSize::SmallInput,
             )
         });
@@ -353,7 +360,7 @@ fn bench_resource_contention(c: &mut Criterion) {
     // so DFS terminates exhausting all paths.  Measures the graph-scan overhead.
     for n in WAITER_COUNTS {
         let tracker = tracker_with_n_waiters(n);
-        group.bench_function(&format!("has_deadlock/waiters_{}", n), |b| {
+        group.bench_function(format!("has_deadlock/waiters_{}", n), |b| {
             b.iter(|| black_box(tracker.has_deadlock()))
         });
     }
@@ -364,7 +371,7 @@ fn bench_resource_contention(c: &mut Criterion) {
     // With N waiters all on resource 0, the sum equals N.
     for n in WAITER_COUNTS {
         let tracker = tracker_with_n_waiters(n);
-        group.bench_function(&format!("contention_score/waiters_{}", n), |b| {
+        group.bench_function(format!("contention_score/waiters_{}", n), |b| {
             b.iter(|| black_box(tracker.contention_score()))
         });
     }
@@ -375,7 +382,7 @@ fn bench_resource_contention(c: &mut Criterion) {
     // is a trivial load; we measure it after N blocks to match real workloads.
     for n in WAITER_COUNTS {
         let tracker = tracker_with_n_waiters(n);
-        group.bench_function(&format!("interleaving_score/after_{}_blocks", n), |b| {
+        group.bench_function(format!("interleaving_score/after_{}_blocks", n), |b| {
             b.iter(|| black_box(tracker.interleaving_score()))
         });
     }

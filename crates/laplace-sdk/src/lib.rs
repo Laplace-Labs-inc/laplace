@@ -63,52 +63,52 @@ pub use laplace_macro::laplace_meta;
 
 // ── Tracked 프리미티브 재수출 ────────────────────────────────────────────────
 
-/// Async-based Mutex wrapper with automatic event tracking.
+/// Async-based `Mutex` wrapper with automatic event tracking.
 pub use laplace_probe_sdk::TrackedMutex;
 
-/// Read guard for TrackedMutex (Deref only).
+/// Read guard for `TrackedMutex` (`Deref` only).
 pub use laplace_probe_sdk::TrackedGuard;
 
-/// Sync-based Mutex wrapper with automatic event tracking.
+/// Sync-based `Mutex` wrapper with automatic event tracking.
 pub use laplace_probe_sdk::TrackedStdMutex;
 
-/// Read guard for TrackedStdMutex (Deref only).
+/// Read guard for `TrackedStdMutex` (`Deref` only).
 pub use laplace_probe_sdk::TrackedStdGuard;
 
-/// Async-based RwLock wrapper with automatic event tracking.
+/// Async-based `RwLock` wrapper with automatic event tracking.
 pub use laplace_probe_sdk::TrackedRwLock;
 
-/// Shared (read) guard for TrackedRwLock (Deref only).
+/// Shared (read) guard for `TrackedRwLock` (`Deref` only).
 pub use laplace_probe_sdk::TrackedRwLockReadGuard;
 
-/// Exclusive (write) guard for TrackedRwLock (Deref + DerefMut).
+/// Exclusive (write) guard for `TrackedRwLock` (`Deref` + `DerefMut`).
 pub use laplace_probe_sdk::TrackedRwLockWriteGuard;
 
-/// Sync-based RwLock wrapper with automatic event tracking.
+/// Sync-based `RwLock` wrapper with automatic event tracking.
 pub use laplace_probe_sdk::TrackedStdRwLock;
 
-/// Shared (read) guard for TrackedStdRwLock (Deref only).
+/// Shared (read) guard for `TrackedStdRwLock` (`Deref` only).
 pub use laplace_probe_sdk::TrackedStdRwLockReadGuard;
 
-/// Exclusive (write) guard for TrackedStdRwLock (Deref + DerefMut).
+/// Exclusive (write) guard for `TrackedStdRwLock` (`Deref` + `DerefMut`).
 pub use laplace_probe_sdk::TrackedStdRwLockWriteGuard;
 
-/// Atomic bool wrapper with load/store/CAS tracking.
+/// Atomic bool wrapper with `load`/`store`/`CAS` tracking.
 pub use laplace_probe_sdk::TrackedAtomicBool;
 
-/// Atomic u32 wrapper with load/store/CAS/fetch_add/fetch_sub tracking.
+/// Atomic u32 wrapper with `load`/`store`/`CAS`/`fetch_add`/`fetch_sub` tracking.
 pub use laplace_probe_sdk::TrackedAtomicU32;
 
-/// Atomic u64 wrapper with load/store/CAS/fetch_add/fetch_sub tracking.
+/// Atomic u64 wrapper with `load`/`store`/`CAS`/`fetch_add`/`fetch_sub` tracking.
 pub use laplace_probe_sdk::TrackedAtomicU64;
 
-/// Atomic usize wrapper with load/store/CAS/fetch_add/fetch_sub tracking.
+/// Atomic usize wrapper with `load`/`store`/`CAS`/`fetch_add`/`fetch_sub` tracking.
 pub use laplace_probe_sdk::TrackedAtomicUsize;
 
 /// Semaphore wrapper with acquire/release event tracking.
 pub use laplace_probe_sdk::TrackedSemaphore;
 
-/// Permit guard for TrackedSemaphore (auto-release on drop).
+/// Permit guard for `TrackedSemaphore` (auto-release on drop).
 pub use laplace_probe_sdk::TrackedSemaphorePermit;
 
 // ── 검증 인프라 재수출 ────────────────────────────────────────────────────────

@@ -3,7 +3,7 @@
 //! Smoke Test: Run all 18 registered harnesses and verify expected verdicts.
 //!
 //! This is the automated equivalent of `laplace verify --harness all`.
-//! Each harness is run through AxiomOracle::run_exhaustive() and the
+//! Each harness is run through `AxiomOracle::run_exhaustive()` and the
 //! resulting verdict is checked against the harness's declared expectation.
 
 use smoke_test::{get_all_harnesses, run_harness_smoke, verdict_matches_expected};
@@ -26,40 +26,34 @@ fn smoke_all_harnesses_produce_expected_verdicts() {
         let verdict = run_harness_smoke(name, 10000, false, ".");
         let verdict_str = verdict_name(&verdict);
 
-        if verdict_matches_expected(&verdict, &config.expected) {
+        if verdict_matches_expected(&verdict, config.expected) {
             passed += 1;
-            println!(
-                "✅ {}: {} (expected: {})",
-                name, verdict_str, config.expected
-            );
+            println!("✅ {name}: {verdict_str} (expected: {})", config.expected);
         } else {
             failed.push((
                 name.to_string(),
                 config.expected.to_string(),
                 verdict_str.clone(),
             ));
-            println!(
-                "❌ {}: {} (expected: {})",
-                name, verdict_str, config.expected
-            );
+            println!("❌ {name}: {verdict_str} (expected: {})", config.expected);
         }
     }
 
     let total = passed + failed.len();
     println!();
-    println!("{} / {} harnesses passed", passed, total);
+    println!("{passed} / {total} harnesses passed");
 
     if !failed.is_empty() {
         eprintln!();
         eprintln!("Failed harnesses:");
         for (name, expected, actual) in &failed {
-            eprintln!("  - {} (expected {}, got {})", name, expected, actual);
+            eprintln!("  - {name} (expected {expected}, got {actual})");
         }
         panic!("{} harnesses failed", failed.len());
     }
 }
 
-/// Helper function to format OracleVerdict for display
+/// Helper function to format `OracleVerdict` for display
 fn verdict_name(verdict: &smoke_test::OracleVerdict) -> String {
     use smoke_test::OracleVerdict;
     match verdict {

@@ -108,11 +108,13 @@ mod tests {
     #[test]
     fn test_constants_valid() {
         // Verify that constants meet design constraints
-        assert!(MAX_THREADS > 0 && MAX_THREADS <= 8);
-        assert!(MAX_DEPTH > 0 && MAX_DEPTH <= 100);
+        const {
+            assert!(MAX_THREADS > 0 && MAX_THREADS <= 8);
+            assert!(MAX_DEPTH > 0 && MAX_DEPTH <= 100);
 
-        // MAX_THREADS must fit in TinyBitSet (64 bits)
-        assert!(MAX_THREADS <= 64);
+            // MAX_THREADS must fit in TinyBitSet (64 bits)
+            assert!(MAX_THREADS <= 64);
+        }
     }
 
     #[test]

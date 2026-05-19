@@ -157,10 +157,7 @@ mod tests {
     fn test_parse_proc_stat() {
         let content = "cpu  10132153 290696 3084719 46828483 16683 0 25195 0 0 0\ncpu0 ...\n";
         let ticks = parse_proc_stat(content).unwrap();
-        assert_eq!(
-            ticks.total,
-            10132153 + 290696 + 3084719 + 46828483 + 16683 + 0 + 25195 + 0 + 0 + 0
-        );
+        assert_eq!(ticks.total, 60_377_929);
         assert_eq!(ticks.idle, 46828483 + 16683);
     }
 

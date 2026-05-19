@@ -85,7 +85,7 @@ mod tests {
 
         // Cleanup
         unsafe {
-            let _ = Box::from_raw(std::slice::from_raw_parts_mut(ptr, test_str.len()));
+            let _ = Box::from_raw(std::ptr::slice_from_raw_parts_mut(ptr, test_str.len()));
         }
     }
 

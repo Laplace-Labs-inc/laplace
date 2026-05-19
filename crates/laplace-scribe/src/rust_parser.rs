@@ -144,7 +144,7 @@ struct GhostTransformer;
 impl VisitMut for GhostTransformer {
     /// Replace free-function bodies with `{ unimplemented!() }`.
     fn visit_item_fn_mut(&mut self, node: &mut syn::ItemFn) {
-        node.block = Box::new(syn::parse_quote!({ unimplemented!() }));
+        *node.block = syn::parse_quote!({ unimplemented!() });
         // Do not recurse: the new body has no nested items.
     }
 
@@ -373,6 +373,8 @@ struct LaplaceMetaInfo {
 ///   - `#[laplace::knowledge(layer = "…", link = "…")]`
 ///   - `#[cfg_attr(feature = "scribe_docs", laplace_meta(layer = "…", link = "…"))]`
 fn extract_laplace_meta(attrs: &[syn::Attribute]) -> Option<LaplaceMetaInfo> {
+    let inner_re = Regex::new(r"laplace_meta\s*\(([^)]*)\)").unwrap();
+
     for attr in attrs {
         let path = attr.path();
         let segs: Vec<String> = path.segments.iter().map(|s| s.ident.to_string()).collect();
@@ -387,7 +389,6 @@ fn extract_laplace_meta(attrs: &[syn::Attribute]) -> Option<LaplaceMetaInfo> {
             if let syn::Meta::List(list) = &attr.meta {
                 let s = list.tokens.to_string();
                 if s.contains("scribe_docs") && s.contains("laplace_meta") {
-                    let inner_re = Regex::new(r"laplace_meta\s*\(([^)]*)\)").unwrap();
                     if let Some(cap) = inner_re.captures(&s) {
                         return Some(parse_kv_meta(&cap[1]));
                     }

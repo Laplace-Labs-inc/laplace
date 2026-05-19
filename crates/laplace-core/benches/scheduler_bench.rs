@@ -4,14 +4,14 @@
 //! Measures performance characteristics of the `domain::scheduler` module:
 //! - `scheduler/init`          – Backend and engine construction overhead.
 //! - `scheduler/enqueue`       – Event register/unregister (enqueue/dequeue)
-//!                               on `ProductionBackend` (`DashMap` + `parking_lot::RwLock`)
-//!                               and `VerificationBackend` (`RefCell` + fixed array).
+//!   on `ProductionBackend` (`DashMap` + `parking_lot::RwLock`)
+//!   and `VerificationBackend` (`RefCell` + fixed array).
 //! - `scheduler/state`         – Thread state get/set/count transitions
-//!                               and predicate methods.
+//!   and predicate methods.
 //! - `scheduler/priority`      – Runnable-event scan (O(N) "priority pop"),
-//!                               `schedule_task` state-gate validation, idle detection.
+//!   `schedule_task` state-gate validation, idle detection.
 //! - `scheduler/ffi_serialize` – JSON encode/decode of a `SchedulerSnapshot` wrapper
-//!                               and 8-byte-aligned `Vec<u64>` mock-FFI buffer.
+//!   and 8-byte-aligned `Vec<u64>` mock-FFI buffer.
 //!
 //! **Zero-Implementation Rule**: all calls use only the existing `domain::scheduler` API.
 //! No OS thread spawning or scheduling loop logic is introduced.
@@ -151,7 +151,10 @@ fn bench_scheduler_enqueue(c: &mut Criterion) {
     group.bench_function("register_only/prod", |b| {
         b.iter_batched(
             || ProductionBackend::new(4),
-            |backend| black_box(backend.register_event(42u64, ThreadId::new(0)).unwrap()),
+            |backend| {
+                backend.register_event(42u64, ThreadId::new(0)).unwrap();
+                black_box(());
+            },
             BatchSize::SmallInput,
         )
     });
@@ -164,7 +167,10 @@ fn bench_scheduler_enqueue(c: &mut Criterion) {
                 backend.register_event(42u64, ThreadId::new(0)).unwrap();
                 backend
             },
-            |backend| black_box(backend.unregister_event(42u64)),
+            |backend| {
+                backend.unregister_event(42u64);
+                black_box(());
+            },
             BatchSize::SmallInput,
         )
     });
@@ -187,7 +193,7 @@ fn bench_scheduler_enqueue(c: &mut Criterion) {
                 .register_event(i as u64, ThreadId::new(i % 8))
                 .unwrap();
         }
-        group.bench_function(&format!("count_runnable_events/prod/{n}"), |b| {
+        group.bench_function(format!("count_runnable_events/prod/{n}"), |b| {
             b.iter(|| black_box(backend.count_runnable_events()))
         });
     }
@@ -212,7 +218,10 @@ fn bench_scheduler_enqueue(c: &mut Criterion) {
                 }
                 backend
             },
-            |backend| black_box(backend.clear_events()),
+            |backend| {
+                backend.clear_events();
+                black_box(());
+            },
             BatchSize::SmallInput,
         )
     });
@@ -427,7 +436,7 @@ fn bench_scheduler_priority(c: &mut Criterion) {
                 .register_event(i as u64, ThreadId::new(i % 8))
                 .unwrap();
         }
-        group.bench_function(&format!("count_runnable_events/all_runnable/{n}"), |b| {
+        group.bench_function(format!("count_runnable_events/all_runnable/{n}"), |b| {
             b.iter(|| black_box(backend.count_runnable_events()))
         });
     }
@@ -471,7 +480,10 @@ fn bench_scheduler_priority(c: &mut Criterion) {
                     .unwrap();
                 engine
             },
-            |mut engine| black_box(engine.reset()),
+            |mut engine| {
+                engine.reset();
+                black_box(());
+            },
             BatchSize::SmallInput,
         )
     });
@@ -485,7 +497,10 @@ fn bench_scheduler_priority(c: &mut Criterion) {
                     .unwrap();
                 engine
             },
-            |mut engine| black_box(engine.reset()),
+            |mut engine| {
+                engine.reset();
+                black_box(());
+            },
             BatchSize::SmallInput,
         )
     });

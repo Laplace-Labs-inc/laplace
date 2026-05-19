@@ -151,7 +151,8 @@ where
     let mut deadlock_found = false;
 
     while !scheduler.is_complete() && iterations < max_iterations {
-        if let Some(state) = scheduler.next_state() {
+        scheduler.advance();
+        if let Some(state) = scheduler.current() {
             // Check for deadlock in state
             // (In Ki-DPOR, we can detect deadlock from state properties)
             let blocked_count = state

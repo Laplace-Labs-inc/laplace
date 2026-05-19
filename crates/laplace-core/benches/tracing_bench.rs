@@ -96,7 +96,7 @@ fn bench_tracing_init(c: &mut Criterion) {
 
     group.bench_function("verification_tracer", |b| {
         b.iter_batched(
-            || VerificationBackend::new(),
+            VerificationBackend::new,
             |backend| black_box(TraceEngine::new(backend, TraceEngineConfig::default())),
             BatchSize::SmallInput,
         )
@@ -119,11 +119,10 @@ fn bench_tracing_logging(c: &mut Criterion) {
                 ProductionTracer::new(backend, TraceEngineConfig::default())
             },
             |mut tracer| {
-                black_box(
-                    tracer
-                        .log_read(ThreadId::new(0), Address::new(0x1000), 42)
-                        .unwrap(),
-                )
+                tracer
+                    .log_read(ThreadId::new(0), Address::new(0x1000), 42)
+                    .unwrap();
+                black_box(());
             },
             BatchSize::SmallInput,
         )
@@ -136,11 +135,10 @@ fn bench_tracing_logging(c: &mut Criterion) {
                 ProductionTracer::new(backend, TraceEngineConfig::default())
             },
             |mut tracer| {
-                black_box(
-                    tracer
-                        .log_write(ThreadId::new(0), Address::new(0x1000), 42, false)
-                        .unwrap(),
-                )
+                tracer
+                    .log_write(ThreadId::new(0), Address::new(0x1000), 42, false)
+                    .unwrap();
+                black_box(());
             },
             BatchSize::SmallInput,
         )
@@ -153,11 +151,10 @@ fn bench_tracing_logging(c: &mut Criterion) {
                 VerificationTracer::new(backend, TraceEngineConfig::default())
             },
             |mut tracer| {
-                black_box(
-                    tracer
-                        .log_read(ThreadId::new(0), Address::new(0x1000), 42)
-                        .unwrap(),
-                )
+                tracer
+                    .log_read(ThreadId::new(0), Address::new(0x1000), 42)
+                    .unwrap();
+                black_box(());
             },
             BatchSize::SmallInput,
         )
@@ -178,7 +175,10 @@ fn bench_tracing_causality(c: &mut Criterion) {
     for &n in &event_counts {
         group.bench_with_input(BenchmarkId::new("verify_causality/prod", n), &n, |b, &n| {
             let backend = fill_prod_backend(n);
-            b.iter(|| black_box(backend.verify_causality().unwrap()))
+            b.iter(|| {
+                backend.verify_causality().unwrap();
+                black_box(());
+            })
         });
 
         group.bench_with_input(
@@ -186,7 +186,10 @@ fn bench_tracing_causality(c: &mut Criterion) {
             &n,
             |b, &n| {
                 let backend = fill_verif_backend(n);
-                b.iter(|| black_box(backend.verify_causality().unwrap()))
+                b.iter(|| {
+                    backend.verify_causality().unwrap();
+                    black_box(());
+                })
             },
         );
 

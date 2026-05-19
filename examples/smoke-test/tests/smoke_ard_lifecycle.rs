@@ -4,9 +4,9 @@
 //!
 //! Tests the complete ARD workflow:
 //! 1. Bug-producing harness execution
-//! 2. ARD file generation (write_ard=true)
+//! 2. ARD file generation (`write_ard=true`)
 //! 3. File existence and validity
-//! 4. ArdReport JSON load round-trip
+//! 4. `ArdReport` JSON load round-trip
 //! 5. JSON/binary serialization
 
 use laplace_core::domain::journal::ard::ArdReport;
@@ -18,10 +18,25 @@ fn load_ard_json(path: &str) -> ArdReport {
     ArdReport::from_json(&content).expect("Failed to parse ARD JSON")
 }
 
+fn find_ard_files(output_dir: &str) -> Vec<std::path::PathBuf> {
+    std::fs::read_dir(output_dir)
+        .expect("Failed to read output directory")
+        .filter_map(|entry| {
+            let entry = entry.ok()?;
+            let path = entry.path();
+            if path.is_file() && path.extension().is_some_and(|ext| ext == "ard") {
+                Some(path)
+            } else {
+                None
+            }
+        })
+        .collect()
+}
+
 /// Generate ARD file from a bug-producing harness.
 ///
-/// Runs resource_abba_deadlock with write_ard=true and verifies:
-/// 1. Verdict is BugFound
+/// Runs `resource_abba_deadlock` with `write_ard=true` and verifies:
+/// 1. Verdict is `BugFound`
 /// 2. ARD file exists
 /// 3. File has non-zero size
 #[test]
@@ -33,24 +48,12 @@ fn smoke_ard_generation_on_bug_found() {
 
     assert!(
         matches!(verdict, OracleVerdict::BugFound { .. }),
-        "resource_abba_deadlock must find bug, got {:?}",
-        verdict
+        "resource_abba_deadlock must find bug, got {verdict:?}"
     );
 
     // ARD file should be created in output_dir
     // File name pattern: {harness_name}_ard.bin or similar
-    let ard_files: Vec<_> = std::fs::read_dir(output_dir)
-        .expect("Failed to read output directory")
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "ard") {
-                Some(path)
-            } else {
-                None
-            }
-        })
-        .collect();
+    let ard_files = find_ard_files(output_dir);
 
     assert!(
         !ard_files.is_empty(),
@@ -65,7 +68,7 @@ fn smoke_ard_generation_on_bug_found() {
 /// Load and validate ARD report structure.
 ///
 /// Verifies:
-/// 1. ArdReport JSON load succeeds
+/// 1. `ArdReport` JSON load succeeds
 /// 2. Header fields are populated correctly
 /// 3. Frame count is valid
 /// 4. Error frame exists and is correct
@@ -82,18 +85,7 @@ fn smoke_ard_load_and_structure_verification() {
     );
 
     // Find .ard file
-    let ard_files: Vec<_> = std::fs::read_dir(output_dir)
-        .expect("Failed to read output directory")
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "ard") {
-                Some(path)
-            } else {
-                None
-            }
-        })
-        .collect();
+    let ard_files = find_ard_files(output_dir);
 
     assert!(!ard_files.is_empty(), "ARD file should exist");
 
@@ -136,7 +128,7 @@ fn smoke_ard_load_and_structure_verification() {
 /// Clean harness should not generate ARD file.
 ///
 /// Verifies:
-/// 1. Running a clean harness with write_ard=true returns Clean
+/// 1. Running a clean harness with `write_ard=true` returns Clean
 /// 2. No ARD file is created
 #[test]
 fn smoke_ard_not_generated_on_clean() {
@@ -151,18 +143,7 @@ fn smoke_ard_not_generated_on_clean() {
     );
 
     // Verify no ARD file was created
-    let ard_files: Vec<_> = std::fs::read_dir(output_dir)
-        .expect("Failed to read output directory")
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "ard") {
-                Some(path)
-            } else {
-                None
-            }
-        })
-        .collect();
+    let ard_files = find_ard_files(output_dir);
 
     assert!(
         ard_files.is_empty(),
@@ -173,8 +154,8 @@ fn smoke_ard_not_generated_on_clean() {
 /// Verify ARD JSON round-trip serialization.
 ///
 /// Verifies:
-/// 1. to_json() succeeds
-/// 2. from_json() succeeds
+/// 1. `to_json()` succeeds
+/// 2. `from_json()` succeeds
 /// 3. Round-trip preserves structure
 #[test]
 fn smoke_ard_json_roundtrip() {
@@ -186,18 +167,7 @@ fn smoke_ard_json_roundtrip() {
     assert!(matches!(verdict, OracleVerdict::BugFound { .. }));
 
     // Load original report
-    let ard_files: Vec<_> = std::fs::read_dir(output_dir)
-        .expect("Failed to read output directory")
-        .filter_map(|entry| {
-            let entry = entry.ok()?;
-            let path = entry.path();
-            if path.is_file() && path.extension().map_or(false, |ext| ext == "ard") {
-                Some(path)
-            } else {
-                None
-            }
-        })
-        .collect();
+    let ard_files = find_ard_files(output_dir);
 
     let ard_path = ard_files[0].to_str().expect("Invalid path");
     let original = load_ard_json(ard_path);

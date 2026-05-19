@@ -5,7 +5,7 @@
 //! - `tenant/init`           – TenantMetadata allocation, creation cost, and Tier enums.
 //! - `tenant/capabilities`   – Pure O(1) enum matching for tier capabilities and quotas.
 //! - `tenant/ffi_serialize`  – JSON encode/decode of TenantMetadata and packing
-//!                             into an 8-byte-aligned `Vec<u64>` mock-FFI buffer.
+//!   into an 8-byte-aligned `Vec<u64>` mock-FFI buffer.
 //!
 //! **Zero-Implementation Rule**: Validates that Multi-tenancy isolation checks
 //! (like `uses_turbo` or `for_tier`) add virtually zero runtime overhead.
@@ -55,7 +55,7 @@ fn bench_tenant_init(c: &mut Criterion) {
     // Enum clone/copy overhead (should be sub-nanosecond)
     group.bench_function("tier_clone", |b| {
         let tier = TenantTier::Turbo;
-        b.iter(|| black_box(black_box(&tier).clone()))
+        b.iter(|| black_box(*black_box(&tier)))
     });
 
     group.finish();
