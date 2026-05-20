@@ -2,6 +2,7 @@
 name = "laplace-ffi"
 version.workspace = true
 edition = "2021"
+rust-version.workspace = true
 description = "Laplace FFI barrier for Wasm/native interop"
 license = "Apache-2.0"
 
