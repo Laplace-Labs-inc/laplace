@@ -1,11 +1,11 @@
 [package]
-name = "tokio-hunt"
+name = "parking-lot-hunt"
 version = "0.1.0"
 edition = "2021"
 publish = false
 
 [dependencies]
-tokio = { path = "../../../vendor/tokio-patched/tokio", features = ["sync", "rt"] }
+parking_lot = { path = "../../../vendor/parking_lot-patched" }
 
 [dev-dependencies]
 laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk", features = ["verification"] }

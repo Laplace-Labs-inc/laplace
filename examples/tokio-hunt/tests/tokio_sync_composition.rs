@@ -9,7 +9,7 @@
 
 use laplace_probe_sdk::{
     clear_probe_sender, current_thread_id, emit, run_verification_from, set_probe_sender,
-    set_probe_thread_id, ProbeEvent, ProbeSessionConfig,
+    set_probe_thread_id, ProbeEvent, ProbeSessionConfig, TrackedStdMutex, TrackedStdRwLock,
 };
 use std::sync::{mpsc, Arc};
 
@@ -171,11 +171,19 @@ impl<T> Drop for TrackedTokioRwLockWriteGuard<'_, T> {
 // Helper
 // ============================================================
 
-fn default_config() -> ProbeSessionConfig {
+fn bug_config() -> ProbeSessionConfig {
     ProbeSessionConfig {
         max_depth: 100_000,
         write_ard: true,
-        output_dir: std::env::temp_dir().to_string_lossy().into_owned(),
+        output_dir: ".".to_string(),
+    }
+}
+
+fn clean_config() -> ProbeSessionConfig {
+    ProbeSessionConfig {
+        max_depth: 100_000,
+        write_ard: false,
+        output_dir: ".".to_string(),
     }
 }
 
@@ -212,7 +220,7 @@ fn tokio_mutex_single_baseline() {
     let events: Vec<ProbeEvent> = rx.into_iter().collect();
     println!("[S1] Collected {} events", events.len());
 
-    let config = default_config();
+    let config = clean_config();
     run_verification_from(&events, "tokio_mutex_single_baseline", &config).assert_clean();
 
     println!("[S1] PASS — single mutex, no deadlock");
@@ -274,7 +282,7 @@ fn tokio_dual_mutex_ab_ba() {
         println!("  Event {}: {:?}", i, e);
     }
 
-    let config = default_config();
+    let config = bug_config();
     laplace_probe_sdk::session::run_verification_from(&events, "tokio_dual_mutex_ab_ba", &config)
         .assert_bug();
 
@@ -338,7 +346,7 @@ fn tokio_mutex_rwlock_cross() {
         println!("  Event {}: {:?}", i, e);
     }
 
-    let config = default_config();
+    let config = bug_config();
     laplace_probe_sdk::session::run_verification_from(&events, "tokio_mutex_rwlock_cross", &config)
         .assert_bug();
 
@@ -402,7 +410,7 @@ fn tokio_dual_rwlock_read_write_cross() {
         println!("  Event {}: {:?}", i, e);
     }
 
-    let config = default_config();
+    let config = bug_config();
     laplace_probe_sdk::session::run_verification_from(
         &events,
         "tokio_dual_rwlock_read_write_cross",
@@ -484,7 +492,7 @@ fn tokio_three_lock_chain() {
         println!("  Event {}: {:?}", i, e);
     }
 
-    let config = default_config();
+    let config = bug_config();
     laplace_probe_sdk::session::run_verification_from(&events, "tokio_three_lock_chain", &config)
         .assert_bug();
 
@@ -557,7 +565,7 @@ fn tokio_cache_fetch_lock_deadlock() {
         println!("  Event {}: {:?}", i, e);
     }
 
-    let config = default_config();
+    let config = bug_config();
     laplace_probe_sdk::session::run_verification_from(
         &events,
         "tokio_cache_fetch_lock_deadlock",
@@ -566,4 +574,72 @@ fn tokio_cache_fetch_lock_deadlock() {
     .assert_bug();
 
     println!("[S6] PASS — cache+fetch lock deadlock (real-world pattern)");
+}
+
+// ============================================================
+// Scenario 7: tokio::sync::watch + Mutex — Check-Then-Act Race
+//
+// watch 채널로 상태를 구독하면서 Mutex로 보호된 데이터를 갱신하는 패턴.
+// 알려진 버그: GitHub #3168 — watch receiver가 stale 값 읽기 후 행동.
+//
+// Thread 0 (Reader): watch.borrow() [읽기, held] → mutex.lock() [업데이트]
+// Thread 1 (Writer): mutex.lock() [쓰기, held] → watch_tx.send() [알림]
+//
+// 기대 결과: BUG (Reader가 stale 값 확인 후 mutex 획득 → Writer가 이미 갱신)
+// ============================================================
+
+#[test]
+fn tokio_watch_mutex_race() {
+    let (tx, rx) = mpsc::sync_channel::<ProbeEvent>(8192);
+    let watch_state = Arc::new(TrackedStdRwLock::new(0_u64, "watch_state"));
+    let shared_state = Arc::new(TrackedStdMutex::new(0_u64, "shared_state"));
+
+    {
+        let tx0 = tx.clone();
+        let watch = watch_state.clone();
+        let shared = shared_state.clone();
+        std::thread::spawn(move || {
+            set_probe_sender(tx0);
+            set_probe_thread_id(0);
+
+            let watch_guard = watch.read();
+            let stale_value = *watch_guard;
+            let mut shared_guard = shared.lock();
+            *shared_guard = stale_value;
+            drop(shared_guard);
+            drop(watch_guard);
+        })
+        .join()
+        .expect("reader thread panicked");
+    }
+
+    {
+        let tx1 = tx.clone();
+        let watch = watch_state.clone();
+        let shared = shared_state.clone();
+        std::thread::spawn(move || {
+            set_probe_sender(tx1);
+            set_probe_thread_id(1);
+
+            let mut shared_guard = shared.lock();
+            *shared_guard += 1;
+            let mut watch_guard = watch.write();
+            *watch_guard = *shared_guard;
+            drop(watch_guard);
+            drop(shared_guard);
+        })
+        .join()
+        .expect("writer thread panicked");
+    }
+
+    drop(tx);
+    clear_probe_sender();
+
+    let events: Vec<ProbeEvent> = rx.into_iter().collect();
+    println!("[S7] Collected {} events", events.len());
+
+    let config = bug_config();
+    run_verification_from(&events, "tokio_watch_mutex_race", &config).assert_bug();
+
+    println!("[S7] PASS — watch+mutex check-then-act race model detected");
 }
