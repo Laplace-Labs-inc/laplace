@@ -4,7 +4,10 @@
     "axiom_seed": 11605788121205899265,
     "target_id": "kv_concurrent_rw",
     "timestamp_start": 0,
-    "snapshot_ref": "seed:0xa1100ace5eed0001"
+    "snapshot_ref": "seed:0xa1100ace5eed0001",
+    "symbol_table": {
+      "r0": "kv_data"
+    }
   },
   "frames": [
     {

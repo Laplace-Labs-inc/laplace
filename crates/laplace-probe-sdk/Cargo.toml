@@ -12,6 +12,7 @@ default = ["verification", "parking_lot_tracking"]
 verification = [
     "laplace-axiom/twin",
     "laplace-axiom/verification",
+    "laplace-axiom/engine",
     "laplace-core/twin",
     "laplace-probe-common/std",
     "laplace-probe-common/pipeline",

@@ -125,6 +125,7 @@ impl VerificationSession {
             axiom_seed: config.axiom_seed,
             output_dir: config.output_dir.clone(),
             write_ard: config.write_ard,
+            symbol_table: std::collections::HashMap::new(),
         });
 
         let mut simulator = TwinSimulatorBuilder::new()

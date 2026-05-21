@@ -34,6 +34,7 @@
 #[cfg(feature = "verification")]
 use laplace_core::domain::resource::{ResourceId, ThreadId};
 use laplace_interfaces::AxiomConfig;
+use std::collections::HashMap;
 
 #[cfg(feature = "scribe_docs")]
 use laplace_macro::laplace_meta;
@@ -168,6 +169,9 @@ pub struct OracleConfig {
     /// Set to `false` for harnesses where a bug is *expected* (`expected = "bug"`)
     /// to avoid creating noise files in CI pipelines.  Defaults to `true`.
     pub write_ard: bool,
+
+    /// Local ARD-only mapping from DPOR resource ids like `r0` to source names.
+    pub symbol_table: HashMap<String, String>,
 }
 
 impl Default for OracleConfig {
@@ -179,6 +183,7 @@ impl Default for OracleConfig {
             axiom_seed: AxiomConfig::default().default_seed,
             output_dir: ".".to_string(),
             write_ard: true,
+            symbol_table: HashMap::new(),
         }
     }
 }
@@ -204,6 +209,7 @@ impl OracleConfig {
             axiom_seed: axiom_cfg.default_seed,
             output_dir: ".".to_string(),
             write_ard: true,
+            symbol_table: HashMap::new(),
         }
     }
 }

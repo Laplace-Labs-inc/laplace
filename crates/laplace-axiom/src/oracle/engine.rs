@@ -64,7 +64,8 @@ impl VerdictEngine {
 
         // Snapshot ref is a seed-derived placeholder (Sled integration: future).
         let snapshot_ref = format!("seed:{:#018x}", self.config.axiom_seed);
-        let header = ArdHeader::new(self.config.axiom_seed, target_id, snapshot_ref);
+        let mut header = ArdHeader::new(self.config.axiom_seed, target_id, snapshot_ref);
+        header.symbol_table = self.config.symbol_table.clone();
         let report = window.into_report(header);
 
         let ard_path = if self.config.write_ard {

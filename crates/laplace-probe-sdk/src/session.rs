@@ -9,7 +9,7 @@
 //! `run_verification_from()` 호출 후 재사용 불가.
 
 use std::cell::Cell;
-use std::collections::hash_map::DefaultHasher;
+use std::collections::{hash_map::DefaultHasher, HashMap};
 use std::hash::{Hash, Hasher};
 use std::sync::mpsc;
 
@@ -374,6 +374,29 @@ fn build_step_programs(
     (compacted, dpor_to_axiom, builder)
 }
 
+#[cfg(feature = "verification")]
+fn build_symbol_table(
+    events: &[ProbeEvent],
+    resources: &laplace_probe_common::axiom_adapter::ResourceRegistry,
+) -> HashMap<String, String> {
+    let mut symbol_table = HashMap::new();
+
+    for event in events {
+        let Some(resource_name) = event.resource_name() else {
+            continue;
+        };
+        let resource_addr = resource_name_to_addr(resource_name);
+        let Some(resource_id) = resources.get(resource_addr) else {
+            continue;
+        };
+        symbol_table
+            .entry(format!("r{resource_id}"))
+            .or_insert_with(|| resource_name.to_string());
+    }
+
+    symbol_table
+}
+
 // ── run_verification_from — 공개 진입점 ──────────────────────────────────────
 
 /// 수집된 `ProbeEvent` 목록을 받아 Ki-DPOR 검증을 실행한다.
@@ -400,6 +423,7 @@ pub fn run_verification_from(
 
     let num_active_threads = compacted_steps.len().max(1);
     let num_resources = step_builder.resource_registry().len().max(1);
+    let symbol_table = build_symbol_table(events, step_builder.resource_registry());
 
     let mut simulator = TwinSimulatorBuilder::new()
         .cores(num_active_threads.max(2))
@@ -427,6 +451,7 @@ pub fn run_verification_from(
         max_depth: config.max_depth,
         output_dir: config.output_dir.clone(),
         write_ard: config.write_ard,
+        symbol_table,
         ..OracleConfig::default()
     });
 
@@ -450,6 +475,40 @@ pub fn run_verification_from(
         thread_count: num_active_threads,
         resource_count: num_resources,
         events_collected,
+    }
+}
+
+#[cfg(all(test, feature = "verification"))]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn symbol_table_uses_session_local_resource_ids() {
+        let events = vec![
+            ProbeEvent::LockAcquired {
+                thread_id: 0,
+                resource: "mutex_a".to_string(),
+            },
+            ProbeEvent::LockAcquired {
+                thread_id: 0,
+                resource: "mutex_b".to_string(),
+            },
+            ProbeEvent::LockReleased {
+                thread_id: 0,
+                resource: "mutex_b".to_string(),
+            },
+            ProbeEvent::LockReleased {
+                thread_id: 0,
+                resource: "mutex_a".to_string(),
+            },
+        ];
+
+        let (_steps, _threads, builder) = build_step_programs(&events);
+        let symbol_table = build_symbol_table(&events, builder.resource_registry());
+
+        assert_eq!(symbol_table.get("r0"), Some(&"mutex_a".to_string()));
+        assert_eq!(symbol_table.get("r1"), Some(&"mutex_b".to_string()));
+        assert_eq!(symbol_table.len(), 2);
     }
 }
 

@@ -57,6 +57,27 @@ pub enum ProbeEvent {
     SemaphoreReleased { thread_id: u64, resource: String },
 }
 
+impl ProbeEvent {
+    /// Returns the human-readable resource name carried by synchronization events.
+    pub fn resource_name(&self) -> Option<&str> {
+        match self {
+            Self::ThreadBlocked { blocked_on, .. } => Some(blocked_on),
+            Self::LockAcquired { resource, .. }
+            | Self::LockReleased { resource, .. }
+            | Self::RwLockReadAcquired { resource, .. }
+            | Self::RwLockReadReleased { resource, .. }
+            | Self::RwLockWriteAcquired { resource, .. }
+            | Self::RwLockWriteReleased { resource, .. }
+            | Self::AtomicLoad { resource, .. }
+            | Self::AtomicStore { resource, .. }
+            | Self::AtomicRmw { resource, .. }
+            | Self::SemaphoreAcquired { resource, .. }
+            | Self::SemaphoreReleased { resource, .. } => Some(resource),
+            Self::DbQuery { .. } | Self::HttpRequest { .. } | Self::Custom { .. } => None,
+        }
+    }
+}
+
 /// Contextual envelope wrapping a [`ProbeEvent`] with timing and trace metadata.
 #[derive(Debug, Clone)]
 pub struct EventContext {
