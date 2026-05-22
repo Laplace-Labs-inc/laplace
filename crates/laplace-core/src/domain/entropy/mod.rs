@@ -49,9 +49,13 @@ pub use rng::{DeterministicRng, RngSnapshot};
 pub use laplace_interfaces::domain::entropy::Entropy;
 
 #[cfg(feature = "twin")]
+use std::cell::RefCell;
+#[cfg(feature = "twin")]
+use std::collections::HashMap;
+#[cfg(feature = "twin")]
 use std::fmt;
 #[cfg(feature = "twin")]
-use std::sync::{Arc, Mutex};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 #[cfg(feature = "twin")]
 use rand_chacha::rand_core::RngCore;
@@ -139,8 +143,16 @@ pub struct DeterministicEntropy {
     /// Seed value for initialization and reset tracking.
     seed: u64,
 
-    /// Protected PRNG state.
-    rng: Arc<Mutex<ChaCha8Rng>>,
+    /// Per-instance key into the thread-local PRNG map.
+    instance_id: u64,
+}
+
+#[cfg(feature = "twin")]
+static NEXT_DETERMINISTIC_ENTROPY_ID: AtomicU64 = AtomicU64::new(1);
+
+#[cfg(feature = "twin")]
+thread_local! {
+    static THREAD_RNGS: RefCell<HashMap<u64, ChaCha8Rng>> = RefCell::new(HashMap::new());
 }
 
 #[cfg(feature = "twin")]
@@ -152,12 +164,9 @@ impl DeterministicEntropy {
     /// - `seed`: A u64 value used to initialize the PRNG. The same seed always
     ///   produces the same sequence.
     pub fn new(seed: u64) -> Self {
-        let seed_array = Self::seed_to_array(seed);
-        let rng = ChaCha8Rng::from_seed(seed_array);
-
         Self {
             seed,
-            rng: Arc::new(Mutex::new(rng)),
+            instance_id: NEXT_DETERMINISTIC_ENTROPY_ID.fetch_add(1, Ordering::Relaxed),
         }
     }
 
@@ -183,9 +192,19 @@ impl DeterministicEntropy {
     /// After reset, the next generated value will be identical to the value
     /// from a freshly created entropy source with the same seed.
     pub fn reset(&self) {
-        let seed_array = Self::seed_to_array(self.seed);
-        let new_rng = ChaCha8Rng::from_seed(seed_array);
-        *self.rng.lock().unwrap() = new_rng;
+        THREAD_RNGS.with(|rngs| {
+            rngs.borrow_mut().remove(&self.instance_id);
+        });
+    }
+
+    fn with_rng<R>(&self, f: impl FnOnce(&mut ChaCha8Rng) -> R) -> R {
+        THREAD_RNGS.with(|rngs| {
+            let mut rngs = rngs.borrow_mut();
+            let rng = rngs
+                .entry(self.instance_id)
+                .or_insert_with(|| ChaCha8Rng::from_seed(Self::seed_to_array(self.seed)));
+            f(rng)
+        })
     }
 }
 
@@ -201,13 +220,11 @@ impl fmt::Debug for DeterministicEntropy {
 #[cfg(feature = "twin")]
 impl Entropy for DeterministicEntropy {
     fn next_u64(&self) -> u64 {
-        let mut guard = self.rng.lock().unwrap();
-        guard.next_u64()
+        self.with_rng(|rng| rng.next_u64())
     }
 
     fn fill_bytes(&self, dest: &mut [u8]) {
-        let mut guard = self.rng.lock().unwrap();
-        guard.fill_bytes(dest);
+        self.with_rng(|rng| rng.fill_bytes(dest));
     }
 
     fn next_range(&self, max: u64) -> u64 {
@@ -215,17 +232,16 @@ impl Entropy for DeterministicEntropy {
             return 0;
         }
 
-        let mut guard = self.rng.lock().unwrap();
+        self.with_rng(|rng| {
+            let zone = u64::MAX - (u64::MAX % max);
 
-        // Unbiased range generation using rejection sampling ("Apple Logic")
-        let zone = u64::MAX - (u64::MAX % max);
-
-        loop {
-            let v = guard.next_u64();
-            if v < zone {
-                return v % max;
+            loop {
+                let v = rng.next_u64();
+                if v < zone {
+                    return v % max;
+                }
             }
-        }
+        })
     }
 }
 
@@ -338,6 +354,32 @@ mod tests {
                 count
             );
         }
+    }
+
+    #[cfg(feature = "twin")]
+    #[test]
+    fn test_entropy_thread_local_deterministic_with_same_seed() {
+        let entropy1 = DeterministicEntropy::new(777);
+        let entropy2 = DeterministicEntropy::new(777);
+
+        let seq1: Vec<u64> = (0..8).map(|_| entropy1.next_u64()).collect();
+        let seq2: Vec<u64> = (0..8).map(|_| entropy2.next_u64()).collect();
+
+        assert_eq!(seq1, seq2);
+    }
+
+    #[cfg(feature = "twin")]
+    #[test]
+    fn test_entropy_different_threads_independent() {
+        let entropy = DeterministicEntropy::new(888);
+        let first_main = entropy.next_u64();
+        let cloned = entropy.clone();
+        let first_worker = std::thread::spawn(move || cloned.next_u64())
+            .join()
+            .unwrap();
+
+        assert_eq!(first_main, first_worker);
+        assert_ne!(entropy.next_u64(), first_worker);
     }
 
     #[cfg(feature = "twin")]

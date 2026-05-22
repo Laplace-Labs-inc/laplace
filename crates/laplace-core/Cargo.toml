@@ -44,6 +44,7 @@ dashmap = { version = "5.5", optional = true }
 
 # Tier 1: Verification (Sampling & Deadlock Detection)
 parking_lot  = { version = "0.12", optional = true }
+crossbeam-queue = "0.3"
 hdrhistogram = { version = "7.5",  optional = true }
 
 # Tier 2: Axiom (Deterministic Simulation & Full Search)
