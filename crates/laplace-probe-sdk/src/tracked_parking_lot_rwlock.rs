@@ -60,6 +60,14 @@ impl<T> TrackedParkingLotRwLock<T> {
         }
     }
 
+    /// Returns a raw pointer to the inner value, bypassing the lock.
+    ///
+    /// # Safety
+    /// Caller must ensure exclusive access or that no mutable references exist.
+    pub fn data_ptr(&self) -> *mut T {
+        self.inner.data_ptr()
+    }
+
     /// Non-blocking read 시도.
     pub fn try_read(&self) -> Option<TrackedParkingLotRwLockReadGuard<'_, T>> {
         let thread_id = current_thread_id();

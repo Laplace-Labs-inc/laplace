@@ -160,7 +160,10 @@ impl EventRingBuffer {
     /// Events pushed by a concurrent `push()` while this method holds the drain
     /// window will appear in the **next** `snapshot()` call.
     pub fn snapshot(&self) -> Vec<TelemetryEvent> {
-        let _guard = self.snapshot_mutex.lock().unwrap_or_else(|e| e.into_inner());
+        let _guard = self
+            .snapshot_mutex
+            .lock()
+            .unwrap_or_else(|e| e.into_inner());
         let mut events = Vec::with_capacity(self.buffer.len());
         while let Some(event) = self.buffer.pop() {
             events.push(event);
