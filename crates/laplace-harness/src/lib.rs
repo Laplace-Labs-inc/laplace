@@ -1,9 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 #![deny(clippy::all)]
 
-//! Laplace Harness Registry — centralised verification scenarios for Axiom Oracle.
+//! Laplace Harness Registry - centralised verification scenarios for Axiom Oracle.
 //!
 //! Requires `feature = "twin"` and `feature = "verification"` to be active.
+
+pub mod dsl;
 
 #[cfg(all(feature = "twin", feature = "verification"))]
 pub mod registry;

@@ -37,6 +37,11 @@ impl<T> TrackedMutex<T> {
         }
     }
 
+    /// Alias used by convenience macros.
+    pub fn named(value: T, resource_name: &'static str) -> Self {
+        Self::new(value, resource_name)
+    }
+
     /// Lock을 비동기로 획득한다. 획득 후 `ProbeEvent::LockAcquired`를 전송한다.
     ///
     /// [GHOST CONSTRAINT]: `lock()` 호출 전 OS 스레드에 `set_probe_sender()` +

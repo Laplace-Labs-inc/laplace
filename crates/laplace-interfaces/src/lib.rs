@@ -41,11 +41,12 @@ pub use abi::{
 pub use error::{LaplaceError, TenantError};
 
 pub use domain::{
-    HttpMethod, KernelCapabilities, KnulConnection, KnulEndpoint, KnulStream, PanelType,
-    PriorityLevel, QuicServerStats, ResourceConfig, RuntimeStats, SovereignContext,
-    SovereignRuntime, SovereignTransport, TenantMetadata, TenantTier, Tier, TransportError,
-    TransportFactory, TransportHandle, TransportPacket, TransportStats, TuiCapabilities,
-    VirtualRequest, VirtualResponse, VirtualTransport, NO_TURBO_SLOT, VUID,
+    DeadlockProbe, GateId, GateSpec, HarnessResourceId, HarnessSpec, HttpMethod,
+    KernelCapabilities, KnulConnection, KnulEndpoint, KnulStream, PanelType, PriorityLevel,
+    QuicServerStats, ReleasePolicy, ResourceConfig, ResourceSpec, RuntimeStats, SovereignContext,
+    SovereignRuntime, SovereignTransport, TenantMetadata, TenantTier, ThreadAction, ThreadSpec,
+    Tier, TransportError, TransportFactory, TransportHandle, TransportPacket, TransportStats,
+    TuiCapabilities, VirtualRequest, VirtualResponse, VirtualTransport, NO_TURBO_SLOT, VUID,
 };
 
 #[cfg(test)]

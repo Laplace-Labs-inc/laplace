@@ -7,6 +7,7 @@
 use proc_macro::TokenStream;
 
 mod byoc_test;
+mod convenience;
 mod harness;
 mod target;
 mod tracked_derive;
@@ -47,6 +48,18 @@ pub fn axiom_harness(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn laplace_meta(_attr: TokenStream, item: TokenStream) -> TokenStream {
     item
+}
+
+/// Create `Arc<TrackedMutex<T>>` with an optional resource name.
+#[proc_macro]
+pub fn mutex(input: TokenStream) -> TokenStream {
+    convenience::mutex_impl(input)
+}
+
+/// Create `Arc<TrackedRwLock<T>>` with an optional resource name.
+#[proc_macro]
+pub fn rwlock(input: TokenStream) -> TokenStream {
+    convenience::rwlock_impl(input)
 }
 
 /// Automated Ki-DPOR verification harness attribute.

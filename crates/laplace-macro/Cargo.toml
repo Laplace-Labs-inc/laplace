@@ -15,6 +15,10 @@ syn = { version = "2", features = ["full"] }
 quote = "1"
 proc-macro2 = "1"
 
+[dev-dependencies]
+laplace-probe-sdk = { path = "../laplace-probe-sdk" }
+tokio = { workspace = true }
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]

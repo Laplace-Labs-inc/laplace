@@ -13,10 +13,13 @@ path = "src/lib.rs"
 
 [dependencies]
 laplace-core = { path = "../laplace-core" }
+laplace-interfaces = { path = "../laplace-interfaces" }
 laplace-dpor = { path = "../laplace-dpor", optional = true }
 laplace-macro = { path = "../laplace-macro", optional = true }
 inventory = { version = "0.3", optional = true }
 anyhow = "1.0"
+serde = { workspace = true, features = ["derive"] }
+serde_yaml = "0.9"
 deadpool = { version = "0.10", optional = true }
 laplace-byoc-audit = { path = "../laplace-byoc-audit", optional = true }
 

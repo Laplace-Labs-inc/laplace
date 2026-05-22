@@ -25,6 +25,7 @@
 pub mod context;
 /// Entropy domain contracts (seed primitives and Entropy trait)
 pub mod entropy;
+pub mod harness;
 pub mod kernel;
 #[cfg(feature = "twin")]
 /// Kraken DSL domain contracts (VUState, ScenarioStep, Scenario, ChaosEvent, RampUpProfile, etc.)
@@ -52,6 +53,10 @@ pub mod tui;
 
 pub use context::{SovereignContext, NO_TURBO_SLOT};
 pub use entropy::{ContextId, Entropy, GlobalSeedConfig, LocalSeed, SeedAssignment};
+pub use harness::{
+    DeadlockProbe, GateId, GateSpec, HarnessSpec, ReleasePolicy, ResourceId as HarnessResourceId,
+    ResourceSpec, ThreadAction, ThreadSpec,
+};
 pub use pool::{HealthStatus, StorageStrategy};
 pub use resource::{
     RequestResult, ResourceError, ResourceGuard, ResourceId, ResourceTracker, ResourceType,

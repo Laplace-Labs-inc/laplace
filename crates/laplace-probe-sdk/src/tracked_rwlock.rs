@@ -29,6 +29,11 @@ impl<T> TrackedRwLock<T> {
         }
     }
 
+    /// Alias used by convenience macros.
+    pub fn named(value: T, resource_name: &'static str) -> Self {
+        Self::new(value, resource_name)
+    }
+
     /// 공유 (읽기) 락을 획득한다. 여러 스레드가 동시에 보유할 수 있다.
     pub async fn read(&self) -> TrackedRwLockReadGuard<'_, T> {
         let thread_id = current_thread_id();
