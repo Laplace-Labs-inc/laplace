@@ -17,17 +17,19 @@ use laplace_macro::laplace_meta;
 /// Passed to QUIC server startup via FFI boundary.
 /// Contains both fixed-size fields and variable-length buffers via FfiBuffer.
 ///
-/// **Memory Layout (144 bytes, 8-byte aligned)**:
-/// - Offset 0: `port` (u16, 2 bytes)
-/// - Offset 2: `_padding1` (u16, 2 bytes)
-/// - Offset 4: `max_streams` (u32, 4 bytes)
-/// - Offset 8: `idle_timeout_ms` (u64, 8 bytes)
-/// - Offset 16: `host_addr` (FfiBuffer, 32 bytes)
-/// - Offset 48: `cert_path` (FfiBuffer, 32 bytes)
-/// - Offset 80: `key_path` (FfiBuffer, 32 bytes)
-/// - Offset 112: `ca_cert_path` (FfiBuffer, 32 bytes)
+/// **Memory Layout (152 bytes, 8-byte aligned)**:
+/// - Offset 0:   `port` (u16, 2 bytes)
+/// - Offset 2:   `_padding1` (u16, 2 bytes)
+/// - Offset 4:   `max_streams` (u32, 4 bytes)
+/// - Offset 8:   `max_concurrent_uni_streams` (u32, 4 bytes)
+/// - Offset 12:  (implicit padding, 4 bytes — u64 alignment for `idle_timeout_ms`)
+/// - Offset 16:  `idle_timeout_ms` (u64, 8 bytes)
+/// - Offset 24:  `host_addr` (FfiBuffer, 32 bytes)
+/// - Offset 56:  `cert_path` (FfiBuffer, 32 bytes)
+/// - Offset 88:  `key_path` (FfiBuffer, 32 bytes)
+/// - Offset 120: `ca_cert_path` (FfiBuffer, 32 bytes)
 ///
-/// Total: 144 bytes (8-byte aligned)
+/// Total: 152 bytes (8-byte aligned)
 // [ABI_GUARD]: FFI Boundary
 #[repr(C, align(8))]
 #[derive(Debug, Clone)]
@@ -40,6 +42,9 @@ pub struct FfiQuicConfig {
 
     /// Maximum concurrent streams per connection
     pub max_streams: u32,
+
+    /// Maximum concurrent unidirectional streams per connection.
+    pub max_concurrent_uni_streams: u32,
 
     /// Connection idle timeout in milliseconds
     pub idle_timeout_ms: u64,
@@ -68,12 +73,30 @@ impl FfiQuicConfig {
             port: 0,
             _padding1: 0,
             max_streams: 1000,
+            max_concurrent_uni_streams: Self::max_concurrent_uni_streams_from_env(),
             idle_timeout_ms: 120000,
             host_addr: FfiBuffer::new(),
             cert_path: FfiBuffer::new(),
             key_path: FfiBuffer::new(),
             ca_cert_path: FfiBuffer::new(),
         }
+    }
+
+    /// Return the effective max concurrent unidirectional stream limit.
+    pub fn effective_max_concurrent_uni_streams(&self) -> u32 {
+        if self.max_concurrent_uni_streams == 0 {
+            256
+        } else {
+            self.max_concurrent_uni_streams
+        }
+    }
+
+    fn max_concurrent_uni_streams_from_env() -> u32 {
+        std::env::var("LAPLACE_QUIC_MAX_UNI_STREAMS")
+            .ok()
+            .and_then(|value| value.parse::<u32>().ok())
+            .filter(|value| *value > 0)
+            .unwrap_or(256)
     }
 
     /// Verify configuration validity
@@ -125,8 +148,8 @@ mod tests {
         );
         assert_eq!(
             mem::size_of::<FfiQuicConfig>(),
-            144,
-            "FfiQuicConfig must be exactly 144 bytes"
+            152,
+            "FfiQuicConfig must be exactly 152 bytes"
         );
     }
 
@@ -136,6 +159,7 @@ mod tests {
 
         assert_eq!(config.port, 0);
         assert_eq!(config.max_streams, 1000);
+        assert_eq!(config.effective_max_concurrent_uni_streams(), 256);
         assert_eq!(config.idle_timeout_ms, 120000);
     }
 
@@ -217,6 +241,15 @@ mod tests {
             FfiQuicConfig::is_valid(&config),
             <FfiQuicConfig as FfiValidatable>::is_valid(&config)
         );
+    }
+
+    #[test]
+    fn ffi_quic_config_env_max_uni_streams() {
+        std::env::set_var("LAPLACE_QUIC_MAX_UNI_STREAMS", "64");
+        let config = FfiQuicConfig::new();
+        std::env::remove_var("LAPLACE_QUIC_MAX_UNI_STREAMS");
+
+        assert_eq!(config.effective_max_concurrent_uni_streams(), 64);
     }
 }
 
