@@ -6,6 +6,11 @@ rust-version.workspace = true
 authors.workspace = true
 license = "Apache-2.0"
 description = "Procedural macros for Laplace verification harness auto-discovery"
+repository.workspace = true
+
+[features]
+default = []
+closed-sdk-tests = []
 
 [lib]
 proc-macro = true
@@ -15,9 +20,6 @@ syn = { version = "2", features = ["full"] }
 quote = "1"
 proc-macro2 = "1"
 
-[dev-dependencies]
-laplace-probe-sdk = { path = "../laplace-probe-sdk" }
-tokio = { workspace = true }
 
 [package.metadata.docs.rs]
 all-features = true

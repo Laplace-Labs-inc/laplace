@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+#![cfg(feature = "closed-sdk-tests")]
 
 #[tokio::test]
 async fn test_mutex_macro_creates_tracked_mutex() {

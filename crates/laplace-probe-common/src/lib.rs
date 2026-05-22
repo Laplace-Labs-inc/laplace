@@ -13,8 +13,7 @@ pub mod mock;
 #[cfg(feature = "std")]
 pub mod adapter;
 
-#[cfg(feature = "pipeline")]
-pub mod pipeline;
+// TODO(alpha-2): keep the closed-dependency pipeline outside this public crate.
 
 #[cfg(feature = "std")]
 pub use decoder::{DecodedProbeEvent, ProbeEventDecoder};

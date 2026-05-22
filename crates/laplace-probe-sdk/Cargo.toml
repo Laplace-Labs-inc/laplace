@@ -15,7 +15,7 @@ verification = [
     "laplace-axiom/engine",
     "laplace-core/twin",
     "laplace-probe-common/std",
-    "laplace-probe-common/pipeline",
+    # TODO(alpha-2): move closed verification pipeline behind a cloud-only feature.
 ]
 parking_lot_tracking = ["dep:parking_lot"]
 cloud = ["dep:futures-util", "dep:tokio-tungstenite"]

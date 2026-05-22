@@ -8,22 +8,20 @@ license = "Apache-2.0"
 repository.workspace = true
 description = "Shared eBPF/user-space types for Laplace Probe"
 
+[lib]
+name = "laplace_probe_common"
+path = "src/lib.rs"
+
 [features]
 default = ["std"]
 std = ["bytemuck"]
-pipeline = ["std", "laplace-axiom", "laplace-core"]
+# pipeline feature는 laplace-cloud에서만 활성화 (laplace-axiom + laplace-core 필요)
 scribe_docs = []
 
 [dependencies]
 bytemuck = { version = "1.16", features = ["derive"], optional = true }
-laplace-interfaces = { path = "../laplace-interfaces" }
-laplace-axiom = { path = "../laplace-axiom", features = ["verification", "engine"], optional = true }
-laplace-core = { path = "../laplace-core", features = ["twin"], optional = true }
-laplace-macro = { path = "../laplace-macro" }
-
-[lib]
-name = "laplace_probe_common"
-path = "src/lib.rs"
+laplace-interfaces = { path = "../laplace-interfaces", version = "0.1.0-alpha-1" }
+laplace-macro = { path = "../laplace-macro", version = "0.1.0-alpha-1" }
 
 [package.metadata.docs.rs]
 all-features = true
