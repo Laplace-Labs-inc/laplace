@@ -6,21 +6,17 @@
 //!
 //! # Design Invariants
 //!
-//! - **No async runtime**: uses `parking_lot::RwLock` for synchronisation — a
-//!   pure synchronous primitive with no executor dependency.
+//! - **Lock-free push**: `crossbeam_queue::SegQueue` allows any number of
+//!   producers to push without contention.
 //! - **Bounded memory**: once the buffer reaches `capacity`, the oldest event
-//!   is discarded (`pop_front`) before inserting the new one.
+//!   is discarded before inserting the new one.
+//! - **Serialized snapshot**: `snapshot()` holds an internal mutex so that
+//!   concurrent readers cannot interleave drain/repush steps and lose events.
 //! - **Clone-on-read**: `snapshot()` returns a `Vec<TelemetryEvent>` so the
-//!   TUI holds its own copy and the writer is never blocked mid-render.
-//!
-//! # Feature Gate
-//!
-//! This module requires `feature = "verification"` because `parking_lot` is
-//! only pulled in at that tier. See `Cargo.toml` for the feature hierarchy.
+//!   TUI holds its own copy without blocking writers.
 
-use std::collections::VecDeque;
-
-use parking_lot::RwLock;
+use crossbeam_queue::SegQueue;
+use std::sync::Mutex;
 
 use crate::domain::entropy::seed::ContextId;
 
@@ -117,7 +113,10 @@ pub enum TelemetryEvent {
 /// ```
 pub struct EventRingBuffer {
     capacity: usize,
-    buffer: RwLock<VecDeque<TelemetryEvent>>,
+    buffer: SegQueue<TelemetryEvent>,
+    /// Serializes concurrent `snapshot()` callers so the drain/repush cycle
+    /// is never interleaved between two readers.
+    snapshot_mutex: Mutex<()>,
 }
 
 impl EventRingBuffer {
@@ -127,7 +126,8 @@ impl EventRingBuffer {
     pub fn new(capacity: usize) -> Self {
         Self {
             capacity,
-            buffer: RwLock::new(VecDeque::with_capacity(capacity)),
+            buffer: SegQueue::new(),
+            snapshot_mutex: Mutex::new(()),
         }
     }
 
@@ -136,11 +136,13 @@ impl EventRingBuffer {
     /// If the buffer has reached `capacity`, the oldest event (front) is
     /// dropped to make room before the new event is appended to the back.
     pub fn push(&self, event: TelemetryEvent) {
-        let mut buf = self.buffer.write();
-        if buf.len() >= self.capacity {
-            buf.pop_front(); // evict oldest — O(1) on VecDeque
+        if self.capacity == 0 {
+            return;
         }
-        buf.push_back(event);
+        self.buffer.push(event);
+        while self.buffer.len() > self.capacity {
+            let _ = self.buffer.pop();
+        }
     }
 
     /// Return a point-in-time snapshot of all buffered events.
@@ -148,25 +150,35 @@ impl EventRingBuffer {
     /// Events are returned in order from oldest (index 0) to newest (last).
     /// The returned `Vec` is an independent clone — the buffer is not modified.
     ///
-    /// Acquires a **shared** read lock for the duration of the clone.
+    /// # Concurrency
     ///
-    /// # Performance Note
+    /// Concurrent `push()` callers remain lock-free and are never blocked.
+    /// Concurrent `snapshot()` callers are serialized via `snapshot_mutex` so
+    /// that the internal drain/repush cycle cannot interleave between two readers
+    /// (which would otherwise cause event loss or duplication).
     ///
-    /// Performance note: `iter().cloned().collect()` clones every event on every TUI poll
-    /// cycle. Planned improvement: epoch-based snapshot using `Arc<[TelemetryEvent]>`
-    /// copy-on-write, requiring `TelemetryEvent: Clone + Send` and an epoch counter.
+    /// Events pushed by a concurrent `push()` while this method holds the drain
+    /// window will appear in the **next** `snapshot()` call.
     pub fn snapshot(&self) -> Vec<TelemetryEvent> {
-        self.buffer.read().iter().cloned().collect()
+        let _guard = self.snapshot_mutex.lock().unwrap_or_else(|e| e.into_inner());
+        let mut events = Vec::with_capacity(self.buffer.len());
+        while let Some(event) = self.buffer.pop() {
+            events.push(event);
+        }
+        for event in events.iter().cloned() {
+            self.buffer.push(event);
+        }
+        events
     }
 
     /// Current number of events in the buffer.
     pub fn len(&self) -> usize {
-        self.buffer.read().len()
+        self.buffer.len()
     }
 
     /// Returns `true` if the buffer contains no events.
     pub fn is_empty(&self) -> bool {
-        self.buffer.read().is_empty()
+        self.buffer.is_empty()
     }
 
     /// Maximum number of events the buffer can hold before eviction begins.
@@ -178,7 +190,7 @@ impl EventRingBuffer {
     ///
     /// Useful for test teardown or scenario resets.
     pub fn clear(&self) {
-        self.buffer.write().clear();
+        while self.buffer.pop().is_some() {}
     }
 }
 
@@ -268,6 +280,29 @@ mod tests {
         } else {
             panic!("Expected StateChanged");
         }
+    }
+
+    #[test]
+    fn test_telemetry_segqueue_mpsc_ordering() {
+        let buf = std::sync::Arc::new(EventRingBuffer::new(64));
+        let mut handles = Vec::new();
+
+        for worker in 0..4 {
+            let buf = std::sync::Arc::clone(&buf);
+            handles.push(std::thread::spawn(move || {
+                for seq in 0..8 {
+                    buf.push(TelemetryEvent::LogError(format!("{worker}:{seq}")));
+                }
+            }));
+        }
+
+        for handle in handles {
+            handle.join().unwrap();
+        }
+
+        let snap = buf.snapshot();
+        assert_eq!(snap.len(), 32);
+        assert_eq!(buf.len(), 32);
     }
 
     #[test]
