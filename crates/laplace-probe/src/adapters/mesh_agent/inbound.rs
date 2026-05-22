@@ -292,8 +292,13 @@ pub fn make_server_config() -> Result<quinn::ServerConfig, MeshAgentError> {
     let mut config = quinn::ServerConfig::with_single_cert(vec![cert_der], key)
         .map_err(|e| MeshAgentError::Config(format!("server config: {e}")))?;
 
+    let max_uni_streams = std::env::var("LAPLACE_QUIC_MAX_UNI_STREAMS")
+        .ok()
+        .and_then(|value| value.parse::<u32>().ok())
+        .filter(|value| *value > 0)
+        .unwrap_or(256);
     let mut transport = quinn::TransportConfig::default();
-    transport.max_concurrent_uni_streams(256u32.into());
+    transport.max_concurrent_uni_streams(max_uni_streams.into());
     config.transport_config(Arc::new(transport));
 
     Ok(config)

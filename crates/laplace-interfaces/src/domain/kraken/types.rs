@@ -164,6 +164,8 @@ pub enum ScenarioStep {
         method: HttpMethod,
         /// Target URL path template
         path: &'static str,
+        /// Request header templates.
+        headers: &'static [(&'static str, &'static str)],
         /// Optional request body template
         body: Option<&'static str>,
         /// `(session_store_key, response_json_field)` extraction pairs

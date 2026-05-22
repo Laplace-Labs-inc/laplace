@@ -39,6 +39,10 @@ pub const WINDOW_POST: usize = 10;
 /// Total forensic window size (Pre-10 + Error + Post-10).
 pub const WINDOW_TOTAL: usize = WINDOW_PRE + 1 + WINDOW_POST;
 
+const ARD_MAGIC: &[u8; 4] = b"LARD";
+const ARD_FORMAT_V1_JSON: u8 = 1;
+const ARD_FORMAT_V2_POSTCARD: u8 = 2;
+
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // ArdHeader — Context Genesis
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -316,6 +320,27 @@ pub struct ArdReport {
     pub frames: Vec<ForensicFrame>,
 }
 
+#[derive(Debug)]
+pub enum ArdFormatError {
+    Json(serde_json::Error),
+    Postcard(postcard::Error),
+    InvalidMagic,
+    UnsupportedVersion(u8),
+}
+
+impl std::fmt::Display for ArdFormatError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Json(e) => write!(f, "ARD JSON decode failed: {e}"),
+            Self::Postcard(e) => write!(f, "ARD postcard decode failed: {e}"),
+            Self::InvalidMagic => write!(f, "ARD magic mismatch"),
+            Self::UnsupportedVersion(version) => write!(f, "unsupported ARD version {version}"),
+        }
+    }
+}
+
+impl std::error::Error for ArdFormatError {}
+
 impl ArdReport {
     /// Construct a report directly from a pre-assembled frame list.
     pub fn new(header: ArdHeader, frames: Vec<ForensicFrame>) -> Self {
@@ -340,6 +365,33 @@ impl ArdReport {
     /// Deserialize from binary (postcard format).
     pub fn from_binary(bytes: &[u8]) -> Result<Self, postcard::Error> {
         postcard::from_bytes(bytes)
+    }
+
+    /// Serialize to the versioned ARD byte format (`LARD` + v2 + postcard payload).
+    pub fn save_to_bytes(&self) -> Result<Vec<u8>, ArdFormatError> {
+        let payload = postcard::to_allocvec(self).map_err(ArdFormatError::Postcard)?;
+        let mut bytes = Vec::with_capacity(ARD_MAGIC.len() + 1 + payload.len());
+        bytes.extend_from_slice(ARD_MAGIC);
+        bytes.push(ARD_FORMAT_V2_POSTCARD);
+        bytes.extend_from_slice(&payload);
+        Ok(bytes)
+    }
+
+    /// Decode a versioned ARD byte sequence. v1 JSON and v2 postcard are supported.
+    pub fn from_bytes(data: &[u8]) -> Result<Self, ArdFormatError> {
+        if data.len() < ARD_MAGIC.len() + 1 || &data[..ARD_MAGIC.len()] != ARD_MAGIC {
+            return serde_json::from_slice(data).map_err(ArdFormatError::Json);
+        }
+
+        let version = data[ARD_MAGIC.len()];
+        let payload = &data[ARD_MAGIC.len() + 1..];
+        match version {
+            ARD_FORMAT_V1_JSON => serde_json::from_slice(payload).map_err(ArdFormatError::Json),
+            ARD_FORMAT_V2_POSTCARD => {
+                postcard::from_bytes(payload).map_err(ArdFormatError::Postcard)
+            }
+            other => Err(ArdFormatError::UnsupportedVersion(other)),
+        }
     }
 
     /// Return the error frame (step_index == 0) if present.
@@ -448,6 +500,41 @@ mod tests {
         assert!(json.contains("test_module"));
 
         let decoded = ArdReport::from_json(&json).unwrap();
+        assert_eq!(decoded, report);
+    }
+
+    #[test]
+    fn test_ard_versioned_bytes_round_trip_v2_postcard() {
+        let header = ArdHeader::new(9, "v2_target", "snap:v2");
+        let report = ArdReport::new(
+            header,
+            vec![ForensicFrame::error_frame(
+                "t0",
+                "Deadlock",
+                "{}",
+                "cycle",
+                vec![],
+            )],
+        );
+
+        let bytes = report.save_to_bytes().unwrap();
+        assert_eq!(&bytes[..4], b"LARD");
+        assert_eq!(bytes[4], 2);
+        let decoded = ArdReport::from_bytes(&bytes).unwrap();
+        assert_eq!(decoded, report);
+    }
+
+    #[test]
+    fn test_ard_v1_json_compat() {
+        let header = ArdHeader::new(10, "v1_target", "snap:v1");
+        let report = ArdReport::new(header, vec![]);
+        let payload = serde_json::to_vec(&report).unwrap();
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(b"LARD");
+        bytes.push(1);
+        bytes.extend_from_slice(&payload);
+
+        let decoded = ArdReport::from_bytes(&bytes).unwrap();
         assert_eq!(decoded, report);
     }
 

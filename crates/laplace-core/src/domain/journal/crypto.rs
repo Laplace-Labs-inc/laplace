@@ -38,15 +38,15 @@ impl ArdCrypto {
 
     /// Encrypts an ARD report into `[magic: 4][nonce: 12][ciphertext+tag: N]`.
     pub fn encrypt(&self, report: &ArdReport) -> Result<Vec<u8>, ArdCryptoError> {
-        let json = report
-            .to_json()
+        let payload = report
+            .save_to_bytes()
             .map_err(|e| ArdCryptoError::SerdeError(e.to_string()))?;
         let cipher = Aes256Gcm::new(Key::<Aes256Gcm>::from_slice(&self.key));
         let mut nonce_bytes = [0u8; NONCE_LEN];
         rand08::thread_rng().fill_bytes(&mut nonce_bytes);
         let nonce = Nonce::from_slice(&nonce_bytes);
         let ciphertext = cipher
-            .encrypt(nonce, json.as_bytes())
+            .encrypt(nonce, payload.as_slice())
             .map_err(|e| ArdCryptoError::EncryptFailed(e.to_string()))?;
 
         let mut output = Vec::with_capacity(LARD_MAGIC.len() + NONCE_LEN + ciphertext.len());
@@ -73,10 +73,7 @@ impl ArdCrypto {
         let plaintext = cipher
             .decrypt(nonce, ciphertext)
             .map_err(|_| ArdCryptoError::DecryptFailed)?;
-        let json =
-            String::from_utf8(plaintext).map_err(|e| ArdCryptoError::SerdeError(e.to_string()))?;
-
-        ArdReport::from_json(&json).map_err(|e| ArdCryptoError::SerdeError(e.to_string()))
+        ArdReport::from_bytes(&plaintext).map_err(|e| ArdCryptoError::SerdeError(e.to_string()))
     }
 }
 

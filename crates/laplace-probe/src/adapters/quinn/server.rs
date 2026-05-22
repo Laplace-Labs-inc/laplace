@@ -192,11 +192,17 @@ impl QuicServer {
         let cert_bytes = std::fs::read(&cert_path).map_err(|_| LaplaceError::NetworkError)?;
         let key_bytes = std::fs::read(&key_path).map_err(|_| LaplaceError::NetworkError)?;
 
-        let quinn_config = crate::infrastructure::transport::quinn_impl::config::load_server_tls(
-            &cert_bytes,
-            &key_bytes,
-        )
-        .map_err(|_| LaplaceError::InvalidRequest)?;
+        let mut quinn_config =
+            crate::infrastructure::transport::quinn_impl::config::load_server_tls(
+                &cert_bytes,
+                &key_bytes,
+            )
+            .map_err(|_| LaplaceError::InvalidRequest)?;
+
+        let mut transport = quinn::TransportConfig::default();
+        transport
+            .max_concurrent_uni_streams(self.config.effective_max_concurrent_uni_streams().into());
+        quinn_config.transport_config(Arc::new(transport));
 
         let socket_addr: std::net::SocketAddr = format!("{}:{}", host_addr, self.config.port)
             .parse()
