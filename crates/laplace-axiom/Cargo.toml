@@ -34,7 +34,7 @@ tokio = { workspace = true }
 default = ["twin", "verification"]
 twin = ["laplace-core/twin", "dep:quinn"]
 verification = ["laplace-core/verification"]
-engine = []
+engine = ["twin", "verification", "laplace-core/ard-encrypt"]
 scribe_docs = []
 
 [lints.rust]

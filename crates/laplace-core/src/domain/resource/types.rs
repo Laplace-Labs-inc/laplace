@@ -2,5 +2,6 @@
 //! Resource tracking types — re-exported from `laplace-interfaces`
 
 pub use laplace_interfaces::domain::resource::types::{
-    RequestResult, ResourceError, ResourceId, ResourceType, ThreadId, ThreadStatus,
+    RequestResult, ResourceCapacity, ResourceError, ResourceId, ResourceType, ThreadId,
+    ThreadStatus,
 };

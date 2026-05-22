@@ -120,3 +120,40 @@ pub fn load_ard(path: &str) -> std::io::Result<laplace_core::domain::journal::Ar
     laplace_core::domain::journal::ArdReport::from_json(&content)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
 }
+
+/// Writes an [`ArdReport`] as AES-GCM encrypted bytes.
+///
+/// If `LAPLACE_ARD_KEY` is missing this falls back to plain JSON and logs a warning.
+#[cfg(feature = "engine")]
+pub fn save_ard_encrypted(
+    report: &laplace_core::domain::journal::ArdReport,
+    path: &str,
+) -> std::io::Result<()> {
+    match laplace_core::domain::journal::crypto::ArdCrypto::from_env() {
+        Ok(crypto) => {
+            let encrypted = crypto
+                .encrypt(report)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))?;
+            std::fs::write(path, encrypted)
+        }
+        Err(laplace_core::domain::journal::crypto::ArdCryptoError::MissingKey) => {
+            tracing::warn!(
+                path = %path,
+                "LAPLACE_ARD_KEY missing; falling back to plain ARD JSON"
+            );
+            save_ard(report, path)
+        }
+        Err(e) => Err(std::io::Error::new(std::io::ErrorKind::InvalidInput, e)),
+    }
+}
+
+/// Reads an AES-GCM encrypted `.ard.enc` file and returns the decrypted report.
+#[cfg(feature = "engine")]
+pub fn load_ard_encrypted(path: &str) -> std::io::Result<laplace_core::domain::journal::ArdReport> {
+    let crypto = laplace_core::domain::journal::crypto::ArdCrypto::from_env()
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidInput, e))?;
+    let encrypted = std::fs::read(path)?;
+    crypto
+        .decrypt(&encrypted)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+}

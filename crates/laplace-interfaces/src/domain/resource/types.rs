@@ -86,6 +86,35 @@ impl fmt::Display for ResourceId {
     }
 }
 
+/// Maximum simultaneous holders allowed for a resource.
+///
+/// `capacity = 1` is mutex-compatible with the existing WFG behavior.
+/// `capacity = N` models a counting semaphore with `N` slots.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ResourceCapacity(pub u32);
+
+impl ResourceCapacity {
+    /// Single-holder mutex capacity.
+    pub const MUTEX: Self = Self(1);
+
+    /// Creates a non-zero resource capacity.
+    pub const fn new(n: u32) -> Self {
+        assert!(n >= 1);
+        Self(n)
+    }
+
+    /// Returns the raw capacity value.
+    pub const fn as_u32(self) -> u32 {
+        self.0
+    }
+}
+
+impl Default for ResourceCapacity {
+    fn default() -> Self {
+        Self::MUTEX
+    }
+}
+
 /// Thread status (maps to TLA+ ThreadStatusValues)
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ThreadStatus {
@@ -215,6 +244,11 @@ pub enum ResourceError {
         /// Resources still held by the thread at exit.
         held_resources: Vec<ResourceId>,
     },
+    /// Multiple wait-for cycles were detected at the same time.
+    MultiCycleDeadlock {
+        /// Each item is one detected cycle represented as an ordered thread list.
+        cycles: Vec<Vec<ThreadId>>,
+    },
 }
 
 impl fmt::Display for ResourceError {
@@ -248,6 +282,21 @@ impl fmt::Display for ResourceError {
                         write!(f, ", ")?;
                     }
                     write!(f, "{}", r)?;
+                }
+                Ok(())
+            }
+            Self::MultiCycleDeadlock { cycles } => {
+                write!(f, "Multiple deadlock cycles detected: ")?;
+                for (cycle_idx, cycle) in cycles.iter().enumerate() {
+                    if cycle_idx > 0 {
+                        write!(f, "; ")?;
+                    }
+                    for (thread_idx, thread) in cycle.iter().enumerate() {
+                        if thread_idx > 0 {
+                            write!(f, " -> ")?;
+                        }
+                        write!(f, "{}", thread)?;
+                    }
                 }
                 Ok(())
             }

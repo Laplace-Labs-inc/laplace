@@ -47,6 +47,10 @@ parking_lot  = { version = "0.12", optional = true }
 hdrhistogram = { version = "7.5",  optional = true }
 
 # Tier 2: Axiom (Deterministic Simulation & Full Search)
+# ARD encryption
+aes-gcm = { version = "0.10", optional = true }
+rand08 = { package = "rand", version = "0.8", optional = true }
+
 rand_chacha = { version = "0.3", optional = true } # Deterministic RNG
 tokio = { workspace = true, optional = true }      # Async Runtime for Simulation
 
@@ -96,6 +100,7 @@ twin = ["verification", "dep:rand_chacha", "dep:tokio", "laplace-interfaces/twin
 tokio-runtime = ["twin"] 
 
 scribe_docs = []
+ard-encrypt = ["dep:aes-gcm", "dep:rand08"]
 
 
 # ============================================================================

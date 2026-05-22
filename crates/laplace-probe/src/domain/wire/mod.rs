@@ -17,7 +17,8 @@ pub mod error;
 pub mod parser;
 
 pub use compression::{
-    lz4_compress, lz4_decompress, DictSyncMessage, TokenFrequencyTracker, LZ4_COMPRESSION_THRESHOLD,
+    lz4_compress, lz4_decompress, DictSyncError, DictSyncMessage, DictSyncSession,
+    TokenFrequencyTracker, DYNAMIC_ID_MAX, DYNAMIC_ID_MIN, LZ4_COMPRESSION_THRESHOLD,
 };
 pub use decoder::SemanticDecoder;
 pub use dictionary::{read_varint, write_varint, StaticDictionary, STATIC_ID_MAX, STATIC_ID_MIN};

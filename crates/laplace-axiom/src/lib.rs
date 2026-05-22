@@ -22,6 +22,20 @@ pub mod simulation;
 
 pub mod infrastructure;
 
+/// Wait-for Graph / Resource Allocation Graph public API.
+/// GC-L3: this module must remain exposed as `pub mod wfg` after RAG migration.
+pub mod wfg {
+    pub use laplace_core::domain::resource::{
+        rag::RagTracker,
+        tracker::ResourceTracker,
+        types::{RequestResult, ResourceError, ResourceId, ThreadId, ThreadStatus},
+    };
+
+    #[cfg(feature = "twin")]
+    pub use laplace_core::domain::resource::detailed::DetailedTracker;
+    pub use laplace_interfaces::domain::resource::types::ResourceCapacity;
+}
+
 /// Axiom Oracle — exhaustive DPOR judgment engine with SMT bridge and ARD dump.
 pub mod oracle;
 pub mod session;

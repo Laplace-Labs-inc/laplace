@@ -81,6 +81,8 @@
 //! ```
 
 pub mod ard;
+#[cfg(feature = "ard-encrypt")]
+pub mod crypto;
 pub mod model;
 pub mod status;
 

@@ -49,7 +49,7 @@ use laplace_ki_dpor::{DporRunner, KiDporScheduler, LivenessViolation, Schedule};
 #[cfg(feature = "engine")]
 mod engine;
 #[cfg(feature = "engine")]
-pub use engine::{load_ard, save_ard};
+pub use engine::{load_ard, load_ard_encrypted, save_ard, save_ard_encrypted};
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // SMT Bridge — Z3 abstraction layer

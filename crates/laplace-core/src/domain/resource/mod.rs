@@ -74,6 +74,8 @@ pub mod types;
 
 // Production (zero-cost)
 pub mod noop;
+pub mod pearce_kelly;
+pub mod rag;
 
 // Verification (full tracking)
 #[cfg(feature = "twin")]
@@ -83,7 +85,9 @@ pub mod detailed;
 // Public Re-exports: Core Types and Traits
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-pub use types::{ResourceError, ResourceId, ResourceType, ThreadId, ThreadStatus};
+pub use types::{
+    ResourceCapacity, ResourceError, ResourceId, ResourceType, ThreadId, ThreadStatus,
+};
 
 pub use tracker::{RequestResult, ResourceTracker};
 
@@ -95,6 +99,9 @@ pub use guard::{ResourceGuard, ResourceUsage};
 
 #[cfg(all(kani, feature = "twin"))]
 mod proofs;
+
+#[cfg(all(kani, feature = "twin"))]
+mod rag_proofs;
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 // Feature-Gated DefaultTracker Selection

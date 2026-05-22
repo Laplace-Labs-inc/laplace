@@ -5,4 +5,7 @@ pub mod traits;
 pub mod types;
 
 pub use traits::{ResourceGuard, ResourceTracker, ResourceUsage};
-pub use types::{RequestResult, ResourceError, ResourceId, ResourceType, ThreadId, ThreadStatus};
+pub use types::{
+    RequestResult, ResourceCapacity, ResourceError, ResourceId, ResourceType, ThreadId,
+    ThreadStatus,
+};

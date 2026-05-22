@@ -28,7 +28,7 @@
 //! **Note**: The stream-level sync logic is stubbed here. The data structures
 //! are complete and ready for integration in Phase 4.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use super::dictionary::{read_varint, write_varint};
 
@@ -73,6 +73,78 @@ pub enum DictSyncMessage {
     Ack { confirmed_id: u32 },
     /// Receiver rejects the proposed ID mapping (e.g. ID conflict).
     Reject { rejected_id: u32 },
+}
+
+/// DictSync negotiation failure.
+///
+/// Semantic decoders must reject dynamic IDs that were rejected or never
+/// confirmed, preventing silent decode corruption.
+#[derive(Debug, PartialEq, Eq, thiserror::Error)]
+pub enum DictSyncError {
+    #[error("dynamic ID {0:#06x} was rejected; using it would silently produce wrong output")]
+    RejectedId(u32),
+    #[error("dynamic ID {0:#06x} is unknown (Propose not received or Ack not confirmed)")]
+    UnknownId(u32),
+}
+
+/// Per-session DictSync negotiation state.
+///
+/// Stream 0 feeds received control messages here. Decoders must call
+/// [`Self::check_id`] before using any dynamic ID.
+#[derive(Debug, Default)]
+pub struct DictSyncSession {
+    confirmed: HashMap<u32, String>,
+    rejected: HashSet<u32>,
+    pending: HashMap<u32, String>,
+}
+
+impl DictSyncSession {
+    /// Creates an empty DictSync session.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Handles a DictSync control message.
+    pub fn handle(&mut self, msg: DictSyncMessage) {
+        match msg {
+            DictSyncMessage::Propose { proposed_id, token } => {
+                self.pending.insert(proposed_id, token);
+                self.rejected.remove(&proposed_id);
+            }
+            DictSyncMessage::Ack { confirmed_id } => {
+                if let Some(token) = self.pending.remove(&confirmed_id) {
+                    self.confirmed.insert(confirmed_id, token);
+                    self.rejected.remove(&confirmed_id);
+                }
+            }
+            DictSyncMessage::Reject { rejected_id } => {
+                self.pending.remove(&rejected_id);
+                self.confirmed.remove(&rejected_id);
+                self.rejected.insert(rejected_id);
+            }
+        }
+    }
+
+    /// Registers a locally proposed ID while waiting for Ack/Reject.
+    pub fn register_pending(&mut self, id: u32, token: String) {
+        self.pending.insert(id, token);
+        self.rejected.remove(&id);
+    }
+
+    /// Checks whether a dynamic ID is confirmed and returns its token.
+    pub fn check_id(&self, id: u32) -> Result<&str, DictSyncError> {
+        #[allow(clippy::manual_range_contains)]
+        if id < DYNAMIC_ID_MIN || id > DYNAMIC_ID_MAX {
+            return Err(DictSyncError::UnknownId(id));
+        }
+        if self.rejected.contains(&id) {
+            return Err(DictSyncError::RejectedId(id));
+        }
+        self.confirmed
+            .get(&id)
+            .map(String::as_str)
+            .ok_or(DictSyncError::UnknownId(id))
+    }
 }
 
 impl DictSyncMessage {
