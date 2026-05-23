@@ -1,0 +1,113 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 1: Format + Lint + Check
+# ─────────────────────────────────────────────────────────────────────────────
+  lint-and-check:
+    name: Lint & Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "."
+
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Format check
+        run: cargo fmt --all -- --check
+
+      - name: Cargo check
+        run: cargo check --all-targets
+
+      - name: Clippy
+        run: cargo clippy --all-targets -- -D warnings
+        continue-on-error: true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 2: Unit Tests (public crates)
+# ─────────────────────────────────────────────────────────────────────────────
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: lint-and-check
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "."
+
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run tests
+        run: cargo test
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Job 3: Bug-Detection Hunt Examples (patched vendor 사용)
+# ─────────────────────────────────────────────────────────────────────────────
+  hunt-examples:
+    name: Bug Detection Hunt Examples
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    needs: lint-and-check
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.base_ref == 'main')
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "."
+
+      - uses: arduino/setup-protoc@v3
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: crossbeam-hunt
+        run: |
+          cargo test --manifest-path examples/crossbeam-hunt/Cargo.toml
+        continue-on-error: true
+
+      - name: dashmap-hunt
+        run: |
+          cargo test --manifest-path examples/dashmap-hunt/Cargo.toml
+        continue-on-error: true
+
+      - name: parking_lot-hunt
+        run: |
+          cargo test --manifest-path examples/parking_lot-hunt/Cargo.toml
+        continue-on-error: true
+
+      - name: rayon-hunt
+        run: |
+          cargo test --manifest-path examples/rayon-hunt/Cargo.toml
+        continue-on-error: true

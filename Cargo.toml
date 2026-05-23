@@ -28,3 +28,11 @@ async-trait = "0.1.89"
 
 [workspace.lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+
+# Patched crates for bug-detection examples (hunt examples only)
+[patch.crates-io]
+lock_api          = { path = "vendor/lock_api-patched" }
+dashmap           = { path = "vendor/dashmap-patched" }
+parking_lot       = { path = "vendor/parking_lot-patched" }
+crossbeam-channel = { path = "vendor/crossbeam-patched" }
+rayon             = { path = "vendor/rayon-patched" }
