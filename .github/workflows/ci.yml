@@ -25,7 +25,15 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Checkout laplace-cloud repo
-        run: git clone https://github.com/laplace-labs-inc/laplace-cloud.git "${{ github.workspace }}/../laplace-cloud"
+        uses: actions/checkout@v4
+        with:
+          repository: laplace-labs-inc/laplace-cloud
+          path: laplace-cloud
+          token: ${{ secrets.LAPLACE_CI_READ_TOKEN }}
+          fetch-depth: 1
+
+      - name: Link laplace-cloud sibling path
+        run: ln -sfn "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -61,7 +69,15 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Checkout laplace-cloud repo
-        run: git clone https://github.com/laplace-labs-inc/laplace-cloud.git "${{ github.workspace }}/../laplace-cloud"
+        uses: actions/checkout@v4
+        with:
+          repository: laplace-labs-inc/laplace-cloud
+          path: laplace-cloud
+          token: ${{ secrets.LAPLACE_CI_READ_TOKEN }}
+          fetch-depth: 1
+
+      - name: Link laplace-cloud sibling path
+        run: ln -sfn "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -89,7 +105,15 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Checkout laplace-cloud repo
-        run: git clone https://github.com/laplace-labs-inc/laplace-cloud.git "${{ github.workspace }}/../laplace-cloud"
+        uses: actions/checkout@v4
+        with:
+          repository: laplace-labs-inc/laplace-cloud
+          path: laplace-cloud
+          token: ${{ secrets.LAPLACE_CI_READ_TOKEN }}
+          fetch-depth: 1
+
+      - name: Link laplace-cloud sibling path
+        run: ln -sfn "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
 
       - uses: dtolnay/rust-toolchain@stable
 
