@@ -46,8 +46,6 @@ jobs:
           workspaces: "."
 
       - uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Format check
         run: cargo fmt --all -- --check
@@ -90,8 +88,6 @@ jobs:
           workspaces: "."
 
       - uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run tests
         run: cargo test
@@ -128,8 +124,6 @@ jobs:
           workspaces: "."
 
       - uses: arduino/setup-protoc@v3
-        with:
-          repo-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: crossbeam-hunt
         run: |
