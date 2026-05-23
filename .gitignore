@@ -1,0 +1,44 @@
+# Rust
+target/
+**/*.rs.bk
+*.pdb
+
+# Cargo.lock — 라이브러리 크레이트는 커밋하지 않음
+Cargo.lock
+
+# Secrets & keys
+*.pem
+*.key
+*.p12
+*.pfx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs & env
+*.log
+.env
+.env.prod
+
+# Laplace artifacts
+.laplace/
+*.ard
+*_audit_log_*.jsonl
+
+# Claude Code local settings
+.claude/settings.local.json
+.claude/projects/
+
+# TLA+ generated files
+*_TTrace_*.tla
+*.bin
+states/
+MC.out
+MC.cfg
