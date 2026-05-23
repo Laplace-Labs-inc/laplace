@@ -11,9 +11,19 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::{Mutex, MutexGuard};
 
+#[cfg(feature = "verification")]
 use laplace_probe::ProbeEvent;
 
 use crate::session::{current_thread_id, emit};
+
+macro_rules! emit_probe_event {
+    ($event:expr) => {
+        #[cfg(feature = "verification")]
+        {
+            emit($event);
+        }
+    };
+}
 
 /// `std::sync::Mutex<T>` 래퍼 — lock/unlock 시 `ProbeEvent`를 자동 전송한다.
 ///
@@ -56,7 +66,7 @@ impl<T> TrackedStdMutex<T> {
         let guard = self.inner.lock().unwrap();
 
         // Lock 획득 후 이벤트 전송 (획득 전 전송하면 순서 역전 가능)
-        emit(ProbeEvent::LockAcquired {
+        emit_probe_event!(ProbeEvent::LockAcquired {
             thread_id,
             resource: self.resource_name.to_string(),
         });
@@ -91,7 +101,7 @@ impl<T> DerefMut for TrackedStdGuard<'_, T> {
 
 impl<T> Drop for TrackedStdGuard<'_, T> {
     fn drop(&mut self) {
-        emit(ProbeEvent::LockReleased {
+        emit_probe_event!(ProbeEvent::LockReleased {
             thread_id: self.thread_id,
             resource: self.resource_name.to_string(),
         });

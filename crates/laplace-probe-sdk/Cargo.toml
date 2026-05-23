@@ -5,26 +5,31 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license = "Apache-2.0"
-description = "Laplace SDK — TrackedMutex + embedded Ki-DPOR oracle for cargo test verification"
+repository.workspace = true
+description = "Laplace Probe SDK — TrackedMutex instrumentation + optional Ki-DPOR oracle"
+keywords = ["concurrency", "verification", "mutex", "deadlock", "tracing"]
+categories = ["development-tools::testing", "concurrency"]
 
 [features]
-default = ["verification", "parking_lot_tracking"]
+# thin default: instrumentation only
+default = ["parking_lot_tracking"]
 verification = [
+    "dep:laplace-probe",
+    "dep:laplace-axiom",
+    "dep:laplace-core",
     "laplace-axiom/twin",
     "laplace-axiom/verification",
     "laplace-axiom/engine",
     "laplace-core/twin",
     "laplace-probe-common/std",
-    # TODO(alpha-2): move closed verification pipeline behind a cloud-only feature.
 ]
 parking_lot_tracking = ["dep:parking_lot"]
 cloud = ["dep:futures-util", "dep:tokio-tungstenite"]
 
 [dependencies]
-laplace-probe-common = { path = "../laplace-probe-common" }
-laplace-probe        = { path = "../laplace-probe" }
-laplace-axiom        = { path = "../laplace-axiom" }
-laplace-core         = { path = "../laplace-core" }
+# open deps
+laplace-probe-common = { path = "../laplace-probe-common", version = "0.1.0-alpha-1" }
+laplace-interfaces   = { path = "../laplace-interfaces", version = "0.1.0-alpha-1" }
 
 tokio      = { workspace = true }
 serde      = { workspace = true }
@@ -33,18 +38,19 @@ tracing    = { workspace = true }
 anyhow     = { workspace = true }
 once_cell  = "1.21"
 bytemuck   = { version = "1.16", features = ["derive"] }
-futures-util = { version = "0.3", optional = true }
+base64     = "0.22"
+dirs       = "5"
+toml       = "0.8"
+
+# optional closed deps (laplace-cloud internal verification)
+laplace-probe = { path = "../../../laplace-cloud/crates/laplace-probe", version = "0.1.0-alpha-1", optional = true }
+laplace-axiom = { path = "../../../laplace-cloud/crates/laplace-axiom", version = "0.1.0-alpha-1", optional = true }
+laplace-core  = { path = "../../../laplace-cloud/crates/laplace-core", version = "0.1.0-alpha-1", optional = true }
+
+# optional open deps
+futures-util      = { version = "0.3", optional = true }
 tokio-tungstenite = { version = "0.24", optional = true }
-
-# JWT payload 디코딩 (라이선스 max_depth 읽기)
-base64 = "0.22"
-dirs   = "5"
-
-# laplace.toml 파싱
-toml = "0.8"
-
-# parking_lot RwLock for reentrant read support
-parking_lot = { version = "0.12", optional = true }
+parking_lot       = { version = "0.12", optional = true }
 
 [package.metadata.docs.rs]
 all-features = true

@@ -7,6 +7,16 @@
 //! 내부적으로 SeqCst를 강제한다. SimulatedMemory 브리지는 Phase 2.
 
 use crate::session::{current_thread_id, emit};
+
+macro_rules! emit_probe_event {
+    ($event:expr) => {
+        #[cfg(feature = "verification")]
+        {
+            emit($event);
+        }
+    };
+}
+#[cfg(feature = "verification")]
 use laplace_probe::ProbeEvent;
 use std::sync::atomic::Ordering;
 
@@ -55,7 +65,7 @@ macro_rules! tracked_atomic {
             pub fn load(&self, _ordering: Ordering) -> <$inner as AtomicInner>::Value {
                 let thread_id = current_thread_id();
                 let val = self.inner.load(Ordering::SeqCst);
-                emit(ProbeEvent::AtomicLoad {
+                emit_probe_event!(ProbeEvent::AtomicLoad {
                     thread_id,
                     resource: self.resource_name.to_string(),
                 });
@@ -66,7 +76,7 @@ macro_rules! tracked_atomic {
             pub fn store(&self, value: <$inner as AtomicInner>::Value, _ordering: Ordering) {
                 let thread_id = current_thread_id();
                 self.inner.store(value, Ordering::SeqCst);
-                emit(ProbeEvent::AtomicStore {
+                emit_probe_event!(ProbeEvent::AtomicStore {
                     thread_id,
                     resource: self.resource_name.to_string(),
                 });
@@ -84,7 +94,7 @@ macro_rules! tracked_atomic {
                 let result =
                     self.inner
                         .compare_exchange(current, new, Ordering::SeqCst, Ordering::SeqCst);
-                emit(ProbeEvent::AtomicRmw {
+                emit_probe_event!(ProbeEvent::AtomicRmw {
                     thread_id,
                     resource: self.resource_name.to_string(),
                 });
@@ -108,7 +118,7 @@ macro_rules! tracked_atomic_numeric {
             ) -> <$inner as AtomicInner>::Value {
                 let thread_id = current_thread_id();
                 let prev = self.inner.fetch_add(val, Ordering::SeqCst);
-                emit(ProbeEvent::AtomicRmw {
+                emit_probe_event!(ProbeEvent::AtomicRmw {
                     thread_id,
                     resource: self.resource_name.to_string(),
                 });
@@ -123,7 +133,7 @@ macro_rules! tracked_atomic_numeric {
             ) -> <$inner as AtomicInner>::Value {
                 let thread_id = current_thread_id();
                 let prev = self.inner.fetch_sub(val, Ordering::SeqCst);
-                emit(ProbeEvent::AtomicRmw {
+                emit_probe_event!(ProbeEvent::AtomicRmw {
                     thread_id,
                     resource: self.resource_name.to_string(),
                 });

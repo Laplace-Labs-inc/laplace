@@ -5,28 +5,22 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license = "Apache-2.0"
+repository.workspace = true
 description = "Laplace Harness Registry: centralised verification scenarios for Axiom Oracle"
+keywords = ["concurrency", "verification", "deadlock", "harness", "dpor"]
+categories = ["development-tools::testing"]
 
 [lib]
 name = "laplace_harness"
 path = "src/lib.rs"
 
-[dependencies]
-laplace-core = { path = "../laplace-core" }
-laplace-interfaces = { path = "../laplace-interfaces" }
-laplace-dpor = { path = "../laplace-dpor", optional = true }
-laplace-macro = { path = "../laplace-macro", optional = true }
-inventory = { version = "0.3", optional = true }
-anyhow = "1.0"
-serde = { workspace = true, features = ["derive"] }
-serde_yaml = "0.9"
-deadpool = { version = "0.10", optional = true }
-laplace-byoc-audit = { path = "../laplace-byoc-audit", optional = true }
-
 [features]
-default = ["twin"]
-twin = ["laplace-core/twin"]
+# thin default: DSL only
+default = []
+# twin: laplace-core enabled (laplace-cloud internal)
+twin = ["dep:laplace-core", "laplace-core/twin"]
 verification = [
+    "twin",
     "dep:laplace-dpor",
     "dep:laplace-macro",
     "dep:inventory",
@@ -35,6 +29,23 @@ verification = [
     "laplace-core/verification",
 ]
 internal-audit = []
+
+[dependencies]
+# open deps
+laplace-interfaces = { path = "../laplace-interfaces", version = "0.1.0-alpha-1" }
+anyhow     = "1.0"
+serde      = { workspace = true, features = ["derive"] }
+serde_yaml = "0.9"
+
+# optional closed deps
+laplace-core       = { path = "../../../laplace-cloud/crates/laplace-core", version = "0.1.0-alpha-1", optional = true }
+laplace-dpor       = { path = "../../../laplace-cloud/crates/laplace-dpor", version = "0.1.0-alpha-1", optional = true }
+laplace-byoc-audit = { path = "../../../laplace-cloud/crates/laplace-byoc-audit", version = "0.1.0-alpha-1", optional = true }
+
+# optional open deps
+laplace-macro = { path = "../laplace-macro", version = "0.1.0-alpha-1", optional = true }
+inventory     = { version = "0.3", optional = true }
+deadpool      = { version = "0.10", optional = true }
 
 [package.metadata.docs.rs]
 all-features = true

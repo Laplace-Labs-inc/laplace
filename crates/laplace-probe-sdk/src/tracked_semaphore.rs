@@ -4,6 +4,16 @@
 //! acquire → SemaphoreAcquired, Permit drop → SemaphoreReleased 이벤트 전송.
 
 use crate::session::{current_thread_id, emit};
+
+macro_rules! emit_probe_event {
+    ($event:expr) => {
+        #[cfg(feature = "verification")]
+        {
+            emit($event);
+        }
+    };
+}
+#[cfg(feature = "verification")]
 use laplace_probe::ProbeEvent;
 use std::sync::Arc;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
@@ -44,7 +54,7 @@ impl TrackedSemaphore {
             .acquire_owned()
             .await
             .expect("semaphore closed");
-        emit(ProbeEvent::SemaphoreAcquired {
+        emit_probe_event!(ProbeEvent::SemaphoreAcquired {
             thread_id,
             resource: self.resource_name.to_string(),
         });
@@ -70,7 +80,7 @@ pub struct TrackedSemaphorePermit {
 
 impl Drop for TrackedSemaphorePermit {
     fn drop(&mut self) {
-        emit(ProbeEvent::SemaphoreReleased {
+        emit_probe_event!(ProbeEvent::SemaphoreReleased {
             thread_id: self.thread_id,
             resource: self.resource_name.to_string(),
         });

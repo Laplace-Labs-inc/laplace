@@ -123,6 +123,7 @@ pub use laplace_probe_sdk::set_probe_thread_id;
 pub use laplace_probe_sdk::ProbeSessionConfig;
 
 /// Enumeration of all probe event types.
+#[cfg(feature = "verification")]
 pub use laplace_probe_sdk::ProbeEvent;
 
 /// Verification result with verdicts and assertions.

@@ -5,6 +5,16 @@
 //! Guard drop 시 각각 RwLockReadReleased / RwLockWriteReleased 이벤트 전송.
 
 use crate::session::{current_thread_id, emit};
+
+macro_rules! emit_probe_event {
+    ($event:expr) => {
+        #[cfg(feature = "verification")]
+        {
+            emit($event);
+        }
+    };
+}
+#[cfg(feature = "verification")]
 use laplace_probe::ProbeEvent;
 use std::ops::{Deref, DerefMut};
 use std::sync::RwLock;
@@ -36,7 +46,7 @@ impl<T> TrackedStdRwLock<T> {
         // is expected behavior per Rust stdlib semantics.
         #[allow(clippy::unwrap_used)]
         let guard = self.inner.read().unwrap();
-        emit(ProbeEvent::RwLockReadAcquired {
+        emit_probe_event!(ProbeEvent::RwLockReadAcquired {
             thread_id,
             resource: self.resource_name.to_string(),
         });
@@ -54,7 +64,7 @@ impl<T> TrackedStdRwLock<T> {
         // is expected behavior per Rust stdlib semantics.
         #[allow(clippy::unwrap_used)]
         let guard = self.inner.write().unwrap();
-        emit(ProbeEvent::RwLockWriteAcquired {
+        emit_probe_event!(ProbeEvent::RwLockWriteAcquired {
             thread_id,
             resource: self.resource_name.to_string(),
         });
@@ -85,7 +95,7 @@ impl<T> Deref for TrackedStdRwLockReadGuard<'_, T> {
 
 impl<T> Drop for TrackedStdRwLockReadGuard<'_, T> {
     fn drop(&mut self) {
-        emit(ProbeEvent::RwLockReadReleased {
+        emit_probe_event!(ProbeEvent::RwLockReadReleased {
             thread_id: self.thread_id,
             resource: self.resource_name.to_string(),
         });
@@ -115,7 +125,7 @@ impl<T> DerefMut for TrackedStdRwLockWriteGuard<'_, T> {
 
 impl<T> Drop for TrackedStdRwLockWriteGuard<'_, T> {
     fn drop(&mut self) {
-        emit(ProbeEvent::RwLockWriteReleased {
+        emit_probe_event!(ProbeEvent::RwLockWriteReleased {
             thread_id: self.thread_id,
             resource: self.resource_name.to_string(),
         });

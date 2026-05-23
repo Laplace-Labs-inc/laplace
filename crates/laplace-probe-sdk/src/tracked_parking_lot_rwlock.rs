@@ -6,6 +6,16 @@
 //! DashMap 등 `parking_lot` 기반 크레이트 패치에 사용.
 
 use crate::session::{current_thread_id, emit};
+
+macro_rules! emit_probe_event {
+    ($event:expr) => {
+        #[cfg(feature = "verification")]
+        {
+            emit($event);
+        }
+    };
+}
+#[cfg(feature = "verification")]
 use laplace_probe::ProbeEvent;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::ops::{Deref, DerefMut};
@@ -34,7 +44,7 @@ impl<T> TrackedParkingLotRwLock<T> {
     pub fn read(&self) -> TrackedParkingLotRwLockReadGuard<'_, T> {
         let thread_id = current_thread_id();
         let guard = self.inner.read();
-        emit(ProbeEvent::RwLockReadAcquired {
+        emit_probe_event!(ProbeEvent::RwLockReadAcquired {
             thread_id,
             resource: self.resource_name.to_string(),
         });
@@ -49,7 +59,7 @@ impl<T> TrackedParkingLotRwLock<T> {
     pub fn write(&self) -> TrackedParkingLotRwLockWriteGuard<'_, T> {
         let thread_id = current_thread_id();
         let guard = self.inner.write();
-        emit(ProbeEvent::RwLockWriteAcquired {
+        emit_probe_event!(ProbeEvent::RwLockWriteAcquired {
             thread_id,
             resource: self.resource_name.to_string(),
         });
@@ -72,7 +82,7 @@ impl<T> TrackedParkingLotRwLock<T> {
     pub fn try_read(&self) -> Option<TrackedParkingLotRwLockReadGuard<'_, T>> {
         let thread_id = current_thread_id();
         self.inner.try_read().map(|guard| {
-            emit(ProbeEvent::RwLockReadAcquired {
+            emit_probe_event!(ProbeEvent::RwLockReadAcquired {
                 thread_id,
                 resource: self.resource_name.to_string(),
             });
@@ -88,7 +98,7 @@ impl<T> TrackedParkingLotRwLock<T> {
     pub fn try_write(&self) -> Option<TrackedParkingLotRwLockWriteGuard<'_, T>> {
         let thread_id = current_thread_id();
         self.inner.try_write().map(|guard| {
-            emit(ProbeEvent::RwLockWriteAcquired {
+            emit_probe_event!(ProbeEvent::RwLockWriteAcquired {
                 thread_id,
                 resource: self.resource_name.to_string(),
             });
@@ -120,7 +130,7 @@ impl<T> Deref for TrackedParkingLotRwLockReadGuard<'_, T> {
 
 impl<T> Drop for TrackedParkingLotRwLockReadGuard<'_, T> {
     fn drop(&mut self) {
-        emit(ProbeEvent::RwLockReadReleased {
+        emit_probe_event!(ProbeEvent::RwLockReadReleased {
             thread_id: self.thread_id,
             resource: self.resource_name.to_string(),
         });
@@ -150,7 +160,7 @@ impl<T> DerefMut for TrackedParkingLotRwLockWriteGuard<'_, T> {
 
 impl<T> Drop for TrackedParkingLotRwLockWriteGuard<'_, T> {
     fn drop(&mut self) {
-        emit(ProbeEvent::RwLockWriteReleased {
+        emit_probe_event!(ProbeEvent::RwLockWriteReleased {
             thread_id: self.thread_id,
             resource: self.resource_name.to_string(),
         });

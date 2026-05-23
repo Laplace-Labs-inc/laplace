@@ -5,19 +5,19 @@ edition.workspace = true
 rust-version.workspace = true
 authors.workspace = true
 license = "Apache-2.0"
-description = "Laplace SDK — one-line import for deterministic concurrency verification"
 repository.workspace = true
-keywords = ["concurrency", "verification", "dpor", "determinism"]
+description = "Laplace SDK — one-line import for deterministic concurrency verification"
+keywords = ["concurrency", "verification", "dpor", "determinism", "mutex"]
 categories = ["development-tools::testing", "concurrency"]
 
 [features]
-default = ["verification"]
+default = []
 verification = ["laplace-probe-sdk/verification"]
-cloud = ["laplace-probe-sdk/cloud"]
+cloud        = ["laplace-probe-sdk/cloud"]
 
 [dependencies]
-laplace-probe-sdk = { path = "../laplace-probe-sdk" }
-laplace-macro = { path = "../laplace-macro" }
+laplace-probe-sdk = { path = "../laplace-probe-sdk", version = "0.1.0-alpha-1" }
+laplace-macro     = { path = "../laplace-macro", version = "0.1.0-alpha-1" }
 
 [package.metadata.docs.rs]
 all-features = true

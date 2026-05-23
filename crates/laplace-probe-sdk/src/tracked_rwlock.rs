@@ -5,6 +5,16 @@
 //! Guard drop 시 각각 RwLockReadReleased / RwLockWriteReleased 이벤트 전송.
 
 use crate::session::{current_thread_id, emit};
+
+macro_rules! emit_probe_event {
+    ($event:expr) => {
+        #[cfg(feature = "verification")]
+        {
+            emit($event);
+        }
+    };
+}
+#[cfg(feature = "verification")]
 use laplace_probe::ProbeEvent;
 use std::ops::{Deref, DerefMut};
 use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -38,7 +48,7 @@ impl<T> TrackedRwLock<T> {
     pub async fn read(&self) -> TrackedRwLockReadGuard<'_, T> {
         let thread_id = current_thread_id();
         let guard = self.inner.read().await;
-        emit(ProbeEvent::RwLockReadAcquired {
+        emit_probe_event!(ProbeEvent::RwLockReadAcquired {
             thread_id,
             resource: self.resource_name.to_string(),
         });
@@ -53,7 +63,7 @@ impl<T> TrackedRwLock<T> {
     pub async fn write(&self) -> TrackedRwLockWriteGuard<'_, T> {
         let thread_id = current_thread_id();
         let guard = self.inner.write().await;
-        emit(ProbeEvent::RwLockWriteAcquired {
+        emit_probe_event!(ProbeEvent::RwLockWriteAcquired {
             thread_id,
             resource: self.resource_name.to_string(),
         });
@@ -84,7 +94,7 @@ impl<T> Deref for TrackedRwLockReadGuard<'_, T> {
 
 impl<T> Drop for TrackedRwLockReadGuard<'_, T> {
     fn drop(&mut self) {
-        emit(ProbeEvent::RwLockReadReleased {
+        emit_probe_event!(ProbeEvent::RwLockReadReleased {
             thread_id: self.thread_id,
             resource: self.resource_name.to_string(),
         });
@@ -114,7 +124,7 @@ impl<T> DerefMut for TrackedRwLockWriteGuard<'_, T> {
 
 impl<T> Drop for TrackedRwLockWriteGuard<'_, T> {
     fn drop(&mut self) {
-        emit(ProbeEvent::RwLockWriteReleased {
+        emit_probe_event!(ProbeEvent::RwLockWriteReleased {
             thread_id: self.thread_id,
             resource: self.resource_name.to_string(),
         });

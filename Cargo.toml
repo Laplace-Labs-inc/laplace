@@ -4,10 +4,9 @@ members = [
     "crates/laplace-interfaces",
     "crates/laplace-macro",
     "crates/laplace-probe-common",
-    # alpha-2에서 private dep 분리 후 활성화:
-    # "crates/laplace-probe-sdk",
-    # "crates/laplace-sdk",
-    # "crates/laplace-harness",
+    "crates/laplace-probe-sdk",
+    "crates/laplace-harness",
+    "crates/laplace-sdk",
 ]
 
 [workspace.package]
@@ -19,8 +18,11 @@ license = "Apache-2.0"
 repository = "https://github.com/laplace-labs/laplace"
 
 [workspace.dependencies]
+tokio = { version = "1.42", features = ["full"] }
+anyhow = "1.0"
 serde = { version = "1.0.210", features = ["derive"] }
 serde_json = "1.0"
+tracing = "0.1"
 thiserror = "2.0"
 async-trait = "0.1.89"
 
@@ -29,6 +31,7 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
 
 # Patched crates for bug-detection examples (hunt examples only)
 [patch.crates-io]
+laplace-harness    = { path = "crates/laplace-harness" }
 lock_api          = { path = "vendor/lock_api-patched" }
 dashmap           = { path = "vendor/dashmap-patched" }
 parking_lot       = { path = "vendor/parking_lot-patched" }

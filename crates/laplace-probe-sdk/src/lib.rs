@@ -15,6 +15,7 @@
 //! use laplace_probe_sdk::{set_probe_sender, set_probe_thread_id};
 //! ```
 
+#[cfg(feature = "verification")]
 pub use laplace_probe::ProbeEvent;
 
 #[cfg(feature = "cloud")]
@@ -36,7 +37,7 @@ pub mod tracked_std_rwlock;
 pub use config::{load_project_config, load_toml_max_depth, ProjectConfig};
 pub use session::{
     clear_probe_sender, current_thread_id, emit, set_probe_sender, set_probe_thread_id,
-    ProbeSessionConfig, VerifyResult,
+    ProbeSessionConfig,
 };
 pub use tracked::{TrackedGuard, TrackedMutex};
 pub use tracked_atomic::{
@@ -55,10 +56,12 @@ pub use tracked_std_rwlock::{
 
 #[cfg(feature = "verification")]
 pub use session::run_verification_from;
+#[cfg(feature = "verification")]
+pub use session::VerifyResult;
 
 #[cfg(feature = "cloud")]
 pub use client::ProbeClientConfig;
-#[cfg(feature = "cloud")]
+#[cfg(all(feature = "cloud", feature = "verification"))]
 pub use session::init_cloud_probe;
 
 #[cfg(feature = "verification")]
