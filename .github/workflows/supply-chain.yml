@@ -24,7 +24,9 @@ jobs:
           fetch-depth: 1
 
       - name: Link laplace-cloud sibling path
-        run: ln -sfn "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
+        run: |
+          rm -rf "${{ github.workspace }}/../laplace-cloud"
+          mv "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
       - uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked --version 0.22.1
@@ -45,7 +47,9 @@ jobs:
           fetch-depth: 1
 
       - name: Link laplace-cloud sibling path
-        run: ln -sfn "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
+        run: |
+          rm -rf "${{ github.workspace }}/../laplace-cloud"
+          mv "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
       - uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-deny
         run: cargo install cargo-deny --locked --version 0.18.4

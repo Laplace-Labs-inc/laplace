@@ -33,7 +33,9 @@ jobs:
           fetch-depth: 1
 
       - name: Link laplace-cloud sibling path
-        run: ln -sfn "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
+        run: |
+          rm -rf "${{ github.workspace }}/../laplace-cloud"
+          mv "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -77,7 +79,9 @@ jobs:
           fetch-depth: 1
 
       - name: Link laplace-cloud sibling path
-        run: ln -sfn "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
+        run: |
+          rm -rf "${{ github.workspace }}/../laplace-cloud"
+          mv "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -113,7 +117,9 @@ jobs:
           fetch-depth: 1
 
       - name: Link laplace-cloud sibling path
-        run: ln -sfn "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
+        run: |
+          rm -rf "${{ github.workspace }}/../laplace-cloud"
+          mv "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
 
       - uses: dtolnay/rust-toolchain@stable
 
