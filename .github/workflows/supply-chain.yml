@@ -52,6 +52,6 @@ jobs:
           mv "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
       - uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-deny
-        run: cargo install cargo-deny --locked --version 0.18.4
+        run: cargo install cargo-deny --locked --version 0.19.7
       - name: Run cargo deny
         run: cargo deny --manifest-path ./Cargo.toml --all-features check

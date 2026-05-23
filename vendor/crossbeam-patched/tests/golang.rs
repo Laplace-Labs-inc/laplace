@@ -764,8 +764,10 @@ mod select2 {
         go!(c, sender(&c, N));
         receiver(&c, &dummy, N);
 
-        let _ = alloc;
-        let _ = ALLOCATED.load(SeqCst);
+        assert!(
+            !(ALLOCATED.load(SeqCst) > alloc
+                && (ALLOCATED.load(SeqCst) - alloc) > (N as usize + 10000))
+        )
     }
 }
 
