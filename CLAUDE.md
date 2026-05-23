@@ -1,13 +1,23 @@
-# Laplace Open Zone
+# Laplace (Public SDK)
 
-이 디렉토리: Apache-2.0 공개 크레이트.
+Apache-2.0 공개 크레이트. Ki-DPOR 엔진은 `laplace-cloud` 전용 — 이 레포에 없음.
 
 ## 규칙
-- `../closed/` 디렉토리 수정 금지
-- Ki-DPOR A* 로직 (ki_state.rs, ki_scheduler.rs) 은 이 존에 없음 — 추가 금지
-- oracle/engine.rs 는 비공개 — 이 존에서 참조만 가능 (feature gate 유지)
+- engine 크레이트(laplace-core, laplace-axiom, laplace-ki-dpor 등) 추가 금지
+- Ki-DPOR 로직은 `laplace-cloud/crates/` 전용
 
-## 주요 크레이트
-- laplace-dpor: Classic DPOR + VectorClock (공개 알고리즘)
-- laplace-axiom: VerificationSession + simulation (oracle/engine은 engine feature 뒤에 숨겨짐)
-- laplace-probe-sdk: TrackedMutex — BYOC 핵심 통합 인터페이스
+## Active 크레이트 (crates.io 게시 대상)
+- `laplace-interfaces` — ABI/FFI 타입 (#[repr(C)])
+- `laplace-macro` — proc-macro (#[axiom_harness] 등)
+- `laplace-probe-common` — RawProbeEvent 타입
+
+## Inactive 크레이트 (alpha-2에서 private dep 분리 후 활성화)
+- `laplace-sdk` — 사용자 진입점 re-export
+- `laplace-probe-sdk` — TrackedMutex, BYOC 매크로
+- `laplace-harness` — 내장 시나리오 (BYOC 템플릿)
+
+## 슬래시 커맨드
+| 커맨드 | 용도 |
+|--------|------|
+| `/laca` | 설계/프롬프트 생성 (L-ACA 페르소나) |
+| `/coder` | Rust 코딩 규칙 적용 |

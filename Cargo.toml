@@ -4,9 +4,7 @@ members = [
     "crates/laplace-interfaces",
     "crates/laplace-macro",
     "crates/laplace-probe-common",
-]
-exclude = [
-    # alpha-2에서 laplace-probe-sdk 의존성 분리 후 추가
+    # alpha-2에서 private dep 분리 후 활성화:
     # "crates/laplace-probe-sdk",
     # "crates/laplace-sdk",
     # "crates/laplace-harness",
