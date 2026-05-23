@@ -9,7 +9,11 @@
 //! `run_verification_from()` 호출 후 재사용 불가.
 
 use std::cell::Cell;
-use std::collections::{hash_map::DefaultHasher, HashMap};
+#[cfg(feature = "verification")]
+use std::collections::hash_map::DefaultHasher;
+#[cfg(feature = "verification")]
+use std::collections::HashMap;
+#[cfg(feature = "verification")]
 use std::hash::{Hash, Hasher};
 use std::sync::mpsc;
 
@@ -198,6 +202,7 @@ impl VerifyResult {
 ///
 /// [GHOST CONSTRAINT]: 동일 자원명은 항상 동일 해시를 반환해야 한다.
 /// `ResourceRegistry`가 이름 해시를 `ResourceId`로 고정 매핑하므로 변경 금지.
+#[cfg(feature = "verification")]
 pub(crate) fn resource_name_to_addr(name: &str) -> u64 {
     let mut h = DefaultHasher::new();
     name.hash(&mut h);

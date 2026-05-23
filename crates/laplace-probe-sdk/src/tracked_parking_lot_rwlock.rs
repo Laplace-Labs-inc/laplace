@@ -5,7 +5,9 @@
 //! `parking_lot::RwLock`을 사용하여 read 재진입을 지원한다.
 //! DashMap 등 `parking_lot` 기반 크레이트 패치에 사용.
 
-use crate::session::{current_thread_id, emit};
+use crate::session::current_thread_id;
+#[cfg(feature = "verification")]
+use crate::session::emit;
 
 macro_rules! emit_probe_event {
     ($event:expr) => {
@@ -114,6 +116,7 @@ impl<T> TrackedParkingLotRwLock<T> {
 /// TrackedParkingLotRwLock의 읽기 가드.
 ///
 /// [GHOST CONSTRAINT]: DerefMut 없음 (읽기 전용).
+#[cfg_attr(not(feature = "verification"), allow(dead_code))]
 pub struct TrackedParkingLotRwLockReadGuard<'a, T> {
     inner: RwLockReadGuard<'a, T>,
     resource_name: &'static str,
@@ -138,6 +141,7 @@ impl<T> Drop for TrackedParkingLotRwLockReadGuard<'_, T> {
 }
 
 /// TrackedParkingLotRwLock의 쓰기 가드.
+#[cfg_attr(not(feature = "verification"), allow(dead_code))]
 pub struct TrackedParkingLotRwLockWriteGuard<'a, T> {
     inner: RwLockWriteGuard<'a, T>,
     resource_name: &'static str,
