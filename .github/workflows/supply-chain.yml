@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - name: Checkout laplace-cloud repo
+        run: git clone https://github.com/laplace-labs-inc/laplace-cloud.git "${{ github.workspace }}/../laplace-cloud"
       - uses: dtolnay/rust-toolchain@stable
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked --version 0.22.1
@@ -24,6 +27,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          rust-version: "1.88.0"
+
+      - name: Checkout laplace-cloud repo
+        run: git clone https://github.com/laplace-labs-inc/laplace-cloud.git "${{ github.workspace }}/../laplace-cloud"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-deny
+        run: cargo install cargo-deny --locked --version 0.18.4
+      - name: Run cargo deny
+        run: cargo deny --manifest-path ./Cargo.toml --all-features check

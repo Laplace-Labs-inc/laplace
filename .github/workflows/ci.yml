@@ -24,6 +24,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout laplace-cloud repo
+        run: git clone https://github.com/laplace-labs-inc/laplace-cloud.git "${{ github.workspace }}/../laplace-cloud"
+
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -57,6 +60,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Checkout laplace-cloud repo
+        run: git clone https://github.com/laplace-labs-inc/laplace-cloud.git "${{ github.workspace }}/../laplace-cloud"
+
       - uses: dtolnay/rust-toolchain@stable
 
       - uses: Swatinem/rust-cache@v2
@@ -81,6 +87,9 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.base_ref == 'main')
     steps:
       - uses: actions/checkout@v4
+
+      - name: Checkout laplace-cloud repo
+        run: git clone https://github.com/laplace-labs-inc/laplace-cloud.git "${{ github.workspace }}/../laplace-cloud"
 
       - uses: dtolnay/rust-toolchain@stable
 
