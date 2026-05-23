@@ -1,0 +1,14 @@
+name: ABI Stability Check
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  semver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          package: laplace-interfaces laplace-macro laplace-probe-common
