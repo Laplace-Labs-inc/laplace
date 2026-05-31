@@ -30,6 +30,7 @@ pub mod kernel;
 #[cfg(feature = "twin")]
 /// Kraken DSL domain contracts (VUState, ScenarioStep, Scenario, ChaosEvent, RampUpProfile, etc.)
 pub mod kraken;
+pub mod log_redacted;
 /// Memory domain contracts (Address, Value, CoreId, MemoryBackend, etc.)
 pub mod memory;
 /// Pool domain contracts (StorageStrategy, HealthStatus)
@@ -42,6 +43,10 @@ pub mod runtime;
 /// Scheduler domain contracts (ThreadId, TaskId, SchedulerBackend, etc.)
 pub mod scheduler;
 pub mod scheduling;
+pub mod telemetry_config;
+pub mod telemetry_domain;
+pub mod telemetry_event;
+pub mod telemetry_sink;
 pub mod tenant;
 /// Time domain contracts (VirtualTimeNs, LamportClock, ClockBackend, etc.)
 pub mod time;
@@ -72,7 +77,12 @@ pub use transport::{
 };
 
 pub use kernel::KernelCapabilities;
+pub use log_redacted::LogRedacted;
 
 pub use quic::QuicServerStats;
+pub use telemetry_config::TelemetryConfig;
+pub use telemetry_domain::TelemetryDomain;
+pub use telemetry_event::TelemetryEvent;
+pub use telemetry_sink::TelemetrySink;
 
 pub use tui::{PanelType, Tier, TuiCapabilities};

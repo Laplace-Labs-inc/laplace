@@ -20,7 +20,7 @@
 //!
 //! ## Module Organization
 //!
-//! - `abi`: FFI layer contracts (Sovereign Bridge ABI v1.1.0)
+//! - `abi`: FFI layer contracts (Sovereign Bridge ABI v1.2.0)
 //! - `error`: Error types and domain-specific error handling
 //! - `domain`: Domain models and shared business logic types
 
@@ -42,10 +42,11 @@ pub use error::{LaplaceError, TenantError};
 
 pub use domain::{
     DeadlockProbe, GateId, GateSpec, HarnessResourceId, HarnessSpec, HttpMethod,
-    KernelCapabilities, KnulConnection, KnulEndpoint, KnulStream, PanelType, PriorityLevel,
-    QuicServerStats, ReleasePolicy, ResourceConfig, ResourceSpec, RuntimeStats, SovereignContext,
-    SovereignRuntime, SovereignTransport, TenantMetadata, TenantTier, ThreadAction, ThreadSpec,
-    Tier, TransportError, TransportFactory, TransportHandle, TransportPacket, TransportStats,
+    KernelCapabilities, KnulConnection, KnulEndpoint, KnulStream, LogRedacted, PanelType,
+    PriorityLevel, QuicServerStats, ReleasePolicy, ResourceConfig, ResourceSpec, RuntimeStats,
+    SovereignContext, SovereignRuntime, SovereignTransport, TelemetryConfig, TelemetryDomain,
+    TelemetryEvent, TelemetrySink, TenantMetadata, TenantTier, ThreadAction, ThreadSpec, Tier,
+    TransportError, TransportFactory, TransportHandle, TransportPacket, TransportStats,
     TuiCapabilities, VirtualRequest, VirtualResponse, VirtualTransport, NO_TURBO_SLOT, VUID,
 };
 
@@ -55,7 +56,7 @@ mod lib_tests {
 
     #[test]
     fn version_constants_defined() {
-        assert_eq!(FFI_ABI_VERSION, 0x00010001);
+        assert_eq!(FFI_ABI_VERSION, 0x00020000);
     }
 
     #[test]
