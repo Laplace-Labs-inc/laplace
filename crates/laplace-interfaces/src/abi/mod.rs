@@ -43,7 +43,7 @@ pub use shared::SharedMemoryMetadata;
 /// FFI ABI Version
 ///
 /// Version encoding: `0xMMmmRRRR` where MM = major, mm = minor, RRRR = revision
-/// Current: 1.1.0 (Major 1, Minor 1, Revision 0)
+/// Current: 1.2.0 (Major 1, Minor 2, Revision 0)
 ///
 /// Used for runtime compatibility checking at FFI boundary.
 #[cfg_attr(
@@ -53,7 +53,7 @@ pub use shared::SharedMemoryMetadata;
         link = "LEP-0003-laplace-interfaces-shared_memory_abi"
     )
 )]
-pub const FFI_ABI_VERSION: u32 = 0x00010001;
+pub const FFI_ABI_VERSION: u32 = 0x00020000;
 
 /// Standard alignment for all FFI structures
 ///
@@ -112,12 +112,12 @@ mod tests {
 
     #[test]
     fn abi_version_encoding() {
-        // Verify version encoding: 0x00010001 = 1.1.0
+        // Verify version encoding: 0x00020000 = 1.2.0
         let major = (FFI_ABI_VERSION >> 24) & 0xFF;
         let minor = (FFI_ABI_VERSION >> 16) & 0xFF;
 
         assert_eq!(major, 0, "Major version should be 0 (corresponds to 1.x)");
-        assert_eq!(minor, 1, "Minor version should be 1 (1.1.x)");
+        assert_eq!(minor, 2, "Minor version should be 2 (1.2.x)");
     }
 
     #[test]
