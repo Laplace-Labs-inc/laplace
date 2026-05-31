@@ -47,6 +47,13 @@ laplace-macro = { path = "../laplace-macro", version = "0.1.0-alpha-1", optional
 inventory     = { version = "0.3", optional = true }
 deadpool      = { version = "0.10", optional = true }
 
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "bench_harness_matrix"
+harness = false
+
 [package.metadata.docs.rs]
 all-features = true
 rustdoc-args = ["--cfg", "docsrs"]
