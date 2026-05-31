@@ -1,0 +1,11 @@
+[package]
+name = "macro-compile-time-fixture"
+version = "0.0.0"
+edition = "2021"
+publish = false
+
+[workspace]
+
+[dependencies]
+laplace-macro = { path = "../../.." }
+inventory = "=0.3.24"

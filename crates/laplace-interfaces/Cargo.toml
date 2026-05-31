@@ -29,6 +29,13 @@ scribe_docs = []
 [build-dependencies]
 prost-build = "0.14.3"
 
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+
+[[bench]]
+name = "pipeline_matrix_bench"
+harness = false
+
 [lints.rust]
 # Allow custom cfg attributes used by Kani verification harnesses
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
