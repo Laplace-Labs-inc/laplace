@@ -54,9 +54,9 @@ impl TelemetryEvent {
     /// consumed only by in-process subscribers like the Hollywood TUI.
     pub fn domain(&self) -> TelemetryDomain {
         match self {
-            Self::LogError(_)
-            | Self::Panic { .. }
-            | Self::ExternalSinkError { .. } => TelemetryDomain::External,
+            Self::LogError(_) | Self::Panic { .. } | Self::ExternalSinkError { .. } => {
+                TelemetryDomain::External
+            }
             _ => TelemetryDomain::Internal,
         }
     }
@@ -64,8 +64,8 @@ impl TelemetryEvent {
 
 #[cfg(test)]
 mod tests {
-    use crate::domain::entropy::ContextId;
     use super::{TelemetryDomain, TelemetryEvent};
+    use crate::domain::entropy::ContextId;
 
     #[test]
     fn domain_routes_external_sink_errors_to_external() {
