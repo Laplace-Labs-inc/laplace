@@ -6,7 +6,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
-rayon = { path = "../../../vendor/rayon-patched", features = ["laplace"] }
+rayon = { path = "../../vendor/rayon-patched", features = ["laplace"] }
 
 [dev-dependencies]
-laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk", features = ["verification"] }
+laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk" }

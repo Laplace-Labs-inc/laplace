@@ -5,26 +5,16 @@
 pub mod decoder;
 
 #[cfg(feature = "std")]
-pub mod axiom_adapter;
-
-#[cfg(feature = "std")]
 pub mod mock;
 
 #[cfg(feature = "std")]
 pub mod adapter;
-
-// TODO(alpha-2): keep the closed-dependency pipeline outside this public crate.
 
 #[cfg(feature = "std")]
 pub use decoder::{DecodedProbeEvent, ProbeEventDecoder};
 
 #[cfg(feature = "std")]
 pub use adapter::{to_resource_id, to_thread_id};
-#[cfg(feature = "std")]
-pub use axiom_adapter::{
-    AxiomEvent, AxiomOp, AxiomResourceId, AxiomStep, AxiomStepBuilder, AxiomThreadId,
-    ResourceRegistry, ThreadRegistry, MAX_AXIOM_THREADS,
-};
 
 /// Probe event type discriminant.
 ///

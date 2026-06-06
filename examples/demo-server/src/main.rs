@@ -23,9 +23,9 @@ use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 use tracing::info;
 
-use laplace_probe::{laplace_probe_init, EventContext, ProbeEvent, FFI_ABI_VERSION};
+use laplace_probe_sdk::ProbeEvent;
 
-fn yield_to_axiom(_ctx: EventContext) {}
+fn yield_to_probe(_event: ProbeEvent) {}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -61,10 +61,10 @@ struct AppState {
 /// tasks observe the same `current` count and all decrement without one seeing
 /// the other's write, eventually underflowing to `usize::MAX`.
 async fn book_ticket(State(state): State<AppState>) -> Json<Value> {
-    yield_to_axiom(EventContext::new(ProbeEvent::Custom {
+    yield_to_probe(ProbeEvent::Custom {
         name: "ticket_read_before".to_string(),
         metadata: json!({ "phase": "read" }),
-    }));
+    });
 
     // Step A: read (shared) — multiple tasks pass through simultaneously
     let current = *state.tickets.read().await;
@@ -76,10 +76,10 @@ async fn book_ticket(State(state): State<AppState>) -> Json<Value> {
     // Step B: artificial delay — other tasks read the same stale value here
     sleep(Duration::from_millis(10)).await;
 
-    yield_to_axiom(EventContext::new(ProbeEvent::Custom {
+    yield_to_probe(ProbeEvent::Custom {
         name: "ticket_write_before".to_string(),
         metadata: json!({ "phase": "write", "read_value": current }),
-    }));
+    });
 
     // Step C: write without re-checking — the race condition
     let mut tickets = state.tickets.write().await;
@@ -132,10 +132,10 @@ async fn deadlock_handler(State(state): State<AppState>) -> Json<Value> {
         // ── Order: Lock A → Lock B ────────────────────────────────────────
         info!(tid, "deadlock: acquiring Lock A (A→B order)");
         let guard_a = state.lock_a.lock().await;
-        yield_to_axiom(EventContext::new(ProbeEvent::LockAcquired {
+        yield_to_probe(ProbeEvent::LockAcquired {
             thread_id: tid,
             resource: "lock_a".to_string(),
-        }));
+        });
 
         // Sleep to guarantee the concurrent request has time to acquire Lock B
         // before we attempt to acquire it, closing the circular-wait window.
@@ -146,24 +146,24 @@ async fn deadlock_handler(State(state): State<AppState>) -> Json<Value> {
             "deadlock: acquiring Lock B (A→B order) — may block here"
         );
         let guard_b = state.lock_b.lock().await;
-        yield_to_axiom(EventContext::new(ProbeEvent::LockAcquired {
+        yield_to_probe(ProbeEvent::LockAcquired {
             thread_id: tid,
             resource: "lock_b".to_string(),
-        }));
+        });
 
         info!(tid, "deadlock: holds both locks (A+B), releasing");
 
         // Release in reverse order (B first, then A)
-        yield_to_axiom(EventContext::new(ProbeEvent::LockReleased {
+        yield_to_probe(ProbeEvent::LockReleased {
             thread_id: tid,
             resource: "lock_b".to_string(),
-        }));
+        });
         drop(guard_b);
 
-        yield_to_axiom(EventContext::new(ProbeEvent::LockReleased {
+        yield_to_probe(ProbeEvent::LockReleased {
             thread_id: tid,
             resource: "lock_a".to_string(),
-        }));
+        });
         drop(guard_a);
 
         Json(json!({ "status": "ok", "tid": tid, "order": "A→B" }))
@@ -171,10 +171,10 @@ async fn deadlock_handler(State(state): State<AppState>) -> Json<Value> {
         // ── Order: Lock B → Lock A ────────────────────────────────────────
         info!(tid, "deadlock: acquiring Lock B (B→A order)");
         let guard_b = state.lock_b.lock().await;
-        yield_to_axiom(EventContext::new(ProbeEvent::LockAcquired {
+        yield_to_probe(ProbeEvent::LockAcquired {
             thread_id: tid,
             resource: "lock_b".to_string(),
-        }));
+        });
 
         sleep(Duration::from_millis(50)).await;
 
@@ -183,23 +183,23 @@ async fn deadlock_handler(State(state): State<AppState>) -> Json<Value> {
             "deadlock: acquiring Lock A (B→A order) — may block here"
         );
         let guard_a = state.lock_a.lock().await;
-        yield_to_axiom(EventContext::new(ProbeEvent::LockAcquired {
+        yield_to_probe(ProbeEvent::LockAcquired {
             thread_id: tid,
             resource: "lock_a".to_string(),
-        }));
+        });
 
         info!(tid, "deadlock: holds both locks (B+A), releasing");
 
-        yield_to_axiom(EventContext::new(ProbeEvent::LockReleased {
+        yield_to_probe(ProbeEvent::LockReleased {
             thread_id: tid,
             resource: "lock_a".to_string(),
-        }));
+        });
         drop(guard_a);
 
-        yield_to_axiom(EventContext::new(ProbeEvent::LockReleased {
+        yield_to_probe(ProbeEvent::LockReleased {
             thread_id: tid,
             resource: "lock_b".to_string(),
-        }));
+        });
         drop(guard_b);
 
         Json(json!({ "status": "ok", "tid": tid, "order": "B→A" }))
@@ -211,8 +211,6 @@ async fn deadlock_handler(State(state): State<AppState>) -> Json<Value> {
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt::init();
-
-    let _ = laplace_probe_init(FFI_ABI_VERSION);
 
     let state = AppState {
         tickets: Arc::new(tokio::sync::RwLock::new(INITIAL_TICKETS)),

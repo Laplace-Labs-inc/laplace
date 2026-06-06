@@ -6,19 +6,14 @@
 //! DashMap 등 `parking_lot` 기반 크레이트 패치에 사용.
 
 use crate::session::current_thread_id;
-#[cfg(laplace_private_verification)]
 use crate::session::emit;
 
 macro_rules! emit_probe_event {
-    ($event:expr) => {
-        #[cfg(laplace_private_verification)]
-        {
-            emit($event);
-        }
-    };
+    ($event:expr) => {{
+        emit($event);
+    }};
 }
-#[cfg(laplace_private_verification)]
-use laplace_probe::ProbeEvent;
+use crate::ProbeEvent;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::ops::{Deref, DerefMut};
 

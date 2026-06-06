@@ -13,7 +13,7 @@ edition = "2018"
 log = "0.4"
 parking_lot = "0.12"
 scheduled-thread-pool = "0.2"
-laplace-probe-sdk = { path = "../../open/crates/laplace-probe-sdk", features = ["verification"], optional = true }
+laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk", optional = true }
 
 [features]
 laplace = ["dep:laplace-probe-sdk"]

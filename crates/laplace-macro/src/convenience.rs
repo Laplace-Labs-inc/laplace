@@ -29,7 +29,7 @@ pub fn mutex_impl(input: TokenStream) -> TokenStream {
     let name = name.unwrap_or_else(|| LitStr::new("laplace_mutex", proc_macro2::Span::call_site()));
 
     quote! {
-        ::std::sync::Arc::new(::laplace_probe_sdk::__macro_support::TrackedMutex::named(#value, #name))
+        ::std::sync::Arc::new(::laplace_sdk::__macro_support::TrackedMutex::named(#value, #name))
     }
     .into()
 }
@@ -40,7 +40,7 @@ pub fn rwlock_impl(input: TokenStream) -> TokenStream {
         name.unwrap_or_else(|| LitStr::new("laplace_rwlock", proc_macro2::Span::call_site()));
 
     quote! {
-        ::std::sync::Arc::new(::laplace_probe_sdk::__macro_support::TrackedRwLock::named(#value, #name))
+        ::std::sync::Arc::new(::laplace_sdk::__macro_support::TrackedRwLock::named(#value, #name))
     }
     .into()
 }

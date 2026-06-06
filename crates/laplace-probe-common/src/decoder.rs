@@ -12,8 +12,8 @@ use crate::{ProbeEventType, RawProbeEvent};
 ///
 /// Decoded from the flat 128-byte `RawProbeEvent`. Each variant retains only
 /// the fields relevant to its event type; padding and internal kernel fields
-/// are discarded. The DPOR translation layer (`axiom_adapter`) consumes this
-/// type to produce `AxiomEvent`s.
+/// are discarded. Downstream consumers can translate this representation into
+/// their scheduler- or analysis-specific event model.
 #[cfg(feature = "std")]
 #[derive(Debug, Clone)]
 pub enum DecodedProbeEvent {
@@ -183,7 +183,7 @@ pub enum DecodedProbeEvent {
 /// let decoder = ProbeEventDecoder::new();
 /// for raw in ring_buffer.drain() {
 ///     if let Some(decoded) = decoder.decode(&raw) {
-///         // forward to AxiomStepBuilder
+///         // forward to a scheduler-specific translator
 ///     }
 /// }
 /// ```

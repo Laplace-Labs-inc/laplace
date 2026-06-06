@@ -4,19 +4,14 @@
 //! acquire → SemaphoreAcquired, Permit drop → SemaphoreReleased 이벤트 전송.
 
 use crate::session::current_thread_id;
-#[cfg(laplace_private_verification)]
 use crate::session::emit;
 
 macro_rules! emit_probe_event {
-    ($event:expr) => {
-        #[cfg(laplace_private_verification)]
-        {
-            emit($event);
-        }
-    };
+    ($event:expr) => {{
+        emit($event);
+    }};
 }
-#[cfg(laplace_private_verification)]
-use laplace_probe::ProbeEvent;
+use crate::ProbeEvent;
 use std::sync::Arc;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 

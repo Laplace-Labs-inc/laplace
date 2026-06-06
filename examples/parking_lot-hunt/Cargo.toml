@@ -6,7 +6,7 @@ license.workspace = true
 publish = false
 
 [dependencies]
-parking_lot = { path = "../../../vendor/parking_lot-patched" }
+parking_lot = { path = "../../vendor/parking_lot-patched" }
 
 [dev-dependencies]
-laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk", features = ["verification"] }
+laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk" }

@@ -28,7 +28,7 @@ manifest_hits="$(
     \( -name 'Cargo.toml' -o -name '*.yml' -o -name '*.yaml' \) \
     -not -path './target/*' \
     -print0 |
-  xargs -0 grep -nE '(\.\./laplace-cloud|/laplace-cloud/|/closed/|/private/|path = ".*laplace-cloud|dep:laplace-(axiom|core|ki-dpor|kraken|probe-adapter|byoc-audit|api|cli)|dep:laplace-probe([][",[:space:]]|$))' || true
+  xargs -0 grep -nE '(\.\./laplace-cloud|/laplace-cloud/|/closed/|/private/|open/crates|features = \["verification"\]|path = ".*laplace-cloud|laplace-(axiom|core|ki-dpor|kraken|probe-adapter|byoc-audit|api|cli)[[:space:]]*=|dep:laplace-(axiom|core|ki-dpor|kraken|probe-adapter|byoc-audit|api|cli)|dep:laplace-probe([][",[:space:]]|$))' || true
 )"
 
 if [[ -n "${manifest_hits}" ]]; then

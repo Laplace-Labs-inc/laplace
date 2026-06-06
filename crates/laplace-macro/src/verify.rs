@@ -243,7 +243,6 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
                 set_probe_sender,
                 set_probe_thread_id,
                 ProbeSessionConfig,
-                run_verification_from,
                 ProbeEvent,
             };
 
@@ -293,7 +292,8 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
                 );
             }
 
-            // 8. Ki-DPOR 실행 + 결과 검증
+            // 8. Public macro output collects trace data only. Commercial
+            //    verification runs through the private CLI/API boundary.
             let config = ProbeSessionConfig {
                 write_ard: #write_ard,
                 output_dir: #output_dir.to_string(),
@@ -301,14 +301,7 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
                 ..ProbeSessionConfig::default()
             };
 
-            let result = run_verification_from(&events, #target_name, &config);
-
-            // 9. expected 파라미터에 따라 assert
-            if #expected == "bug" {
-                result.assert_bug();
-            } else {
-                result.assert_clean();
-            }
+            let _ = (#expected, #target_name, config, events);
         }
     };
 

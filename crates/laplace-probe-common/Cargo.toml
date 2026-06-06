@@ -15,7 +15,6 @@ path = "src/lib.rs"
 [features]
 default = ["std"]
 std = ["bytemuck"]
-# pipeline feature는 laplace-cloud에서만 활성화 (laplace-axiom + laplace-core 필요)
 scribe_docs = []
 
 [dependencies]

@@ -34,7 +34,7 @@ deadpool-runtime = { version = "0.3", path = "../deadpool-runtime" }
 # unless the `rt_tokio_1` feature is enabled.
 tokio = { version = "1.5", features = ["sync"] }
 # Laplace BYOC verification
-laplace-probe-sdk = { path = "../../open/crates/laplace-probe-sdk", features = ["verification"], optional = true }
+laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk", optional = true }
 
 [dev-dependencies]
 async-std = { version = "1.0", features = ["attributes"] }

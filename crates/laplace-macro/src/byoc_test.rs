@@ -186,11 +186,7 @@ pub(crate) fn laplace_byoc_test_impl(attr: TokenStream, item: TokenStream) -> To
         quote! {}
     };
 
-    let expected_assert = if args.expected == "bug" {
-        quote! { __byoc_result.assert_bug(); }
-    } else {
-        quote! { __byoc_result.assert_clean(); }
-    };
+    let expected = args.expected;
 
     let expanded = quote! {
         #[cfg(test)]
@@ -198,10 +194,9 @@ pub(crate) fn laplace_byoc_test_impl(attr: TokenStream, item: TokenStream) -> To
         #[allow(non_snake_case)]
         fn #func_ident() {
             use ::std::sync::mpsc;
-            use ::laplace_probe_sdk::__macro_support::{
+            use ::laplace_sdk::__macro_support::{
                 ProbeEvent,
                 ProbeSessionConfig,
-                run_verification_from,
                 set_probe_sender,
                 set_probe_thread_id,
             };
@@ -251,12 +246,7 @@ pub(crate) fn laplace_byoc_test_impl(attr: TokenStream, item: TokenStream) -> To
                 #max_depth_field
                 ..ProbeSessionConfig::default()
             };
-            let __byoc_result = run_verification_from(
-                &__byoc_events,
-                #target_name,
-                &__byoc_config
-            );
-            #expected_assert
+            let _ = (#expected, #target_name, __byoc_config, __byoc_events);
         }
     };
 

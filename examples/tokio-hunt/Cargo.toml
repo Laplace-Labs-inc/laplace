@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-tokio = { path = "../../../vendor/tokio-patched/tokio", features = ["sync", "rt"] }
+tokio = { path = "../../vendor/tokio-patched/tokio", features = ["sync", "rt"] }
 
 [dev-dependencies]
-laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk", features = ["verification"] }
+laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk" }

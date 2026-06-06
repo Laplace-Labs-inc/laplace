@@ -38,8 +38,7 @@ version = "0.8.18"
 default-features = false
 
 [dependencies.laplace-probe-sdk]
-path = "../../open/crates/laplace-probe-sdk"
-features = ["verification"]
+path = "../../crates/laplace-probe-sdk"
 optional = true
 
 [dev-dependencies.num_cpus]

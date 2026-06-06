@@ -93,7 +93,7 @@ laplace = ["laplace-probe-sdk"]
 
 [dependencies]
 tokio-macros = { version = "~2.7.0", optional = true }
-laplace-probe-sdk = { path = "../../../open/crates/laplace-probe-sdk", optional = true, default-features = false }
+laplace-probe-sdk = { path = "../../../crates/laplace-probe-sdk", optional = true, default-features = false }
 
 pin-project-lite = "0.2.11"
 
