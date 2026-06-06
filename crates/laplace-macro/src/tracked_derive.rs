@@ -138,11 +138,11 @@ fn map_field_type_to_tracked(
         if path_str.contains("std::sync::Mutex") || path_str.contains("::std::sync::Mutex") {
             if let Some(inner) = extract_first_generic(&type_path.path) {
                 let tracked_type: Type = syn::parse_str(&format!(
-                    "::laplace_sdk::TrackedStdMutex<{}>",
+                    "::laplace_sdk::__macro_support::TrackedStdMutex<{}>",
                     type_to_string(inner)
                 ))?;
                 let default_code = quote! {
-                    ::laplace_sdk::TrackedStdMutex::new(
+                    ::laplace_sdk::__macro_support::TrackedStdMutex::new(
                         <#inner as ::std::default::Default>::default(),
                         #resource_name
                     )
@@ -154,11 +154,11 @@ fn map_field_type_to_tracked(
         if path_str.contains("std::sync::RwLock") || path_str.contains("::std::sync::RwLock") {
             if let Some(inner) = extract_first_generic(&type_path.path) {
                 let tracked_type: Type = syn::parse_str(&format!(
-                    "::laplace_sdk::TrackedStdRwLock<{}>",
+                    "::laplace_sdk::__macro_support::TrackedStdRwLock<{}>",
                     type_to_string(inner)
                 ))?;
                 let default_code = quote! {
-                    ::laplace_sdk::TrackedStdRwLock::new(
+                    ::laplace_sdk::__macro_support::TrackedStdRwLock::new(
                         <#inner as ::std::default::Default>::default(),
                         #resource_name
                     )
@@ -171,11 +171,11 @@ fn map_field_type_to_tracked(
         if path_str.ends_with("Mutex") {
             if let Some(inner) = extract_first_generic(&type_path.path) {
                 let tracked_type: Type = syn::parse_str(&format!(
-                    "::laplace_sdk::TrackedMutex<{}>",
+                    "::laplace_sdk::__macro_support::TrackedMutex<{}>",
                     type_to_string(inner)
                 ))?;
                 let default_code = quote! {
-                    ::laplace_sdk::TrackedMutex::new(
+                    ::laplace_sdk::__macro_support::TrackedMutex::new(
                         <#inner as ::std::default::Default>::default(),
                         #resource_name
                     )
@@ -187,11 +187,11 @@ fn map_field_type_to_tracked(
         if path_str.ends_with("RwLock") && !path_str.contains("std::sync") {
             if let Some(inner) = extract_first_generic(&type_path.path) {
                 let tracked_type: Type = syn::parse_str(&format!(
-                    "::laplace_sdk::TrackedRwLock<{}>",
+                    "::laplace_sdk::__macro_support::TrackedRwLock<{}>",
                     type_to_string(inner)
                 ))?;
                 let default_code = quote! {
-                    ::laplace_sdk::TrackedRwLock::new(
+                    ::laplace_sdk::__macro_support::TrackedRwLock::new(
                         <#inner as ::std::default::Default>::default(),
                         #resource_name
                     )
@@ -202,41 +202,46 @@ fn map_field_type_to_tracked(
 
         // Atomic types (no generic parameters)
         if path_str.ends_with("AtomicBool") {
-            let tracked_type: Type = syn::parse_str("::laplace_sdk::TrackedAtomicBool")?;
+            let tracked_type: Type =
+                syn::parse_str("::laplace_sdk::__macro_support::TrackedAtomicBool")?;
             let default_code = quote! {
-                ::laplace_sdk::TrackedAtomicBool::new(false, #resource_name)
+                ::laplace_sdk::__macro_support::TrackedAtomicBool::new(false, #resource_name)
             };
             return Ok((tracked_type, default_code));
         }
 
         if path_str.ends_with("AtomicU32") {
-            let tracked_type: Type = syn::parse_str("::laplace_sdk::TrackedAtomicU32")?;
+            let tracked_type: Type =
+                syn::parse_str("::laplace_sdk::__macro_support::TrackedAtomicU32")?;
             let default_code = quote! {
-                ::laplace_sdk::TrackedAtomicU32::new(0, #resource_name)
+                ::laplace_sdk::__macro_support::TrackedAtomicU32::new(0, #resource_name)
             };
             return Ok((tracked_type, default_code));
         }
 
         if path_str.ends_with("AtomicU64") {
-            let tracked_type: Type = syn::parse_str("::laplace_sdk::TrackedAtomicU64")?;
+            let tracked_type: Type =
+                syn::parse_str("::laplace_sdk::__macro_support::TrackedAtomicU64")?;
             let default_code = quote! {
-                ::laplace_sdk::TrackedAtomicU64::new(0, #resource_name)
+                ::laplace_sdk::__macro_support::TrackedAtomicU64::new(0, #resource_name)
             };
             return Ok((tracked_type, default_code));
         }
 
         if path_str.ends_with("AtomicUsize") {
-            let tracked_type: Type = syn::parse_str("::laplace_sdk::TrackedAtomicUsize")?;
+            let tracked_type: Type =
+                syn::parse_str("::laplace_sdk::__macro_support::TrackedAtomicUsize")?;
             let default_code = quote! {
-                ::laplace_sdk::TrackedAtomicUsize::new(0, #resource_name)
+                ::laplace_sdk::__macro_support::TrackedAtomicUsize::new(0, #resource_name)
             };
             return Ok((tracked_type, default_code));
         }
 
         if path_str.ends_with("Semaphore") {
-            let tracked_type: Type = syn::parse_str("::laplace_sdk::TrackedSemaphore")?;
+            let tracked_type: Type =
+                syn::parse_str("::laplace_sdk::__macro_support::TrackedSemaphore")?;
             let default_code = quote! {
-                ::laplace_sdk::TrackedSemaphore::new(0, #resource_name)
+                ::laplace_sdk::__macro_support::TrackedSemaphore::new(0, #resource_name)
             };
             return Ok((tracked_type, default_code));
         }

@@ -198,7 +198,7 @@ pub(crate) fn laplace_byoc_test_impl(attr: TokenStream, item: TokenStream) -> To
         #[allow(non_snake_case)]
         fn #func_ident() {
             use ::std::sync::mpsc;
-            use ::laplace_probe_sdk::{
+            use ::laplace_probe_sdk::__macro_support::{
                 ProbeEvent,
                 ProbeSessionConfig,
                 run_verification_from,

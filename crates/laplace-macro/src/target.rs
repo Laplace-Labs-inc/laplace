@@ -157,7 +157,7 @@ pub(crate) fn axiom_target_impl(attr: TokenStream, item: TokenStream) -> TokenSt
         #[allow(non_snake_case)]
         fn #test_fn_name() {
             use ::std::sync::{Arc, mpsc};
-            use ::laplace_probe_sdk::{
+            use ::laplace_probe_sdk::__macro_support::{
                 set_probe_sender,
                 set_probe_thread_id,
                 ProbeSessionConfig,
@@ -166,7 +166,7 @@ pub(crate) fn axiom_target_impl(attr: TokenStream, item: TokenStream) -> TokenSt
 
             // 1. 이벤트 수집 채널 (std::sync::mpsc — OS 스레드 간 안전)
             //    bounded(0): backpressure 없이 최대한 비동기적으로 수집
-            let (tx, rx) = mpsc::sync_channel::<::laplace_probe_sdk::ProbeEvent>(4096);
+            let (tx, rx) = mpsc::sync_channel::<::laplace_probe_sdk::__macro_support::ProbeEvent>(4096);
 
             // 2. 공유 상태 초기화 (T::default())
             #state_init
@@ -181,7 +181,7 @@ pub(crate) fn axiom_target_impl(attr: TokenStream, item: TokenStream) -> TokenSt
                     set_probe_sender(tx2);
                     set_probe_thread_id(i as u64);
                     // 개별 tokio 런타임으로 async 함수 실행
-                    let rt = ::tokio::runtime::Builder::new_current_thread()
+                    let rt = ::laplace_probe_sdk::__macro_support::tokio::runtime::Builder::new_current_thread()
                         .enable_all()
                         .build()
                         .expect("laplace axiom_target: tokio runtime build failed");
@@ -198,7 +198,7 @@ pub(crate) fn axiom_target_impl(attr: TokenStream, item: TokenStream) -> TokenSt
             }
 
             // 6. 이벤트 수집
-            let events: Vec<::laplace_probe_sdk::ProbeEvent> = rx.into_iter().collect();
+            let events: Vec<::laplace_probe_sdk::__macro_support::ProbeEvent> = rx.into_iter().collect();
 
             // 7. Ki-DPOR 실행 + 결과 검증
             let config = ProbeSessionConfig {

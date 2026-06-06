@@ -1,0 +1,5 @@
+error: unsupported type for #[track]: Vec < u64 >
+ --> tests/ui/fail/unsupported_track_type.rs:8:13
+  |
+8 |     values: Vec<u64>,
+  |             ^^^^^^^^

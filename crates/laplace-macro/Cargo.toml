@@ -20,6 +20,10 @@ syn = { version = "2", features = ["full"] }
 quote = "1"
 proc-macro2 = "1"
 
+[dev-dependencies]
+inventory = "0.3"
+laplace-probe-sdk = { path = "../laplace-probe-sdk", features = ["verification"] }
+trybuild = "1.0"
 
 [package.metadata.docs.rs]
 all-features = true

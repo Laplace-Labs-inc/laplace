@@ -1,0 +1,5 @@
+error: laplace_byoc_test: async fn is not supported; use a sync test function
+ --> tests/ui/fail/byoc_async.rs:4:7
+  |
+4 | async fn async_byoc_is_rejected() {}
+  |       ^^

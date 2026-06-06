@@ -18,6 +18,10 @@ cloud        = ["laplace-probe-sdk/cloud"]
 [dependencies]
 laplace-probe-sdk = { path = "../laplace-probe-sdk", version = "0.1.0-alpha-1" }
 laplace-macro     = { path = "../laplace-macro", version = "0.1.0-alpha-1" }
+tokio             = { workspace = true }
+
+[dev-dependencies]
+trybuild = "1.0"
 
 [package.metadata.docs.rs]
 all-features = true

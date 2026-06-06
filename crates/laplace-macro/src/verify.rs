@@ -239,7 +239,7 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
         #[allow(non_snake_case)]
         fn #test_fn_name() {
             use ::std::sync::{Arc, mpsc};
-            use ::laplace_sdk::{
+            use ::laplace_sdk::__macro_support::{
                 set_probe_sender,
                 set_probe_thread_id,
                 ProbeSessionConfig,
@@ -264,7 +264,7 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
                     set_probe_thread_id(i as u64);
 
                     // 개별 tokio 런타임으로 async 함수 실행
-                    let rt = ::tokio::runtime::Builder::new_current_thread()
+                    let rt = ::laplace_sdk::__macro_support::tokio::runtime::Builder::new_current_thread()
                         .enable_all()
                         .build()
                         .expect("laplace verify: tokio runtime build failed");

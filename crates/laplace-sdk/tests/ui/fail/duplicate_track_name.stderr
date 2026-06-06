@@ -1,0 +1,6 @@
+error: duplicate resource name: 'shared'
+  --> tests/ui/fail/duplicate_track_name.rs:10:5
+   |
+10 | /     #[track(name = "shared")]
+11 | |     right: Mutex<u64>,
+   | |_____________________^

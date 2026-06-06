@@ -1,0 +1,5 @@
+error: unknown argument `mode` (allowed: name, expected, write_ard, output_dir, buffer, max_depth, lock_events_only)
+ --> tests/ui/fail/byoc_unknown_arg.rs:3:36
+  |
+3 | #[laplace_macro::laplace_byoc_test(mode = "strict")]
+  |                                    ^^^^
