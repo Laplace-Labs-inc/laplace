@@ -5,18 +5,18 @@
 //! Guard drop 시 각각 RwLockReadReleased / RwLockWriteReleased 이벤트 전송.
 
 use crate::session::current_thread_id;
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 use crate::session::emit;
 
 macro_rules! emit_probe_event {
     ($event:expr) => {
-        #[cfg(feature = "verification")]
+        #[cfg(laplace_private_verification)]
         {
             emit($event);
         }
     };
 }
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 use laplace_probe::ProbeEvent;
 use std::ops::{Deref, DerefMut};
 use tokio::sync::{RwLock, RwLockReadGuard, RwLockWriteGuard};
@@ -80,7 +80,7 @@ impl<T> TrackedRwLock<T> {
 /// TrackedRwLock의 읽기 가드.
 ///
 /// [GHOST CONSTRAINT]: DerefMut 없음 (읽기 전용).
-#[cfg_attr(not(feature = "verification"), allow(dead_code))]
+#[cfg_attr(not(laplace_private_verification), allow(dead_code))]
 pub struct TrackedRwLockReadGuard<'a, T> {
     inner: RwLockReadGuard<'a, T>,
     resource_name: &'static str,
@@ -105,7 +105,7 @@ impl<T> Drop for TrackedRwLockReadGuard<'_, T> {
 }
 
 /// TrackedRwLock의 쓰기 가드.
-#[cfg_attr(not(feature = "verification"), allow(dead_code))]
+#[cfg_attr(not(laplace_private_verification), allow(dead_code))]
 pub struct TrackedRwLockWriteGuard<'a, T> {
     inner: RwLockWriteGuard<'a, T>,
     resource_name: &'static str,

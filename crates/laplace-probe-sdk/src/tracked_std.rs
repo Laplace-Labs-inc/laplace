@@ -11,16 +11,16 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::{Mutex, MutexGuard};
 
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 use laplace_probe::ProbeEvent;
 
 use crate::session::current_thread_id;
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 use crate::session::emit;
 
 macro_rules! emit_probe_event {
     ($event:expr) => {
-        #[cfg(feature = "verification")]
+        #[cfg(laplace_private_verification)]
         {
             emit($event);
         }
@@ -82,7 +82,7 @@ impl<T> TrackedStdMutex<T> {
 }
 
 /// RAII 가드 — Drop 시 `ProbeEvent::LockReleased`를 자동 전송한다.
-#[cfg_attr(not(feature = "verification"), allow(dead_code))]
+#[cfg_attr(not(laplace_private_verification), allow(dead_code))]
 pub struct TrackedStdGuard<'a, T> {
     inner: MutexGuard<'a, T>,
     resource_name: &'static str,

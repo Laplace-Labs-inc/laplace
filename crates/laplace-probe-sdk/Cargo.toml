@@ -13,16 +13,6 @@ categories = ["development-tools::testing", "concurrency"]
 [features]
 # thin default: instrumentation only
 default = ["parking_lot_tracking"]
-verification = [
-    "dep:laplace-probe",
-    "dep:laplace-axiom",
-    "dep:laplace-core",
-    "laplace-axiom/twin",
-    "laplace-axiom/verification",
-    "laplace-axiom/engine",
-    "laplace-core/twin",
-    "laplace-probe-common/std",
-]
 parking_lot_tracking = ["dep:parking_lot"]
 cloud = ["dep:futures-util", "dep:tokio-tungstenite"]
 
@@ -41,11 +31,6 @@ bytemuck   = { version = "1.16", features = ["derive"] }
 base64     = "0.22"
 dirs       = "5"
 toml       = "0.8"
-
-# optional closed deps (laplace-cloud internal verification)
-laplace-probe = { path = "../../../laplace-cloud/crates/laplace-probe", version = "0.1.0-alpha-1", optional = true }
-laplace-axiom = { path = "../../../laplace-cloud/crates/laplace-axiom", version = "0.1.0-alpha-1", optional = true }
-laplace-core  = { path = "../../../laplace-cloud/crates/laplace-core", version = "0.1.0-alpha-1", optional = true }
 
 # optional open deps
 futures-util      = { version = "0.3", optional = true }

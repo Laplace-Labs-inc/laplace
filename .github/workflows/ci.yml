@@ -24,19 +24,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout laplace-cloud repo
-        uses: actions/checkout@v4
-        with:
-          repository: laplace-labs-inc/laplace-cloud
-          path: laplace-cloud
-          token: ${{ secrets.LAPLACE_CI_READ_TOKEN }}
-          fetch-depth: 1
-
-      - name: Link laplace-cloud sibling path
-        run: |
-          rm -rf "${{ github.workspace }}/../laplace-cloud"
-          mv "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
-
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
@@ -50,8 +37,11 @@ jobs:
       - name: Format check
         run: cargo fmt --all -- --check
 
+      - name: Public boundary check
+        run: ./scripts/ci/no-private-deps.sh
+
       - name: Cargo check
-        run: cargo check --all-targets
+        run: cargo check --workspace --all-targets --all-features
 
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
@@ -67,19 +57,6 @@ jobs:
     needs: lint-and-check
     steps:
       - uses: actions/checkout@v4
-
-      - name: Checkout laplace-cloud repo
-        uses: actions/checkout@v4
-        with:
-          repository: laplace-labs-inc/laplace-cloud
-          path: laplace-cloud
-          token: ${{ secrets.LAPLACE_CI_READ_TOKEN }}
-          fetch-depth: 1
-
-      - name: Link laplace-cloud sibling path
-        run: |
-          rm -rf "${{ github.workspace }}/../laplace-cloud"
-          mv "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -103,19 +80,6 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event_name == 'pull_request' && github.base_ref == 'main')
     steps:
       - uses: actions/checkout@v4
-
-      - name: Checkout laplace-cloud repo
-        uses: actions/checkout@v4
-        with:
-          repository: laplace-labs-inc/laplace-cloud
-          path: laplace-cloud
-          token: ${{ secrets.LAPLACE_CI_READ_TOKEN }}
-          fetch-depth: 1
-
-      - name: Link laplace-cloud sibling path
-        run: |
-          rm -rf "${{ github.workspace }}/../laplace-cloud"
-          mv "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
 
       - uses: dtolnay/rust-toolchain@stable
 

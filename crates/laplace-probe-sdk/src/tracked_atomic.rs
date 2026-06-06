@@ -6,18 +6,18 @@
 //! [GHOST CONSTRAINT]: Phase 1에서는 Ordering 파라미터를 받되
 //! 내부적으로 SeqCst를 강제한다. SimulatedMemory 브리지는 Phase 2.
 
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 use crate::session::{current_thread_id, emit};
 
 macro_rules! emit_probe_event {
     ($event:expr) => {
-        #[cfg(feature = "verification")]
+        #[cfg(laplace_private_verification)]
         {
             emit($event);
         }
     };
 }
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 use laplace_probe::ProbeEvent;
 use std::sync::atomic::Ordering;
 
@@ -48,7 +48,7 @@ impl AtomicInner for std::sync::atomic::AtomicUsize {
 macro_rules! tracked_atomic {
     ($name:ident, $inner:ty) => {
         /// Tracked wrapper around a standard atomic type.
-        #[cfg_attr(not(feature = "verification"), allow(dead_code))]
+        #[cfg_attr(not(laplace_private_verification), allow(dead_code))]
         pub struct $name {
             inner: $inner,
             resource_name: &'static str,

@@ -15,19 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout laplace-cloud repo
-        uses: actions/checkout@v4
-        with:
-          repository: laplace-labs-inc/laplace-cloud
-          path: laplace-cloud
-          token: ${{ secrets.LAPLACE_CI_READ_TOKEN }}
-          fetch-depth: 1
-
-      - name: Link laplace-cloud sibling path
-        run: |
-          rm -rf "${{ github.workspace }}/../laplace-cloud"
-          mv "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
       - uses: dtolnay/rust-toolchain@stable
+      - name: Public boundary check
+        run: ./scripts/ci/no-private-deps.sh
       - name: Install cargo-audit
         run: cargo install cargo-audit --locked --version 0.22.1
       - name: Run cargo audit
@@ -38,19 +28,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Checkout laplace-cloud repo
-        uses: actions/checkout@v4
-        with:
-          repository: laplace-labs-inc/laplace-cloud
-          path: laplace-cloud
-          token: ${{ secrets.LAPLACE_CI_READ_TOKEN }}
-          fetch-depth: 1
-
-      - name: Link laplace-cloud sibling path
-        run: |
-          rm -rf "${{ github.workspace }}/../laplace-cloud"
-          mv "${{ github.workspace }}/laplace-cloud" "${{ github.workspace }}/../laplace-cloud"
       - uses: dtolnay/rust-toolchain@stable
+      - name: Public boundary check
+        run: ./scripts/ci/no-private-deps.sh
       - name: Install cargo-deny
         run: cargo install cargo-deny --locked --version 0.19.7
       - name: Run cargo deny

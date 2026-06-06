@@ -9,17 +9,17 @@
 //! `run_verification_from()` 호출 후 재사용 불가.
 
 use std::cell::Cell;
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 use std::collections::hash_map::DefaultHasher;
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 use std::collections::HashMap;
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 use std::hash::{Hash, Hasher};
 use std::sync::mpsc;
 
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 use laplace_probe::ProbeEvent;
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 use laplace_probe_common::decoder::DecodedProbeEvent;
 
 use crate::license::load_axiom_max_depth;
@@ -29,7 +29,7 @@ use crate::license::load_axiom_max_depth;
 thread_local! {
     /// 현재 OS 스레드에서 `ProbeEvent`를 수집하는 채널 송신단.
     /// 세션 외부(세션 미등록 스레드)에서는 None → no-op.
-    #[cfg(feature = "verification")]
+    #[cfg(laplace_private_verification)]
     static PROBE_SENDER: std::cell::RefCell<Option<mpsc::SyncSender<ProbeEvent>>> =
         const { std::cell::RefCell::new(None) };
 
@@ -43,23 +43,23 @@ thread_local! {
 /// 현재 OS 스레드의 `ProbeEvent` 송신단을 등록한다.
 ///
 /// `#[axiom_target]` 생성 코드 내 `std::thread::spawn()` 클로저 진입 직후 호출.
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 pub fn set_probe_sender(tx: mpsc::SyncSender<ProbeEvent>) {
     PROBE_SENDER.with(|s| *s.borrow_mut() = Some(tx));
 }
 
-#[cfg(not(feature = "verification"))]
+#[cfg(not(laplace_private_verification))]
 pub fn set_probe_sender<T>(_: mpsc::SyncSender<T>) {}
 
 /// 현재 OS 스레드의 `ProbeEvent` 송신단을 초기화한다.
 ///
 /// 테스트 또는 세션 정리 후 호출하여 thread-local을 정리한다.
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 pub fn clear_probe_sender() {
     PROBE_SENDER.with(|s| *s.borrow_mut() = None);
 }
 
-#[cfg(not(feature = "verification"))]
+#[cfg(not(laplace_private_verification))]
 pub fn clear_probe_sender() {}
 
 /// 현재 OS 스레드에 DPOR 가상 스레드 인덱스를 할당한다.
@@ -80,7 +80,7 @@ pub fn current_thread_id() -> u64 {
 ///
 /// `TrackedMutex`/`TrackedGuard`가 내부적으로 호출한다.
 /// 채널 미등록(세션 외부) 시 no-op.
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 pub fn emit(event: ProbeEvent) {
     PROBE_SENDER.with(|s| {
         if let Some(tx) = s.borrow().as_ref() {
@@ -88,7 +88,7 @@ pub fn emit(event: ProbeEvent) {
         }
     });
 
-    #[cfg(all(feature = "cloud", feature = "verification"))]
+    #[cfg(all(feature = "cloud", laplace_private_verification))]
     if let Some(client) = cloud::GLOBAL_PROBE_CLIENT.get() {
         if let Some(raw) = cloud::probe_event_to_raw(&event) {
             client.emit(raw);
@@ -96,7 +96,7 @@ pub fn emit(event: ProbeEvent) {
     }
 }
 
-#[cfg(not(feature = "verification"))]
+#[cfg(not(laplace_private_verification))]
 pub fn emit(_: ()) {}
 
 // ── ProbeSessionConfig ─────────────────────────────────────────────────────────
@@ -132,7 +132,7 @@ impl Default for ProbeSessionConfig {
 // ── VerifyResult ───────────────────────────────────────────────────────────────
 
 /// Ki-DPOR 검증 결과.
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 pub struct VerifyResult {
     pub verdict: laplace_axiom::oracle::OracleVerdict,
     pub thread_count: usize,
@@ -140,7 +140,7 @@ pub struct VerifyResult {
     pub events_collected: usize,
 }
 
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 impl VerifyResult {
     /// 버그가 발견될 것을 기대하는 테스트에서 사용.
     ///
@@ -202,7 +202,7 @@ impl VerifyResult {
 ///
 /// [GHOST CONSTRAINT]: 동일 자원명은 항상 동일 해시를 반환해야 한다.
 /// `ResourceRegistry`가 이름 해시를 `ResourceId`로 고정 매핑하므로 변경 금지.
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 pub(crate) fn resource_name_to_addr(name: &str) -> u64 {
     let mut h = DefaultHasher::new();
     name.hash(&mut h);
@@ -215,7 +215,7 @@ pub(crate) fn resource_name_to_addr(name: &str) -> u64 {
 /// - `LockAcquired` → `LockAcquire` (Request 생성)
 /// - `LockReleased` → `LockRelease` (Release 생성)
 /// - 나머지 → None (DPOR 무관)
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 #[allow(clippy::cast_possible_truncation)]
 fn probe_event_to_decoded(event: &ProbeEvent, timestamp_ns: u64) -> Option<DecodedProbeEvent> {
     match event {
@@ -326,7 +326,7 @@ fn probe_event_to_decoded(event: &ProbeEvent, timestamp_ns: u64) -> Option<Decod
 // ── build_step_programs — verify.rs 로직 동일 복제 ───────────────────────────
 
 /// Type alias for per-thread DPOR step programs.
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 type DporStepProgram = Vec<
     Vec<(
         laplace_axiom::dpor::Operation,
@@ -338,7 +338,7 @@ type DporStepProgram = Vec<
 ///
 /// verify.rs `build_step_programs_from_probe_events()`와 동일 로직.
 /// laplace-cli는 library crate가 아니므로 복제 필수.
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 fn build_step_programs(
     probe_events: &[ProbeEvent],
 ) -> (
@@ -397,7 +397,7 @@ fn build_step_programs(
     (compacted, dpor_to_axiom, builder)
 }
 
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 fn build_symbol_table(
     events: &[ProbeEvent],
     resources: &laplace_probe_common::axiom_adapter::ResourceRegistry,
@@ -431,7 +431,7 @@ fn build_symbol_table(
 /// - `events`: 모든 스레드가 완료된 후 `mpsc` 채널에서 수집한 `ProbeEvent` 목록
 /// - `target_name`: 검증 대상 식별자 (ARD 헤더에 기록됨)
 /// - `config`: `max_depth` / `write_ard` / `output_dir` 설정
-#[cfg(feature = "verification")]
+#[cfg(laplace_private_verification)]
 pub fn run_verification_from(
     events: &[ProbeEvent],
     target_name: &str,
@@ -501,7 +501,7 @@ pub fn run_verification_from(
     }
 }
 
-#[cfg(all(test, feature = "verification"))]
+#[cfg(all(test, laplace_private_verification))]
 mod tests {
     use super::*;
 
@@ -537,7 +537,7 @@ mod tests {
 
 // ── 클라우드 관측 경로 (feature = "cloud") ──────────────────────────────────────
 
-#[cfg(all(feature = "cloud", feature = "verification"))]
+#[cfg(all(feature = "cloud", laplace_private_verification))]
 mod cloud {
     use std::sync::OnceLock;
 
@@ -584,5 +584,5 @@ mod cloud {
     }
 }
 
-#[cfg(all(feature = "cloud", feature = "verification"))]
+#[cfg(all(feature = "cloud", laplace_private_verification))]
 pub use cloud::init_cloud_probe;
