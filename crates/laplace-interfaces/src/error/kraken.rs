@@ -4,8 +4,6 @@
 //! `KrakenError` covers all error variants from Kraken DNA operations:
 //! seed distribution, VU state machine, scenario execution, and network transport.
 
-#![cfg(feature = "twin")]
-
 use crate::domain::entropy::types::{ContextId, LocalSeed};
 use std::fmt;
 

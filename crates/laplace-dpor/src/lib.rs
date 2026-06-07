@@ -5,6 +5,8 @@
 //! - Classic DPOR with vector-clock causality tracking
 //! - Kani formal proofs (cfg kani)
 
+#![allow(clippy::uninlined_format_args)]
+
 pub mod dpor;
 pub mod error;
 

@@ -144,10 +144,8 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
     let buffer = args.buffer;
     let max_depth = args.max_depth;
 
-    let test_fn_name = syn::Ident::new(
-        &format!("__laplace_verify_{}", func_ident),
-        func_ident.span(),
-    );
+    let test_fn_name =
+        syn::Ident::new(&format!("__laplace_verify_{func_ident}"), func_ident.span());
 
     // 첫 번째 파라미터 검사: &T, Arc<T>, 또는 없음
     enum StateSignature {

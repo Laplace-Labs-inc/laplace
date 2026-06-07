@@ -109,10 +109,7 @@ pub(crate) fn axiom_target_impl(attr: TokenStream, item: TokenStream) -> TokenSt
     let output_dir = &args.output_dir;
 
     // 생성할 테스트 함수 이름: __laplace_axiom_<fn_name>
-    let test_fn_name = syn::Ident::new(
-        &format!("__laplace_axiom_{}", func_ident),
-        func_ident.span(),
-    );
+    let test_fn_name = syn::Ident::new(&format!("__laplace_axiom_{func_ident}"), func_ident.span());
 
     // 첫 번째 파라미터에서 Arc 내부 타입 추출 (Arc<T> → T)
     // 추출 실패 시 컴파일 에러 대신 Unit 타입 폴백 (사용자에게 진단 필요)

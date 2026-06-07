@@ -43,7 +43,7 @@ pub(crate) fn expand_attribute(
                 if !resource_names.insert(resource_name.clone()) {
                     return Err(Error::new_spanned(
                         field,
-                        format!("duplicate resource name: '{}'", resource_name),
+                        format!("duplicate resource name: '{resource_name}'"),
                     ));
                 }
 

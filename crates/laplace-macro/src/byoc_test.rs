@@ -76,8 +76,7 @@ impl Parse for ByocTestArgs {
                     return Err(syn::Error::new(
                         key.span(),
                         format!(
-                            "unknown argument `{}` (allowed: name, expected, write_ard, output_dir, buffer, max_depth, lock_events_only)",
-                            key_name
+                            "unknown argument `{key_name}` (allowed: name, expected, write_ard, output_dir, buffer, max_depth, lock_events_only)"
                         ),
                     ));
                 }

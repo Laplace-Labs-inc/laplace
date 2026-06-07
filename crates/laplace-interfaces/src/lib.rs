@@ -25,6 +25,7 @@
 //! - `domain`: Domain models and shared business logic types
 
 #![warn(missing_docs)]
+#![allow(clippy::uninlined_format_args)]
 #![allow(non_snake_case)]
 
 pub mod abi;

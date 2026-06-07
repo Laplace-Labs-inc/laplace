@@ -7,8 +7,8 @@ fn main() -> Result<()> {
 
     if let Err(e) = prost_build::compile_protos(
         &[
-            format!("{}/context.proto", proto_dir),
-            format!("{}/error.proto", proto_dir),
+            format!("{proto_dir}/context.proto"),
+            format!("{proto_dir}/error.proto"),
         ],
         &[proto_dir], // proto include 경로
     ) {

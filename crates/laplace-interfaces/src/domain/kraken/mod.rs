@@ -8,8 +8,6 @@
 //!
 //! - **`types`** — data types for the scenario DSL, chaos scheduling, and load profiles
 
-#![cfg(feature = "twin")]
-
 pub mod types;
 
 pub use types::{

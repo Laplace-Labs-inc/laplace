@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+#![allow(clippy::uninlined_format_args)]
 #![cfg_attr(not(feature = "std"), no_std)]
 
 #[cfg(feature = "std")]
