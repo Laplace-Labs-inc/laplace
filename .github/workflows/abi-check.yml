@@ -9,6 +9,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
-          package: laplace-interfaces laplace-macro laplace-probe-common
+          manifest-path: Cargo.toml
+          package: laplace-interfaces,laplace-macro,laplace-probe-common
+          baseline-rev: ${{ github.event.pull_request.base.sha }}
