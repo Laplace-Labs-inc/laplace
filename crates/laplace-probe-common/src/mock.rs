@@ -2,8 +2,9 @@
 //! MockProbeSource: deterministic synthetic `RawProbeEvent` generator.
 //!
 //! Produces realistic event sequences that simulate the output of the eBPF kernel
-//! agent, covering all four concurrency bug patterns detectable by the Axiom DPOR
-//! engine. All scenarios are deterministic and reproducible given the same seed.
+//! agent, covering common concurrency bug patterns consumed by downstream
+//! analysis engines. All scenarios are deterministic and reproducible given the
+//! same seed.
 //!
 //! # Generated scenarios
 //!
@@ -81,7 +82,7 @@ impl MockProbeSource {
     /// Generates a clean, uncontested single-thread scenario.
     ///
     /// One thread acquires a single lock and immediately releases it with no
-    /// other threads present. The Axiom Oracle must return `Clean`.
+    /// other threads present. Downstream analyzers should classify this as clean.
     ///
     /// Use this as a sanity check or to verify that the pipeline correctly
     /// distinguishes clean from buggy executions.

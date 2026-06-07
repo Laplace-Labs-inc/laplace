@@ -2,6 +2,7 @@
 resolver = "2"
 members = [
     "crates/laplace-interfaces",
+    "crates/laplace-dpor",
     "crates/laplace-macro",
     "crates/laplace-probe-common",
     "crates/laplace-probe-sdk",
@@ -27,7 +28,7 @@ thiserror = "2.0"
 async-trait = "0.1.89"
 
 [workspace.lints.rust]
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)', 'cfg(laplace_private_verification)', 'cfg(laplace_private_harness)'] }
 
 # Patched crates for bug-detection examples (hunt examples only)
 [patch.crates-io]

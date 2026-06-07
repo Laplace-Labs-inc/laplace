@@ -10,8 +10,8 @@ tokio = { workspace = true }
 async-trait = "0.1"
 
 [dev-dependencies]
-laplace-sdk = { path = "../../crates/laplace-sdk", features = ["verification"] }
-laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk", features = ["verification"] }
+laplace-sdk = { path = "../../crates/laplace-sdk" }
+laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk" }
 laplace-macro     = { path = "../../crates/laplace-macro" }
 mobc = { version = "0.9", features = ["laplace"] }
 tokio = { workspace = true }

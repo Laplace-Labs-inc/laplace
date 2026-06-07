@@ -20,8 +20,8 @@ tokio    = { workspace = true }
 serde    = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tracing  = { workspace = true }
-tracing-subscriber = { workspace = true }
-laplace-probe = { path = "../../crates/laplace-probe" }
+tracing-subscriber = "0.3"
+laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk" }
 laplace-interfaces = { path = "../../crates/laplace-interfaces" }
 laplace-macro = { path = "../../crates/laplace-macro", optional = true }
 

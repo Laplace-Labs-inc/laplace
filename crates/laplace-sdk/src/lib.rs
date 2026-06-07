@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 #![deny(clippy::all, clippy::pedantic)]
+#![allow(unexpected_cfgs)]
 
 //! Laplace SDK — 결정론적 동시성 검증을 위한 단일 진입점.
 //!
@@ -57,6 +58,12 @@ pub use laplace_macro::axiom_harness;
 ///
 /// Use `#[laplace_sdk::verify(...)]` for new code.
 pub use laplace_macro::axiom_target;
+
+/// Create an `Arc<TrackedMutex<T>>` with an optional resource name.
+pub use laplace_macro::mutex;
+
+/// Create an `Arc<TrackedRwLock<T>>` with an optional resource name.
+pub use laplace_macro::rwlock;
 
 /// Marker attribute for documentation purposes (zero runtime cost).
 pub use laplace_macro::laplace_meta;
@@ -123,20 +130,16 @@ pub use laplace_probe_sdk::set_probe_thread_id;
 pub use laplace_probe_sdk::ProbeSessionConfig;
 
 /// Enumeration of all probe event types.
-#[cfg(feature = "verification")]
 pub use laplace_probe_sdk::ProbeEvent;
 
-/// Verification result with verdicts and assertions.
-#[cfg(feature = "verification")]
+/// Public reference verification result.
 pub use laplace_probe_sdk::VerifyResult;
 
-/// Run Ki-DPOR verification on a stream of probe events.
-#[cfg(feature = "verification")]
-pub use laplace_probe_sdk::run_verification_from;
+/// Public reference verifier verdict.
+pub use laplace_probe_sdk::ReferenceVerdict;
 
-/// Ki-DPOR final verdict: CLEAN (no deadlock) or BUG DETECTED.
-#[cfg(feature = "verification")]
-pub use laplace_probe_sdk::OracleVerdict;
+/// Run the public reference verifier on a stream of probe events.
+pub use laplace_probe_sdk::run_verification_from;
 
 /// Project-level configuration loaded from laplace.toml.
 pub use laplace_probe_sdk::ProjectConfig;
@@ -159,13 +162,11 @@ pub use laplace_probe_sdk::init_cloud_probe;
 /// implementation details between product-specific SDK crates later.
 #[doc(hidden)]
 pub mod __macro_support {
+    pub use crate::ProbeEvent;
     pub use crate::{
         set_probe_sender, set_probe_thread_id, ProbeSessionConfig, TrackedAtomicBool,
         TrackedAtomicU32, TrackedAtomicU64, TrackedAtomicUsize, TrackedMutex, TrackedRwLock,
         TrackedSemaphore, TrackedStdMutex, TrackedStdRwLock,
     };
     pub use tokio;
-
-    #[cfg(feature = "verification")]
-    pub use crate::{run_verification_from, ProbeEvent, VerifyResult};
 }

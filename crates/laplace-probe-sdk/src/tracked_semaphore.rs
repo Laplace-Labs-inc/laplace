@@ -4,19 +4,14 @@
 //! acquire → SemaphoreAcquired, Permit drop → SemaphoreReleased 이벤트 전송.
 
 use crate::session::current_thread_id;
-#[cfg(feature = "verification")]
 use crate::session::emit;
 
 macro_rules! emit_probe_event {
-    ($event:expr) => {
-        #[cfg(feature = "verification")]
-        {
-            emit($event);
-        }
-    };
+    ($event:expr) => {{
+        emit($event);
+    }};
 }
-#[cfg(feature = "verification")]
-use laplace_probe::ProbeEvent;
+use crate::ProbeEvent;
 use std::sync::Arc;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
@@ -74,7 +69,7 @@ impl TrackedSemaphore {
 }
 
 /// TrackedSemaphore에서 획득한 permit.
-#[cfg_attr(not(feature = "verification"), allow(dead_code))]
+#[cfg_attr(not(laplace_private_verification), allow(dead_code))]
 pub struct TrackedSemaphorePermit {
     _permit: OwnedSemaphorePermit,
     resource_name: &'static str,

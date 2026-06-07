@@ -6,11 +6,11 @@ license.workspace = true
 publish = false
 
 [dependencies]
-dashmap = { path = "../../../vendor/dashmap-patched", features = ["laplace", "raw-api"] }
+dashmap = { path = "../../vendor/dashmap-patched", features = ["laplace", "raw-api"] }
 
 [[test]]
 name = "dashmap_async_ref_deadlock"
 path = "tests/dashmap_async_ref_deadlock.rs"
 
 [dev-dependencies]
-laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk", features = ["verification"] }
+laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk" }

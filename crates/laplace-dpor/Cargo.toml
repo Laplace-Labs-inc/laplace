@@ -1,0 +1,31 @@
+[package]
+name = "laplace-dpor"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "Apache-2.0"
+repository.workspace = true
+description = "Classic DPOR reference algorithms for Laplace public verification smoke tests"
+
+[lib]
+name = "laplace_dpor"
+path = "src/lib.rs"
+
+[dependencies]
+laplace-macro = { path = "../laplace-macro", version = "0.1.0-alpha-1" }
+laplace-interfaces = { path = "../laplace-interfaces", version = "0.1.0-alpha-1" }
+serde            = { version = "1.0", features = ["derive"] }
+static_assertions = "1.1"
+tracing          = "0.1"
+
+[features]
+default = []
+scribe_docs = []
+
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)'] }
+
+[package.metadata.docs.rs]
+all-features = true
+rustdoc-args = ["--cfg", "docsrs"]

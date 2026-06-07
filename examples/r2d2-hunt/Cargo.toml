@@ -5,7 +5,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-r2d2 = { path = "../../../vendor/r2d2-patched", features = ["laplace"] }
+r2d2 = { path = "../../vendor/r2d2-patched", features = ["laplace"] }
 
 [dev-dependencies]
-laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk", features = ["verification"] }
+laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk" }

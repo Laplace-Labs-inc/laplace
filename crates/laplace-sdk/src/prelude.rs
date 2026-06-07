@@ -10,6 +10,8 @@
 
 pub use crate::axiom_target;
 pub use crate::laplace_tracked;
+pub use crate::mutex;
+pub use crate::rwlock;
 pub use crate::verify;
 
 pub use crate::TrackedGuard;

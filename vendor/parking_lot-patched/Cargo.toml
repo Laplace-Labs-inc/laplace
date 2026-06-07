@@ -82,7 +82,7 @@ version = "0.4.14"
 version = "0.9.12"
 
 [dependencies.laplace-probe-sdk]
-path = "../../open/crates/laplace-probe-sdk"
+path = "../../crates/laplace-probe-sdk"
 optional = true
 default-features = false
 

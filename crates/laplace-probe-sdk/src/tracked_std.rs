@@ -2,7 +2,7 @@
 //! `TrackedStdMutex<T>` — `std::sync::Mutex` 래퍼로 lock/unlock 시 `ProbeEvent`를 자동 전송.
 //!
 //! [GHOST CONSTRAINT]: `resource_name`은 동일 자원에 대해 항상 동일한 &'static str.
-//! `AxiomStepBuilder`는 이름 해시를 `ResourceId`로 고정 매핑하므로 불일치 시 검증 오염.
+//! Downstream adapters use the name as the stable synchronization resource key.
 //!
 //! [GHOST CONSTRAINT]: `lock()`은 동기 블로킹 호출이다.
 //! tokio async 컨텍스트 내에서 호출하면 tokio 스레드를 블로킹한다.
@@ -11,20 +11,15 @@
 use std::ops::{Deref, DerefMut};
 use std::sync::{Mutex, MutexGuard};
 
-#[cfg(feature = "verification")]
-use laplace_probe::ProbeEvent;
+use crate::ProbeEvent;
 
 use crate::session::current_thread_id;
-#[cfg(feature = "verification")]
 use crate::session::emit;
 
 macro_rules! emit_probe_event {
-    ($event:expr) => {
-        #[cfg(feature = "verification")]
-        {
-            emit($event);
-        }
-    };
+    ($event:expr) => {{
+        emit($event);
+    }};
 }
 
 /// `std::sync::Mutex<T>` 래퍼 — lock/unlock 시 `ProbeEvent`를 자동 전송한다.
@@ -82,7 +77,7 @@ impl<T> TrackedStdMutex<T> {
 }
 
 /// RAII 가드 — Drop 시 `ProbeEvent::LockReleased`를 자동 전송한다.
-#[cfg_attr(not(feature = "verification"), allow(dead_code))]
+#[cfg_attr(not(laplace_private_verification), allow(dead_code))]
 pub struct TrackedStdGuard<'a, T> {
     inner: MutexGuard<'a, T>,
     resource_name: &'static str,

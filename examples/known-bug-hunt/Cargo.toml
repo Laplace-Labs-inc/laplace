@@ -10,7 +10,7 @@ tokio = { workspace = true }
 async-trait = "0.1"
 
 [dev-dependencies]
-laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk", features = ["verification"] }
+laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk" }
 laplace-macro     = { path = "../../crates/laplace-macro" }
 tokio = { workspace = true }
 async-trait = "0.1"

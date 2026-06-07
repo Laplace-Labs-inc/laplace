@@ -22,7 +22,7 @@ proc-macro2 = "1"
 
 [dev-dependencies]
 inventory = "0.3"
-laplace-probe-sdk = { path = "../laplace-probe-sdk", features = ["verification"] }
+laplace-probe-sdk = { path = "../laplace-probe-sdk" }
 trybuild = "1.0"
 
 [package.metadata.docs.rs]

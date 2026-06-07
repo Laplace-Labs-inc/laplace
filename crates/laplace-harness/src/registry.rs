@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Harness registry — auto-discovered via `inventory` at link time.
 
-use laplace_core::domain::resource::{ResourceId, ThreadId};
 use laplace_dpor::Operation;
+use laplace_interfaces::domain::resource::{ResourceId, ThreadId};
 
 /// Configuration for a single verification harness.
 ///
