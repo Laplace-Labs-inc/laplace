@@ -12,7 +12,7 @@ categories = ["development-tools::testing", "concurrency"]
 
 [features]
 # thin default: instrumentation only
-default = ["parking_lot_tracking"]
+default = []
 parking_lot_tracking = ["dep:parking_lot"]
 cloud = ["dep:futures-util", "dep:tokio-tungstenite"]
 

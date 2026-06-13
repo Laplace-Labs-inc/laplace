@@ -42,13 +42,16 @@ pub use abi::{
 pub use error::{LaplaceError, TenantError};
 
 pub use domain::{
-    DeadlockProbe, GateId, GateSpec, HarnessResourceId, HarnessSpec, HttpMethod,
+    AxiomOperation, AxiomThreadSet, DeadlockProbe, DeterminismClass, ExecutionSource,
+    ExecutionSourceVTable, GateId, GateSpec, HarnessResourceId, HarnessSpec, HttpMethod,
     KernelCapabilities, KnulConnection, KnulEndpoint, KnulStream, LogRedacted, PanelType,
-    PriorityLevel, QuicServerStats, ReleasePolicy, ResourceConfig, ResourceSpec, RuntimeStats,
-    SovereignContext, SovereignRuntime, SovereignTransport, TelemetryConfig, TelemetryDomain,
-    TelemetryEvent, TelemetrySink, TenantMetadata, TenantTier, ThreadAction, ThreadSpec, Tier,
-    TransportError, TransportFactory, TransportHandle, TransportPacket, TransportStats,
-    TuiCapabilities, VirtualRequest, VirtualResponse, VirtualTransport, NO_TURBO_SLOT, VUID,
+    PanicReport, PriorityLevel, QuicServerStats, ReleasePolicy, ResourceConfig, ResourceSpec,
+    RuntimeStats, SourceError, SourceErrorCode, SovereignContext, SovereignRuntime,
+    SovereignTransport, StepOutcome, StepOutcomeFfi, StepOutcomeTag, TelemetryConfig,
+    TelemetryDomain, TelemetryEvent, TelemetrySink, TenantMetadata, TenantTier, ThreadAction,
+    ThreadSpec, Tier, TransportError, TransportFactory, TransportHandle, TransportPacket,
+    TransportStats, TuiCapabilities, VirtualRequest, VirtualResponse, VirtualTransport, YieldKind,
+    NO_TURBO_SLOT, VUID,
 };
 
 #[cfg(test)]
