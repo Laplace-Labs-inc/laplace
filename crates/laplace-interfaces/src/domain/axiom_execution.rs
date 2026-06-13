@@ -35,20 +35,15 @@ pub enum AxiomOperation {
 
 /// Determinism guarantee declared by an [`ExecutionSource`].
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub enum DeterminismClass {
     /// The source is deterministic for the same seed, code, and config.
+    #[default]
     FullyDeterministic = 0,
     /// The source is deterministic when declared external inputs are identical.
     DeterministicWithDeclaredInputs = 1,
     /// The source may include unshadowed inputs; results require warnings.
     BestEffort = 2,
-}
-
-impl Default for DeterminismClass {
-    fn default() -> Self {
-        Self::FullyDeterministic
-    }
 }
 
 /// Reserved async yield point kind.
