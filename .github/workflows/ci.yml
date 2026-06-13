@@ -32,7 +32,8 @@ jobs:
         with:
           workspaces: "."
 
-      - uses: arduino/setup-protoc@v3
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
       - name: Format check
         run: cargo fmt --all -- --check
@@ -64,7 +65,8 @@ jobs:
         with:
           workspaces: "."
 
-      - uses: arduino/setup-protoc@v3
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
       - name: Run tests
         run: cargo test
@@ -87,7 +89,8 @@ jobs:
         with:
           workspaces: "."
 
-      - uses: arduino/setup-protoc@v3
+      - name: Install protoc
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
       - name: crossbeam-hunt
         run: |
