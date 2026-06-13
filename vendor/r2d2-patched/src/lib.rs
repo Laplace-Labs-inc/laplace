@@ -1,3 +1,5 @@
+#![allow(clippy::all, clippy::pedantic, deprecated)]
+
 //! A generic connection pool.
 //!
 //! Opening a new database connection every time one is needed is both
