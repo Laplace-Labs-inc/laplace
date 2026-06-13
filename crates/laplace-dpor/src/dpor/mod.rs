@@ -66,9 +66,9 @@ pub const MAX_THREADS: usize = 8;
 /// - Path length for reference DPOR
 /// - Memory overhead for state exploration
 ///
-/// For typical verification workloads (verifying 3-5 concurrent components),
-/// 20 steps is sufficient to expose most concurrency bugs.
-pub const MAX_DEPTH: usize = 20;
+/// Axiom Execution v2 raises the default budget so controlled re-execution can
+/// observe value- and branch-dependent schedules beyond short recorded traces.
+pub const MAX_DEPTH: usize = 64;
 
 const_assert!(MAX_THREADS <= 64);
 const_assert!(MAX_DEPTH <= 1024);
@@ -104,7 +104,7 @@ mod tests {
         // Verify that constants meet design constraints
         const {
             assert!(MAX_THREADS > 0 && MAX_THREADS <= 8);
-            assert!(MAX_DEPTH > 0 && MAX_DEPTH <= 100);
+            assert!(MAX_DEPTH > 0 && MAX_DEPTH <= 256);
 
             // MAX_THREADS must fit in TinyBitSet (64 bits)
             assert!(MAX_THREADS <= 64);

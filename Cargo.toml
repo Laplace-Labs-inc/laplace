@@ -8,6 +8,28 @@ members = [
     "crates/laplace-probe-sdk",
     "crates/laplace-harness",
     "crates/laplace-sdk",
+    "examples/bb8-hunt",
+    "examples/byoc-demo",
+    "examples/crossbeam-hunt",
+    "examples/deadpool-hunt",
+    "examples/integration-test",
+    "examples/known-bug-hunt",
+    "examples/mobc-hunt",
+    "examples/mobc-real",
+    "examples/r2d2-hunt",
+    "examples/rayon-hunt",
+]
+exclude = [
+    # Requires eBPF-oriented host/toolchain support; keep it explicit instead of hiding it.
+    "examples/ebpf-lock-test",
+    # Depends on cloud/private laplace_probe paths; keep out of public workspace checks.
+    "examples/demo-server",
+    # Requires resolving the parking_lot patch with SDK parking_lot_tracking without a Cargo cycle.
+    "examples/dashmap-hunt",
+    # Requires resolving the parking_lot patch with SDK parking_lot_tracking without a Cargo cycle.
+    "examples/parking_lot-hunt",
+    # Patched tokio exposes unstable all-features knobs that require tokio_unstable.
+    "examples/tokio-hunt",
 ]
 
 [workspace.package]
@@ -38,3 +60,5 @@ dashmap           = { path = "vendor/dashmap-patched" }
 parking_lot       = { path = "vendor/parking_lot-patched" }
 crossbeam-channel = { path = "vendor/crossbeam-patched" }
 rayon             = { path = "vendor/rayon-patched" }
+mobc              = { path = "vendor/mobc" }
+deadpool          = { path = "vendor/deadpool-patched" }

@@ -431,7 +431,7 @@ impl Default for AxiomConfig {
     fn default() -> Self {
         Self {
             max_threads: 8,
-            max_depth: 20,
+            max_depth: 64,
             max_starvation_limit: 10,
             max_danger: 2_000,
             default_seed: 0xA110_0ACE_5EED_0001,

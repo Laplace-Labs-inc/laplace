@@ -22,6 +22,8 @@
 //! context, the Kraken's load profile modeling, distributed request tracing,
 //! and network communication across the entire Laplace stack.
 
+/// Axiom Execution v2 operation-source contracts.
+pub mod axiom_execution;
 pub mod context;
 /// Entropy domain contracts (seed primitives and Entropy trait)
 pub mod entropy;
@@ -56,6 +58,11 @@ pub mod transport;
 /// TUI capabilities and permission model (Dumb UI & Closed Kernel pattern)
 pub mod tui;
 
+pub use axiom_execution::{
+    AxiomOperation, AxiomThreadSet, DeterminismClass, ExecutionSource, ExecutionSourceVTable,
+    PanicReport, SourceError, SourceErrorCode, StepOutcome, StepOutcomeFfi, StepOutcomeTag,
+    YieldKind,
+};
 pub use context::{SovereignContext, NO_TURBO_SLOT};
 pub use entropy::{ContextId, Entropy, GlobalSeedConfig, LocalSeed, SeedAssignment};
 pub use harness::{
