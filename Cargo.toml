@@ -12,22 +12,24 @@ members = [
     "examples/byoc-demo",
     "examples/crossbeam-hunt",
     "examples/deadpool-hunt",
-    "examples/demo-server",
     "examples/integration-test",
     "examples/known-bug-hunt",
     "examples/mobc-hunt",
     "examples/mobc-real",
     "examples/r2d2-hunt",
     "examples/rayon-hunt",
-    "examples/tokio-hunt",
 ]
 exclude = [
     # Requires eBPF-oriented host/toolchain support; keep it explicit instead of hiding it.
     "examples/ebpf-lock-test",
+    # Depends on cloud/private laplace_probe paths; keep out of public workspace checks.
+    "examples/demo-server",
     # Requires resolving the parking_lot patch with SDK parking_lot_tracking without a Cargo cycle.
     "examples/dashmap-hunt",
     # Requires resolving the parking_lot patch with SDK parking_lot_tracking without a Cargo cycle.
     "examples/parking_lot-hunt",
+    # Patched tokio exposes unstable all-features knobs that require tokio_unstable.
+    "examples/tokio-hunt",
 ]
 
 [workspace.package]
