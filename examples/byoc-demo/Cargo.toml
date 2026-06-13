@@ -10,6 +10,7 @@ laplace-macro     = { path = "../../crates/laplace-macro" }
 tokio             = { workspace = true }
 
 [dev-dependencies]
+laplace-sdk       = { path = "../../crates/laplace-sdk" }
 laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk" }
 laplace-macro     = { path = "../../crates/laplace-macro" }
 tokio             = { workspace = true }
