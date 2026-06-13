@@ -69,7 +69,15 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
 
       - name: Run tests
-        run: cargo test
+        run: |
+          cargo test \
+            -p laplace-interfaces \
+            -p laplace-macro \
+            -p laplace-probe-common \
+            -p laplace-probe-sdk \
+            -p laplace-dpor \
+            -p laplace-harness \
+            -p laplace-sdk
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Job 3: Bug-Detection Hunt Examples (patched vendor 사용)
