@@ -1,0 +1,15 @@
+[package]
+name = "byoc1b-direction-a"
+version = "0.1.0"
+edition = "2021"
+publish = false
+license = "Apache-2.0"
+
+[workspace]
+
+[dependencies]
+laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk" }
+parking_lot = { version = "=0.12.5", features = ["laplace"] }
+
+[patch.crates-io]
+parking_lot = { path = "../../vendor/parking_lot-patched" }

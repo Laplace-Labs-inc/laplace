@@ -30,7 +30,7 @@
 //!     }
 //! }
 //! ```
-#![allow(clippy::needless_doctest_main)]
+#![allow(clippy::all, clippy::needless_doctest_main, clippy::pedantic)]
 #![deny(missing_docs, missing_debug_implementations)]
 
 mod api;

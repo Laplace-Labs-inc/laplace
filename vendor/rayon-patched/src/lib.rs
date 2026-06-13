@@ -1,6 +1,7 @@
 #![deny(missing_debug_implementations)]
 #![deny(missing_docs)]
 #![deny(unreachable_pub)]
+#![allow(clippy::all, clippy::pedantic)]
 #![warn(rust_2018_idioms)]
 // Laplace Track B audit: rayon is vendored for GC-L2 compliance.
 // Internal work-stealing (atomic CAS) is out of Ki-DPOR scope.

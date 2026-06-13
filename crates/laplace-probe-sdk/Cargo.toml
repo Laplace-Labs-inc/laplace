@@ -21,7 +21,7 @@ cloud = ["dep:futures-util", "dep:tokio-tungstenite"]
 laplace-probe-common = { path = "../laplace-probe-common", version = "0.1.0-alpha-1" }
 laplace-interfaces   = { path = "../laplace-interfaces", version = "0.1.0-alpha-1" }
 
-tokio      = { workspace = true }
+tokio      = { version = "1.42", default-features = false, features = ["macros", "rt", "sync", "time"] }
 serde      = { workspace = true }
 serde_json = { workspace = true }
 tracing    = { workspace = true }
