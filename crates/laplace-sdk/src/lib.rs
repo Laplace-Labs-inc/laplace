@@ -49,6 +49,10 @@ pub use laplace_macro::laplace_probe;
 /// Supports both `&T` references and `Arc<T>` state parameters.
 pub use laplace_macro::laplace_verify as verify;
 
+/// Annotates a model function and routes qualified `std::thread::spawn` calls
+/// through the Laplace runtime spawn seam.
+pub use laplace_macro::model;
+
 /// Register a function as a verification harness via `inventory`.
 ///
 /// Lower-level alternative to `#[laplace_sdk::verify(...)]` for advanced use cases.

@@ -1,0 +1,5 @@
+error: unknown argument for `#[laplace::model]`; P-1 only accepts an empty attribute
+ --> tests/ui/fail/model_unknown_arg.rs:3:24
+  |
+3 | #[laplace_macro::model(mode = "engine")]
+  |                        ^^^^^^^^^^^^^^^

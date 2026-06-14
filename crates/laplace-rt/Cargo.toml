@@ -1,0 +1,12 @@
+[package]
+name = "laplace-rt"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "Apache-2.0"
+repository.workspace = true
+description = "Runtime seams for annotated Laplace model code"
+publish = false
+
+[dependencies]

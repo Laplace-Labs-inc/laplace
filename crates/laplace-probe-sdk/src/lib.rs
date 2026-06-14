@@ -21,6 +21,7 @@ pub mod client;
 pub mod config;
 pub mod event;
 pub mod license;
+pub mod model_lock;
 pub mod session;
 pub mod tracked;
 pub mod tracked_atomic;
@@ -35,6 +36,7 @@ pub mod tracked_std_rwlock;
 
 pub use config::{load_project_config, load_toml_max_depth, ProjectConfig};
 pub use event::ProbeEvent;
+pub use model_lock::{install_probe_lock_hook, ProbeLockHook};
 pub use session::{
     clear_probe_sender, current_thread_id, emit, run_verification_from, set_probe_sender,
     set_probe_thread_id, ProbeSessionConfig, ReferenceVerdict, VerifyResult,

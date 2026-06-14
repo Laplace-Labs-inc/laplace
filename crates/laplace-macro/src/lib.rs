@@ -9,6 +9,7 @@ use proc_macro::TokenStream;
 mod byoc_test;
 mod convenience;
 mod harness;
+mod model;
 mod target;
 mod tracked_derive;
 mod verify;
@@ -174,6 +175,18 @@ pub fn laplace_probe(attr: TokenStream, item: TokenStream) -> TokenStream {
 #[proc_macro_attribute]
 pub fn laplace_verify(attr: TokenStream, item: TokenStream) -> TokenStream {
     verify::laplace_verify_impl(attr, item)
+}
+
+/// Annotates a model function and routes qualified `std::thread::spawn` calls
+/// through `laplace_rt::spawn`.
+///
+/// P-1 rewrites exactly these call paths:
+/// `std::thread::spawn`, `::std::thread::spawn`, and `thread::spawn`.
+/// Bare `spawn(...)` is intentionally not rewritten because token-only macro
+/// expansion cannot prove it came from `std::thread::spawn`.
+#[proc_macro_attribute]
+pub fn model(attr: TokenStream, item: TokenStream) -> TokenStream {
+    model::model_impl(attr, item)
 }
 
 /// BYOC(Bring-Your-Own-Code) 테스트 보일러플레이트 제거용 attribute.
