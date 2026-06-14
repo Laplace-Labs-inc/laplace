@@ -3,7 +3,9 @@
 
 use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc;
+use std::sync::{Mutex as StdMutex, OnceLock};
 
 use crate::event::ProbeEvent;
 use crate::license::load_axiom_max_depth;
@@ -14,36 +16,73 @@ thread_local! {
         const { std::cell::RefCell::new(None) };
 
     /// Current OS-thread logical thread id used by generated test harnesses.
-    static PROBE_THREAD_ID: Cell<u64> = const { Cell::new(0) };
+    static PROBE_THREAD_ID: Cell<Option<u64>> = const { Cell::new(None) };
 }
+
+static GLOBAL_PROBE_SENDER: OnceLock<StdMutex<Option<mpsc::SyncSender<ProbeEvent>>>> =
+    OnceLock::new();
+static NEXT_IMPLICIT_THREAD_ID: AtomicU64 = AtomicU64::new(0);
 
 /// Registers the current OS thread's probe event sink.
 pub fn set_probe_sender(tx: mpsc::SyncSender<ProbeEvent>) {
-    PROBE_SENDER.with(|s| *s.borrow_mut() = Some(tx));
+    PROBE_SENDER.with(|s| *s.borrow_mut() = Some(tx.clone()));
+    NEXT_IMPLICIT_THREAD_ID.store(0, Ordering::SeqCst);
+    let slot = GLOBAL_PROBE_SENDER.get_or_init(|| StdMutex::new(None));
+    *slot.lock().expect("global probe sender lock poisoned") = Some(tx);
 }
 
 /// Clears the current OS thread's probe event sink.
 pub fn clear_probe_sender() {
     PROBE_SENDER.with(|s| *s.borrow_mut() = None);
+    if let Some(slot) = GLOBAL_PROBE_SENDER.get() {
+        *slot.lock().expect("global probe sender lock poisoned") = None;
+    }
 }
 
 /// Assigns the current OS thread's logical probe thread id.
 pub fn set_probe_thread_id(id: u64) {
-    PROBE_THREAD_ID.with(|c| c.set(id));
+    PROBE_THREAD_ID.with(|c| c.set(Some(id)));
 }
 
 /// Reads the current OS thread's logical probe thread id.
 pub fn current_thread_id() -> u64 {
-    PROBE_THREAD_ID.with(Cell::get)
+    PROBE_THREAD_ID.with(|slot| {
+        if let Some(id) = slot.get() {
+            return id;
+        }
+
+        // Annotated std-spawn model functions run child OS threads that did
+        // not call the generated harness setup. Give those threads stable
+        // logical ids so the in-memory reference verifier can still see the
+        // lock-order relation. Explicit `set_probe_thread_id` remains the
+        // preferred path for generated harnesses.
+        let id = NEXT_IMPLICIT_THREAD_ID.fetch_add(1, Ordering::SeqCst);
+        slot.set(Some(id));
+        id
+    })
 }
 
 /// Emits a public probe event to the registered thread-local sink.
 pub fn emit(event: ProbeEvent) {
-    PROBE_SENDER.with(|s| {
+    let emitted_to_thread_local = PROBE_SENDER.with(|s| {
         if let Some(tx) = s.borrow().as_ref() {
             let _ = tx.send(event.clone());
+            return true;
         }
+        false
     });
+
+    if !emitted_to_thread_local {
+        if let Some(slot) = GLOBAL_PROBE_SENDER.get() {
+            if let Some(tx) = slot
+                .lock()
+                .expect("global probe sender lock poisoned")
+                .as_ref()
+            {
+                let _ = tx.send(event.clone());
+            }
+        }
+    }
 
     #[cfg(feature = "cloud")]
     if let Some(client) = cloud::GLOBAL_PROBE_CLIENT.get() {

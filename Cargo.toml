@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/laplace-interfaces",
     "crates/laplace-dpor",
+    "crates/laplace-rt",
     "crates/laplace-macro",
     "crates/laplace-probe-common",
     "crates/laplace-probe-sdk",
