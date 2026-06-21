@@ -61,6 +61,41 @@ fn shared_source_uses_real_parking_lot_rwlock_without_laplace_mutex_traits() {
 }
 
 #[test]
+fn shared_source_uses_real_crossbeam_channel_without_laplace_channel_traits() {
+    let source = include_str!("../src/program.rs");
+
+    assert!(source.contains("crossbeam_channel::bounded"));
+    assert!(source.contains(".send("));
+    assert!(source.contains(".recv()"));
+    assert!(!source.contains("laplace_sync"));
+    assert!(!source.contains("ChannelEvent"));
+    assert!(!source.contains("run_live_channel"));
+}
+
+#[test]
+fn crossbeam_channel_model_bodies_are_plain_crossbeam_channel_bodies() {
+    let recv_spawned = std::cell::RefCell::new(Vec::new());
+    program::crossbeam_channel_recv_cycle_program(|thread, _body| {
+        recv_spawned.borrow_mut().push(thread);
+    });
+    assert_eq!(program::CROSSBEAM_CHANNEL_RESOURCES, 2);
+    assert_eq!(recv_spawned.into_inner(), vec![0, 1]);
+
+    let send_spawned = std::cell::RefCell::new(Vec::new());
+    program::crossbeam_channel_bounded_full_send_cycle_program(|thread, _body| {
+        send_spawned.borrow_mut().push(thread);
+    });
+    assert_eq!(send_spawned.into_inner(), vec![0, 1]);
+}
+
+#[test]
+fn crossbeam_channel_all_senders_drop_body_is_clean_without_engine() {
+    program::crossbeam_channel_all_senders_drop_is_clean_program(|_thread, body| {
+        body();
+    });
+}
+
+#[test]
 fn rwlock_read_models_are_plain_parking_lot_bodies() {
     program::parking_lot_rwlock_read_read_ab_ba_program(|_thread, body| {
         body();

@@ -7,6 +7,7 @@ use std::sync::Arc;
 
 pub const AB_BA_RESOURCES: usize = 2;
 pub const FAN_OUT_RESOURCES: usize = 2;
+pub const CROSSBEAM_CHANNEL_RESOURCES: usize = 2;
 
 #[laplace::model]
 pub fn std_spawn_mutex_ab_ba_program() {
@@ -200,6 +201,71 @@ where
         Box::new(move || {
             let _exclusive = writer_first.write();
             let _blocked_by_readers = writer_second.write();
+        }),
+    );
+}
+
+pub fn crossbeam_channel_recv_cycle_program<S>(spawn: S)
+where
+    S: Fn(usize, Box<dyn FnOnce() + Send + 'static>),
+{
+    let (send_a, recv_a) = crossbeam_channel::bounded::<usize>(1);
+    let (send_b, recv_b) = crossbeam_channel::bounded::<usize>(1);
+
+    spawn(
+        0,
+        Box::new(move || {
+            let _keep_sender_to_b = send_b;
+            let _ = recv_a.recv();
+        }),
+    );
+
+    spawn(
+        1,
+        Box::new(move || {
+            let _keep_sender_to_a = send_a;
+            let _ = recv_b.recv();
+        }),
+    );
+}
+
+pub fn crossbeam_channel_bounded_full_send_cycle_program<S>(spawn: S)
+where
+    S: Fn(usize, Box<dyn FnOnce() + Send + 'static>),
+{
+    let (send_a, recv_a) = crossbeam_channel::bounded::<usize>(1);
+    let (send_b, recv_b) = crossbeam_channel::bounded::<usize>(1);
+    send_a.send(1).expect("prefill channel a");
+    send_b.send(2).expect("prefill channel b");
+
+    spawn(
+        0,
+        Box::new(move || {
+            let _keep_receiver_a = recv_a;
+            let _ = send_b.send(3);
+        }),
+    );
+
+    spawn(
+        1,
+        Box::new(move || {
+            let _keep_receiver_b = recv_b;
+            let _ = send_a.send(4);
+        }),
+    );
+}
+
+pub fn crossbeam_channel_all_senders_drop_is_clean_program<S>(spawn: S)
+where
+    S: Fn(usize, Box<dyn FnOnce() + Send + 'static>),
+{
+    let (sender, receiver) = crossbeam_channel::bounded::<usize>(1);
+    drop(sender);
+
+    spawn(
+        0,
+        Box::new(move || {
+            assert!(receiver.recv().is_err());
         }),
     );
 }

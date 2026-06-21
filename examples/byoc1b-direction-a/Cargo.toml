@@ -12,6 +12,8 @@ laplace = { package = "laplace-macro", path = "../../crates/laplace-macro" }
 laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk" }
 laplace-rt = { path = "../../crates/laplace-rt" }
 parking_lot = { version = "=0.12.5", features = ["laplace"] }
+crossbeam-channel = { version = "=0.5.15", features = ["laplace"] }
 
 [patch.crates-io]
 parking_lot = { path = "../../vendor/parking_lot-patched" }
+crossbeam-channel = { path = "../../vendor/crossbeam-patched" }
