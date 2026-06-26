@@ -22,7 +22,14 @@ pub fn model_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
     quote!(#input).into()
 }
 
-struct ModelRewrite;
+/// `std`-qualified concurrency primitive rewriter shared by `#[laplace::model]`
+/// and `#[laplace::verify]`.
+///
+/// `#[laplace::verify]` reuses this so a single `#[laplace::verify]` attribute
+/// performs the model rewrite (spawn/Mutex) before emitting the harness, letting
+/// users drop the previously-required separate `#[laplace::model]` line. The
+/// public behavior of `#[laplace::model]` itself is unchanged.
+pub(crate) struct ModelRewrite;
 
 impl VisitMut for ModelRewrite {
     fn visit_expr_call_mut(&mut self, node: &mut ExprCall) {

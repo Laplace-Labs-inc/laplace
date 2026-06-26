@@ -146,6 +146,16 @@ pub fn laplace_probe(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// collects probe events, and runs Ki-DPOR verification. Supports both `&T`
 /// references and `Arc<T>`, with automatic state initialization and management.
 ///
+/// # Single-annotation control layer
+///
+/// `#[laplace::verify]` self-contains the model rewrite: it applies the same
+/// `std::thread::spawn` → `::laplace_rt::spawn` and `std::sync::Mutex` →
+/// `::laplace_rt::ModelMutex` rewrite as `#[laplace::model]` to the function body
+/// before emitting the harness. Users therefore need only this one attribute;
+/// the separate `#[laplace::model]` attribute remains available for backward
+/// compatibility. Note that the compile-time `[patch.crates-io]` redirection is
+/// emitted by onboarding (`laplace init`), not by this macro.
+///
 /// # Signature Requirements
 ///
 /// - `async fn <name>(state: &T)` — state reference (recommended)
