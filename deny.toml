@@ -18,6 +18,11 @@ allow = [
     "CDLA-Permissive-2.0",
     "Elastic-2.0",
 ]
+# Workspace-internal example/fixture crates (publish = false) carry no SPDX
+# license field; they are never published, so their license is not a supply-chain
+# concern. Ignore them rather than annotating each (bb8-hunt, byoc-demo,
+# deadpool-hunt, integration-test, known-bug-hunt, mobc-hunt, mobc-real, r2d2-hunt).
+private = { ignore = true }
 
 [bans]
 multiple-versions = "warn"
