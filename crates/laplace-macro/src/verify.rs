@@ -305,7 +305,11 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
             }
 
             // 8. Public macro output collects trace data only. Commercial
-            //    verification runs through the private CLI/API boundary.
+            //    verification runs through the private CLI/API boundary: when
+            //    `$LAPLACE_VERIFY_EVENTS_DIR` is set the captured trace (with the
+            //    declared expectation) is dumped as `<target>.json` for
+            //    `laplace axiom verify --model-events <dir>` to drive the engine.
+            //    No-op under a plain `cargo test`.
             let config = ProbeSessionConfig {
                 write_ard: #write_ard,
                 output_dir: #output_dir.to_string(),
@@ -313,7 +317,10 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
                 ..ProbeSessionConfig::default()
             };
 
-            let _ = (#expected, #target_name, config, events);
+            ::laplace_sdk::__macro_support::dump_events_if_configured(
+                #target_name, #expected, &events,
+            );
+            let _ = config;
         }
     };
 

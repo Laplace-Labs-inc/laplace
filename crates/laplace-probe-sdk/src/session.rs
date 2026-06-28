@@ -92,6 +92,33 @@ pub fn emit(event: ProbeEvent) {
     }
 }
 
+/// Dumps captured events (with the declared expectation) to
+/// `$LAPLACE_VERIFY_EVENTS_DIR/<target>.json` when that env var is set — the
+/// ingestion contract for the private CLI/API verdict boundary
+/// (`laplace axiom verify --model-events <dir>`). No-op when the var is unset,
+/// so it is invisible to a plain `cargo test`.
+///
+/// Trace data only: the verdict is computed downstream by the private engine,
+/// never here. Best-effort — any I/O error is swallowed so verification runs are
+/// never broken by a dump failure.
+pub fn dump_events_if_configured(target_name: &str, expected: &str, events: &[ProbeEvent]) {
+    let Ok(dir) = std::env::var("LAPLACE_VERIFY_EVENTS_DIR") else {
+        return;
+    };
+    if std::fs::create_dir_all(&dir).is_err() {
+        return;
+    }
+    let path = std::path::Path::new(&dir).join(format!("{target_name}.json"));
+    let envelope = serde_json::json!({
+        "target": target_name,
+        "expected": expected,
+        "events": events,
+    });
+    if let Ok(text) = serde_json::to_string_pretty(&envelope) {
+        let _ = std::fs::write(path, text);
+    }
+}
+
 /// Probe collection configuration shared by generated public harnesses.
 #[derive(Debug, Clone)]
 pub struct ProbeSessionConfig {
@@ -251,6 +278,40 @@ mod tests {
     fn set_and_get_thread_id() {
         set_probe_thread_id(7);
         assert_eq!(current_thread_id(), 7);
+    }
+
+    #[test]
+    fn dump_events_writes_envelope_when_env_set_and_noop_otherwise() {
+        let events = vec![ProbeEvent::LockAcquired {
+            thread_id: 0,
+            resource: "a".to_string(),
+        }];
+
+        // No env → no-op (must not panic, must not write anywhere).
+        std::env::remove_var("LAPLACE_VERIFY_EVENTS_DIR");
+        dump_events_if_configured("noop_target", "clean", &events);
+
+        // Env set → writes <target>.json envelope with target/expected/events.
+        let dir = std::env::temp_dir().join(format!(
+            "laplace-dump-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::env::set_var("LAPLACE_VERIFY_EVENTS_DIR", &dir);
+        dump_events_if_configured("my_target", "bug", &events);
+        std::env::remove_var("LAPLACE_VERIFY_EVENTS_DIR");
+
+        let path = dir.join("my_target.json");
+        let text = std::fs::read_to_string(&path).expect("envelope written");
+        let value: serde_json::Value = serde_json::from_str(&text).expect("valid json");
+        assert_eq!(value["target"], "my_target");
+        assert_eq!(value["expected"], "bug");
+        assert_eq!(value["events"].as_array().map(|a| a.len()), Some(1));
+
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

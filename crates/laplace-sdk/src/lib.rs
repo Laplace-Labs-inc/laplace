@@ -136,6 +136,9 @@ pub use laplace_probe_sdk::ProbeSessionConfig;
 /// Enumeration of all probe event types.
 pub use laplace_probe_sdk::ProbeEvent;
 
+/// Dump captured events to `$LAPLACE_VERIFY_EVENTS_DIR` for the private CLI.
+pub use laplace_probe_sdk::dump_events_if_configured;
+
 /// Public reference verification result.
 pub use laplace_probe_sdk::VerifyResult;
 
@@ -168,9 +171,9 @@ pub use laplace_probe_sdk::init_cloud_probe;
 pub mod __macro_support {
     pub use crate::ProbeEvent;
     pub use crate::{
-        set_probe_sender, set_probe_thread_id, ProbeSessionConfig, TrackedAtomicBool,
-        TrackedAtomicU32, TrackedAtomicU64, TrackedAtomicUsize, TrackedMutex, TrackedRwLock,
-        TrackedSemaphore, TrackedStdMutex, TrackedStdRwLock,
+        dump_events_if_configured, set_probe_sender, set_probe_thread_id, ProbeSessionConfig,
+        TrackedAtomicBool, TrackedAtomicU32, TrackedAtomicU64, TrackedAtomicUsize, TrackedMutex,
+        TrackedRwLock, TrackedSemaphore, TrackedStdMutex, TrackedStdRwLock,
     };
     pub use tokio;
 }
