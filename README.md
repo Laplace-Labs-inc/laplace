@@ -25,10 +25,30 @@ Laplace detects deadlocks, data races, and starvation in concurrent Rust code â€
 
 ## Installation
 
-```bash
-# Install the CLI
-curl -fsSL https://install.laplace-labs.com | bash
+Prebuilt, signed binaries â€” no Rust toolchain required.
 
+**Linux / macOS**
+
+```sh
+curl -fsSL https://install.laplace-labs.com | sh
+```
+
+**Windows (PowerShell)**
+
+```powershell
+irm https://install.laplace-labs.com/install.ps1 | iex
+```
+
+The installer picks the right binary for your platform, verifies its SHA-256
+checksum, and installs `laplace` to `~/.laplace/bin`. Linux binaries are static
+(musl), so they run on any distribution regardless of the host glibc version.
+
+Prefer a manual download? Grab an archive from the
+[Releases page](https://github.com/Laplace-Labs-inc/laplace/releases/latest)
+(`laplace-cli-<target>.tar.xz` / `.zip`), verify its `.sha256`, and put
+`laplace` on your `PATH`. From source: `cargo install laplace-cli` (slower).
+
+```sh
 # Authenticate (free tier available)
 laplace auth activate <license-key>
 ```
