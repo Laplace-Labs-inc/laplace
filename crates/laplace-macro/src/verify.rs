@@ -16,6 +16,7 @@ pub(crate) struct VerifyArgs {
     pub(crate) threads: usize,
     pub(crate) name: Option<String>,
     pub(crate) expected: String,
+    pub(crate) determinism: String,
     pub(crate) write_ard: bool,
     pub(crate) output_dir: String,
     pub(crate) buffer: usize,
@@ -27,6 +28,7 @@ impl Parse for VerifyArgs {
         let mut threads = None;
         let mut name = None;
         let mut expected = None;
+        let mut determinism = None;
         let mut write_ard = None;
         let mut output_dir = None;
         let mut buffer = None;
@@ -55,6 +57,13 @@ impl Parse for VerifyArgs {
                         if let Expr::Lit(expr_lit) = &nv.value {
                             if let Lit::Str(s) = &expr_lit.lit {
                                 expected = Some(s.value());
+                            }
+                        }
+                    }
+                    Some("determinism") => {
+                        if let Expr::Lit(expr_lit) = &nv.value {
+                            if let Lit::Str(s) = &expr_lit.lit {
+                                determinism = Some(s.value());
                             }
                         }
                     }
@@ -95,6 +104,7 @@ impl Parse for VerifyArgs {
             threads: threads.ok_or_else(|| input.error("verify: `threads` is required"))?,
             name,
             expected: expected.unwrap_or_else(|| "clean".to_string()),
+            determinism: determinism.unwrap_or_else(|| "fully_deterministic".to_string()),
             write_ard: write_ard.unwrap_or(false),
             output_dir: output_dir.unwrap_or_else(|| ".".to_string()),
             buffer: buffer.unwrap_or(8192),
@@ -153,6 +163,7 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
     let threads = args.threads;
     let target_name = args.name.unwrap_or_else(|| func_ident.to_string());
     let expected = &args.expected;
+    let determinism = &args.determinism;
     let write_ard = args.write_ard;
     let output_dir = &args.output_dir;
     let buffer = args.buffer;
@@ -318,7 +329,7 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
             };
 
             ::laplace_sdk::__macro_support::dump_events_if_configured(
-                #target_name, #expected, &events,
+                #target_name, #expected, #determinism, &events,
             );
             let _ = config;
         }

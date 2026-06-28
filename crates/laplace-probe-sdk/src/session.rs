@@ -92,16 +92,29 @@ pub fn emit(event: ProbeEvent) {
     }
 }
 
-/// Dumps captured events (with the declared expectation) to
-/// `$LAPLACE_VERIFY_EVENTS_DIR/<target>.json` when that env var is set — the
+/// Dumps captured events (with the declared expectation and determinism class)
+/// to `$LAPLACE_VERIFY_EVENTS_DIR/<target>.json` when that env var is set — the
 /// ingestion contract for the private CLI/API verdict boundary
 /// (`laplace axiom verify --model-events <dir>`). No-op when the var is unset,
 /// so it is invisible to a plain `cargo test`.
 ///
+/// `determinism` is the producer's honest scope attestation for the captured
+/// code (`fully_deterministic` | `deterministic_with_declared_inputs` |
+/// `best_effort`), declared via `#[laplace::verify(determinism = "…")]`. The
+/// captured trace replays bit-exactly, but whether that single trace represents
+/// real input-dependent code is something only the author can attest; the
+/// downstream `--strict` gate refuses to bless anything weaker than
+/// `fully_deterministic`.
+///
 /// Trace data only: the verdict is computed downstream by the private engine,
 /// never here. Best-effort — any I/O error is swallowed so verification runs are
 /// never broken by a dump failure.
-pub fn dump_events_if_configured(target_name: &str, expected: &str, events: &[ProbeEvent]) {
+pub fn dump_events_if_configured(
+    target_name: &str,
+    expected: &str,
+    determinism: &str,
+    events: &[ProbeEvent],
+) {
     let Ok(dir) = std::env::var("LAPLACE_VERIFY_EVENTS_DIR") else {
         return;
     };
@@ -112,6 +125,7 @@ pub fn dump_events_if_configured(target_name: &str, expected: &str, events: &[Pr
     let envelope = serde_json::json!({
         "target": target_name,
         "expected": expected,
+        "determinism": determinism,
         "events": events,
     });
     if let Ok(text) = serde_json::to_string_pretty(&envelope) {
@@ -289,7 +303,7 @@ mod tests {
 
         // No env → no-op (must not panic, must not write anywhere).
         std::env::remove_var("LAPLACE_VERIFY_EVENTS_DIR");
-        dump_events_if_configured("noop_target", "clean", &events);
+        dump_events_if_configured("noop_target", "clean", "fully_deterministic", &events);
 
         // Env set → writes <target>.json envelope with target/expected/events.
         let dir = std::env::temp_dir().join(format!(
@@ -301,7 +315,7 @@ mod tests {
                 .as_nanos()
         ));
         std::env::set_var("LAPLACE_VERIFY_EVENTS_DIR", &dir);
-        dump_events_if_configured("my_target", "bug", &events);
+        dump_events_if_configured("my_target", "bug", "best_effort", &events);
         std::env::remove_var("LAPLACE_VERIFY_EVENTS_DIR");
 
         let path = dir.join("my_target.json");
@@ -309,6 +323,7 @@ mod tests {
         let value: serde_json::Value = serde_json::from_str(&text).expect("valid json");
         assert_eq!(value["target"], "my_target");
         assert_eq!(value["expected"], "bug");
+        assert_eq!(value["determinism"], "best_effort");
         assert_eq!(value["events"].as_array().map(|a| a.len()), Some(1));
 
         let _ = std::fs::remove_dir_all(&dir);
