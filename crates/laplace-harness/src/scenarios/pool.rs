@@ -16,8 +16,8 @@
 //!
 //! Expected: `OracleVerdict::Clean`.
 
-use laplace_core::domain::resource::{ResourceId, ThreadId};
 use laplace_dpor::Operation;
+use laplace_interfaces::domain::resource::types::{ResourceId, ThreadId};
 use laplace_macro::axiom_harness;
 
 /// Tiered preemption model — strict hierarchy prevents infinite oscillation.

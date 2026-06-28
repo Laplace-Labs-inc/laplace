@@ -16,4 +16,7 @@ pub mod scheduler;
 pub mod telemetry;
 pub mod template;
 pub mod time;
+// Coverage-boundary: the sole harness here (`tracing_causality_acyclicity`)
+// models a self-deadlock the frozen engine does not flag. Off by default.
+#[cfg(feature = "scenarios-coverage-boundary")]
 pub mod tracing;

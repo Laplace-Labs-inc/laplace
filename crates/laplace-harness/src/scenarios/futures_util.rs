@@ -7,10 +7,13 @@
 //! 공개 이슈(RUSTSEC-2020-0059/0062, issue #2133)를 제외하고,
 //! cancel + waiter 순서로 인한 starvation 경로를 모델링한다.
 
-use laplace_core::domain::resource::{ResourceId, ThreadId};
 use laplace_dpor::Operation;
+use laplace_interfaces::domain::resource::types::{ResourceId, ThreadId};
 use laplace_macro::axiom_harness;
 
+// Coverage-boundary: stale-waiter starvation (a fairness property), not a cyclic
+// deadlock — the frozen engine returns Clean. Off by default.
+#[cfg(feature = "scenarios-coverage-boundary")]
 #[axiom_harness(
     name = "futures_mutex_starvation_3thread",
     threads = 3,

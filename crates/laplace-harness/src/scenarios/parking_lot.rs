@@ -4,8 +4,8 @@
 //! 공개 이슈(#212, #489, #518)와 겹치지 않는 Condvar 교차 경로 + ABBA 경로를
 //! 모델링해 Ki-DPOR로 검증한다.
 
-use laplace_core::domain::resource::{ResourceId, ThreadId};
 use laplace_dpor::Operation;
+use laplace_interfaces::domain::resource::types::{ResourceId, ThreadId};
 use laplace_macro::axiom_harness;
 
 #[axiom_harness(

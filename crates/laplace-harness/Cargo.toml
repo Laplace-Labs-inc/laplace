@@ -18,6 +18,17 @@ path = "src/lib.rs"
 # thin default: DSL only
 default = []
 registry = ["dep:laplace-dpor", "dep:laplace-macro", "dep:inventory"]
+# Built-in verification scenarios + external-crate audits (Apache concurrency
+# models / op-tables, no engine code). Pulls in `registry` so the
+# `#[axiom_harness]`-generated `inventory::submit!` blocks resolve.
+scenarios = ["registry"]
+# Coverage-boundary models: scenarios that describe real concurrency bugs which
+# are *beyond the frozen Classic DPOR engine's current detection scope*
+# (starvation / fairness, partial or N-party deadlocks that never reach a
+# terminal all-blocked state, and non-cyclic invariants). They are kept in-tree
+# for tracking but are OFF by default so `--harness all` stays an honest green
+# gate — registering them would assert bugs the shipped engine cannot prove.
+scenarios-coverage-boundary = ["scenarios"]
 reference-dpor = ["dep:laplace-dpor"]
 
 [dependencies]

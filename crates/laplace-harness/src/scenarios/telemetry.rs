@@ -8,8 +8,8 @@
 //! Because exactly one thread holds the write-lock at a time, no torn snapshot
 //! or data race can occur.  DPOR exhaustive search must confirm `OracleVerdict::Clean`.
 
-use laplace_core::domain::resource::{ResourceId, ThreadId};
 use laplace_dpor::Operation;
+use laplace_interfaces::domain::resource::types::{ResourceId, ThreadId};
 use laplace_macro::axiom_harness;
 
 /// Two threads race to acquire the ring buffer write-lock (ResourceId 0),

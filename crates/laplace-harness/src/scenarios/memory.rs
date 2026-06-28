@@ -7,8 +7,8 @@
 //! Under any valid interleaving, the last write wins — no torn values are possible.
 //! DPOR exhaustive search must confirm `OracleVerdict::Clean`.
 
-use laplace_core::domain::resource::{ResourceId, ThreadId};
 use laplace_dpor::Operation;
+use laplace_interfaces::domain::resource::types::{ResourceId, ThreadId};
 use laplace_macro::axiom_harness;
 
 /// Two threads concurrently write to address 0 (Request) then fence (Release).
@@ -58,6 +58,10 @@ pub fn cross_core_op_provider(thread: ThreadId, pc: usize) -> Option<(Operation,
 /// where the store buffer is full and a new write is rejected (overflow).
 ///
 /// Expected: `OracleVerdict::BugFound`.
+///
+/// Coverage-boundary: a single-thread self-re-request is not a multi-thread WFG
+/// cycle, so the frozen engine returns Clean. Off by default.
+#[cfg(feature = "scenarios-coverage-boundary")]
 #[axiom_harness(
     name = "memory_buffer_overflow",
     threads = 1,

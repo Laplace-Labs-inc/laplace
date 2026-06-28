@@ -3,8 +3,8 @@
 //!
 //! R0 = shared allocation reference, R1 = is_unique/mutation intent.
 
-use laplace_core::domain::resource::{ResourceId, ThreadId};
 use laplace_dpor::Operation;
+use laplace_interfaces::domain::resource::types::{ResourceId, ThreadId};
 use laplace_macro::axiom_harness;
 
 #[axiom_harness(

@@ -5,8 +5,8 @@
 //! every thread gets a turn; no thread can be permanently denied the slot.
 //! DPOR exhaustive search must confirm `OracleVerdict::Clean`.
 
-use laplace_core::domain::resource::{ResourceId, ThreadId};
 use laplace_dpor::Operation;
+use laplace_interfaces::domain::resource::types::{ResourceId, ThreadId};
 use laplace_macro::axiom_harness;
 
 /// 3 threads each acquire the scheduler slot (r0) for one quantum then release.

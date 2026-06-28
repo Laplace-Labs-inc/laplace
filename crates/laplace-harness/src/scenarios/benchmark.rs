@@ -8,8 +8,8 @@
 //!
 //! Expected: `OracleVerdict::Clean`.
 
-use laplace_core::domain::resource::{ResourceId, ThreadId};
 use laplace_dpor::Operation;
+use laplace_interfaces::domain::resource::types::{ResourceId, ThreadId};
 use laplace_macro::axiom_harness;
 
 /// Writer (T0) and analyzer (T1) race for the metrics lock — proves snapshots are clean.
