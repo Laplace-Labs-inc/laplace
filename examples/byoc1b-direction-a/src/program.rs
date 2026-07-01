@@ -55,6 +55,35 @@ pub fn std_sync_mutex_ab_ba_program() {
     thread1.join().expect("thread1 completes");
 }
 
+/// AB-BA deadlock over annotated `std::sync::RwLock` write locks.
+///
+/// `#[laplace::model]` rewrites `std::sync::RwLock` to `laplace_rt::ModelRwLock`,
+/// whose `write` acquisitions route through the same exclusive engine boundary
+/// as `ModelMutex`. The two write locks are grabbed in opposite orders, so the
+/// engine must prove the classic circular-wait deadlock (P-3 coverage).
+#[laplace::model]
+pub fn std_sync_rwlock_ab_ba_program() {
+    let left = Arc::new(std::sync::RwLock::new(()));
+    let right = Arc::new(std::sync::RwLock::new(()));
+
+    let left_first = Arc::clone(&left);
+    let right_second = Arc::clone(&right);
+    let thread0 = std::thread::spawn(move || {
+        let _left = left_first.write().expect("left write");
+        let _right = right_second.write().expect("right write");
+    });
+
+    let right_first = Arc::clone(&right);
+    let left_second = Arc::clone(&left);
+    let thread1 = std::thread::spawn(move || {
+        let _right = right_first.write().expect("right write");
+        let _left = left_second.write().expect("left write");
+    });
+
+    thread0.join().expect("thread0 completes");
+    thread1.join().expect("thread1 completes");
+}
+
 pub fn parking_lot_mutex_ab_ba_program<S>(spawn: S)
 where
     S: Fn(usize, Box<dyn FnOnce() + Send + 'static>),

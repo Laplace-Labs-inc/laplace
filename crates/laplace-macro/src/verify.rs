@@ -147,17 +147,17 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
 
     // Single-annotation control layer: `#[laplace::verify]` self-contains the
     // model rewrite, so users no longer need a separate `#[laplace::model]`
-    // line. Apply the shared `ModelRewrite` (qualified `std::thread::spawn` →
-    // `::laplace_rt::spawn`, `std::sync::Mutex` → `::laplace_rt::ModelMutex`) to
-    // the parsed function body BEFORE generating the harness below, so the
-    // emitted `#func` already carries the rewritten primitives.
+    // line. Apply the shared model rewrite (qualified `std::thread::spawn` →
+    // `::laplace_rt::spawn`, `std::sync::{Mutex,RwLock}` →
+    // `::laplace_rt::{ModelMutex,ModelRwLock}`, plus un-modeled blind-spot
+    // markers) to the parsed function body BEFORE generating the harness below,
+    // so the emitted `#func` already carries the rewritten primitives.
     //
     // Honest limit: the rewrite only covers source-level call/type paths. The
     // `[patch.crates-io]` redirection that swaps the real concurrency crates for
     // their Laplace shims is a compile-time Cargo setting and CANNOT be injected
     // by a proc-macro; it is emitted by onboarding (`laplace init`).
-    use syn::visit_mut::VisitMut;
-    crate::model::ModelRewrite.visit_item_fn_mut(&mut func);
+    crate::model::apply_model_rewrite(&mut func);
 
     let func_ident = &func.sig.ident;
     let threads = args.threads;
