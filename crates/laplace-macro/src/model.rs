@@ -50,7 +50,7 @@ pub(crate) struct ModelRewrite {
 }
 
 /// A concurrency primitive `#[laplace::model]` recognizes but cannot model.
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 enum Unmodeled {
     Condvar,
     Atomic,
@@ -231,4 +231,78 @@ fn classify_unmodeled(path: &Path) -> Option<Unmodeled> {
         return Some(Unmodeled::Atomic);
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use quote::ToTokens;
+
+    fn classify(path: &str) -> Option<Unmodeled> {
+        let path: Path = syn::parse_str(path).expect("valid path");
+        classify_unmodeled(&path)
+    }
+
+    /// Rewrites the annotated function and returns the emitted source as a
+    /// whitespace-normalized string, so assertions are stable across rustc
+    /// versions (unlike trybuild `.stderr` byte-matching).
+    fn rewrite_to_string(func: &str) -> String {
+        let mut func: ItemFn = syn::parse_str(func).expect("valid fn");
+        apply_model_rewrite(&mut func);
+        func.into_token_stream().to_string()
+    }
+
+    #[test]
+    fn classify_flags_unmodeled_and_ignores_modeled() {
+        assert_eq!(classify("std::sync::Condvar"), Some(Unmodeled::Condvar));
+        assert_eq!(classify("Condvar"), Some(Unmodeled::Condvar));
+        assert_eq!(
+            classify("std::sync::mpsc::channel"),
+            Some(Unmodeled::Channel)
+        );
+        assert_eq!(
+            classify("std::sync::atomic::AtomicUsize"),
+            Some(Unmodeled::Atomic)
+        );
+        assert_eq!(classify("AtomicBool"), Some(Unmodeled::Atomic));
+        // Modeled or unrelated paths must not be flagged.
+        assert_eq!(classify("std::sync::Mutex"), None);
+        assert_eq!(classify("std::sync::RwLock"), None);
+        assert_eq!(classify("std::sync::Arc"), None);
+        // "Atomic" alone is too generic to flag (avoids user-type false positives).
+        assert_eq!(classify("Atomic"), None);
+    }
+
+    #[test]
+    fn rewrite_maps_qualified_mutex_and_rwlock() {
+        let out = rewrite_to_string(
+            "fn f() { let a = std::sync::Mutex::new(0); let b = std::sync::RwLock::new(0); }",
+        );
+        assert!(out.contains("ModelMutex"), "mutex rewrite missing: {out}");
+        assert!(out.contains("ModelRwLock"), "rwlock rewrite missing: {out}");
+        // No un-modeled primitive → no blind-spot marker injected.
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_injects_blind_spot_marker_for_unmodeled_condvar() {
+        let out = rewrite_to_string("fn f() { let c = std::sync::Condvar::new(); }");
+        assert!(
+            out.contains("laplace_rt") && out.contains("unmodeled") && out.contains("CONDVAR"),
+            "condvar blind-spot marker missing: {out}"
+        );
+    }
+
+    #[test]
+    fn rewrite_injects_one_marker_per_distinct_unmodeled_primitive() {
+        let out = rewrite_to_string(
+            "fn f() { let c1 = std::sync::Condvar::new(); let c2 = std::sync::Condvar::new(); }",
+        );
+        // Deduplicated via the BTreeSet: exactly one CONDVAR marker.
+        assert_eq!(
+            out.matches("CONDVAR").count(),
+            1,
+            "expected one marker: {out}"
+        );
+    }
 }
