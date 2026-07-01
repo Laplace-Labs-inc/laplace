@@ -25,6 +25,8 @@
 /// Axiom Execution v2 operation-source contracts.
 pub mod axiom_execution;
 pub mod context;
+/// Determinism-declaration report contracts (#89 = M1-PROD-1)
+pub mod determinism;
 /// Entropy domain contracts (seed primitives and Entropy trait)
 pub mod entropy;
 pub mod harness;
@@ -64,6 +66,9 @@ pub use axiom_execution::{
     YieldKind,
 };
 pub use context::{SovereignContext, NO_TURBO_SLOT};
+pub use determinism::{
+    Confidence, DeterminismReport, NdKind, NonDeterminismFinding, Remedy, SrcLoc,
+};
 pub use entropy::{ContextId, Entropy, GlobalSeedConfig, LocalSeed, SeedAssignment};
 pub use harness::{
     DeadlockProbe, GateId, GateSpec, HarnessSpec, ReleasePolicy, ResourceId as HarnessResourceId,

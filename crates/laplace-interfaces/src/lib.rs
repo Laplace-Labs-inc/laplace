@@ -42,16 +42,16 @@ pub use abi::{
 pub use error::{LaplaceError, TenantError};
 
 pub use domain::{
-    AxiomOperation, AxiomThreadSet, DeadlockProbe, DeterminismClass, ExecutionSource,
-    ExecutionSourceVTable, GateId, GateSpec, HarnessResourceId, HarnessSpec, HttpMethod,
-    KernelCapabilities, KnulConnection, KnulEndpoint, KnulStream, LogRedacted, PanelType,
-    PanicReport, PriorityLevel, QuicServerStats, ReleasePolicy, ResourceConfig, ResourceSpec,
-    RuntimeStats, SourceError, SourceErrorCode, SovereignContext, SovereignRuntime,
-    SovereignTransport, StepOutcome, StepOutcomeFfi, StepOutcomeTag, TelemetryConfig,
-    TelemetryDomain, TelemetryEvent, TelemetrySink, TenantMetadata, TenantTier, ThreadAction,
-    ThreadSpec, Tier, TransportError, TransportFactory, TransportHandle, TransportPacket,
-    TransportStats, TuiCapabilities, VirtualRequest, VirtualResponse, VirtualTransport, YieldKind,
-    NO_TURBO_SLOT, VUID,
+    AxiomOperation, AxiomThreadSet, Confidence, DeadlockProbe, DeterminismClass, DeterminismReport,
+    ExecutionSource, ExecutionSourceVTable, GateId, GateSpec, HarnessResourceId, HarnessSpec,
+    HttpMethod, KernelCapabilities, KnulConnection, KnulEndpoint, KnulStream, LogRedacted, NdKind,
+    NonDeterminismFinding, PanelType, PanicReport, PriorityLevel, QuicServerStats, ReleasePolicy,
+    Remedy, ResourceConfig, ResourceSpec, RuntimeStats, SourceError, SourceErrorCode,
+    SovereignContext, SovereignRuntime, SovereignTransport, SrcLoc, StepOutcome, StepOutcomeFfi,
+    StepOutcomeTag, TelemetryConfig, TelemetryDomain, TelemetryEvent, TelemetrySink,
+    TenantMetadata, TenantTier, ThreadAction, ThreadSpec, Tier, TransportError, TransportFactory,
+    TransportHandle, TransportPacket, TransportStats, TuiCapabilities, VirtualRequest,
+    VirtualResponse, VirtualTransport, YieldKind, NO_TURBO_SLOT, VUID,
 };
 
 #[cfg(test)]
