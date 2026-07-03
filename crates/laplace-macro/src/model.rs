@@ -40,9 +40,9 @@ pub(crate) fn apply_model_rewrite(func: &mut ItemFn) {
 /// `std`-qualified concurrency primitive rewriter shared by `#[laplace::model]`
 /// and `#[laplace::verify]`.
 ///
-/// Rewrites qualified `std::thread::spawn` → `::laplace_rt::spawn` and
-/// `std::sync::{Mutex,RwLock}` → `::laplace_rt::{ModelMutex,ModelRwLock}`, and
-/// records any recognized-but-un-modeled primitive (`Condvar`, `atomic`,
+/// Rewrites qualified `std::thread::spawn` → `::laplace_sdk::rt::spawn` and
+/// `std::sync::{Mutex,RwLock}` → `::laplace_sdk::rt::{ModelMutex,ModelRwLock}`,
+/// and records any recognized-but-un-modeled primitive (`Condvar`, `atomic`,
 /// `mpsc`) so a compile-time blind-spot warning can be injected.
 #[derive(Default)]
 pub(crate) struct ModelRewrite {
@@ -58,7 +58,7 @@ enum Unmodeled {
 }
 
 impl Unmodeled {
-    /// The `::laplace_rt::unmodeled` marker constant for this primitive.
+    /// The `::laplace_sdk::rt::unmodeled` marker constant for this primitive.
     fn marker_ident(self) -> Ident {
         let name = match self {
             Unmodeled::Condvar => "CONDVAR",
@@ -82,7 +82,7 @@ impl ModelRewrite {
             .iter()
             .map(|primitive| {
                 let marker = primitive.marker_ident();
-                parse_quote!(let _ = ::laplace_rt::unmodeled::#marker;)
+                parse_quote!(let _ = ::laplace_sdk::rt::unmodeled::#marker;)
             })
             .collect();
         markers.append(&mut func.block.stmts);
@@ -99,7 +99,7 @@ impl VisitMut for ModelRewrite {
         };
 
         if is_supported_spawn_path(&path.path) {
-            path.path = parse_quote!(::laplace_rt::spawn);
+            path.path = parse_quote!(::laplace_sdk::rt::spawn);
         } else if let Some(rewritten) = rewrite_std_sync_constructor_path(&path.path) {
             path.path = rewritten;
         } else if let Some(primitive) = classify_unmodeled(&path.path) {
@@ -200,7 +200,7 @@ fn rewrite_std_sync_constructor_path(path: &Path) -> Option<Path> {
 
 fn model_path(target: &str, arguments: PathArguments, method: Option<PathSegment>) -> Path {
     let ident = Ident::new(target, proc_macro2::Span::call_site());
-    let mut path: Path = parse_quote!(::laplace_rt::#ident);
+    let mut path: Path = parse_quote!(::laplace_sdk::rt::#ident);
     path.segments
         .last_mut()
         .expect("model path has a segment")
@@ -223,14 +223,38 @@ fn classify_unmodeled(path: &Path) -> Option<Unmodeled> {
     if has("mpsc") {
         return Some(Unmodeled::Channel);
     }
+    // Atomics: a genuine `std::sync::atomic` module segment, or a *known* std
+    // atomic type name. Restricting the prefix match to the concrete atomic
+    // types avoids false-positives on unrelated user types that merely start
+    // with "Atomic" (e.g. `AtomicState`, `AtomicWaker`) — those must not inject
+    // a blind-spot marker or the honest scope report lies about a clean run.
     let is_atomic = path.segments.iter().any(|segment| {
         let ident = segment.ident.to_string();
-        ident == "atomic" || (ident.starts_with("Atomic") && ident.len() > "Atomic".len())
+        ident == "atomic" || is_known_atomic_type(&ident)
     });
     if is_atomic {
         return Some(Unmodeled::Atomic);
     }
     None
+}
+
+/// Whether `ident` is one of the concrete `std::sync::atomic` types.
+fn is_known_atomic_type(ident: &str) -> bool {
+    matches!(
+        ident,
+        "AtomicBool"
+            | "AtomicI8"
+            | "AtomicI16"
+            | "AtomicI32"
+            | "AtomicI64"
+            | "AtomicIsize"
+            | "AtomicU8"
+            | "AtomicU16"
+            | "AtomicU32"
+            | "AtomicU64"
+            | "AtomicUsize"
+            | "AtomicPtr"
+    )
 }
 
 #[cfg(test)]
@@ -265,12 +289,17 @@ mod tests {
             Some(Unmodeled::Atomic)
         );
         assert_eq!(classify("AtomicBool"), Some(Unmodeled::Atomic));
+        assert_eq!(classify("AtomicU64"), Some(Unmodeled::Atomic));
         // Modeled or unrelated paths must not be flagged.
         assert_eq!(classify("std::sync::Mutex"), None);
         assert_eq!(classify("std::sync::RwLock"), None);
         assert_eq!(classify("std::sync::Arc"), None);
         // "Atomic" alone is too generic to flag (avoids user-type false positives).
         assert_eq!(classify("Atomic"), None);
+        // User types that merely start with "Atomic" are NOT std atomics and must
+        // not be flagged (else a clean run injects a false blind-spot marker).
+        assert_eq!(classify("AtomicState"), None);
+        assert_eq!(classify("AtomicWaker"), None);
     }
 
     #[test]
@@ -288,7 +317,7 @@ mod tests {
     fn rewrite_injects_blind_spot_marker_for_unmodeled_condvar() {
         let out = rewrite_to_string("fn f() { let c = std::sync::Condvar::new(); }");
         assert!(
-            out.contains("laplace_rt") && out.contains("unmodeled") && out.contains("CONDVAR"),
+            out.contains("laplace_sdk") && out.contains("unmodeled") && out.contains("CONDVAR"),
             "condvar blind-spot marker missing: {out}"
         );
     }

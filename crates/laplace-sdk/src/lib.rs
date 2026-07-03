@@ -154,6 +154,14 @@ pub use laplace_probe_sdk::run_verification_from;
 /// Scoped event-capture session used by generated `#[verify]` harnesses.
 pub use laplace_probe_sdk::CaptureSession;
 
+/// Runtime seams for annotated model code (`spawn`, `ModelMutex`, `ModelRwLock`,
+/// un-modeled-primitive markers).
+///
+/// Generated macro output routes rewritten primitives through this single root
+/// (`::laplace_sdk::rt::…`) so an adopter only ever depends on `laplace-sdk`;
+/// the runtime crate is never a direct dependency of user code.
+pub use laplace_rt as rt;
+
 /// Project-level configuration loaded from laplace.toml.
 pub use laplace_probe_sdk::ProjectConfig;
 
