@@ -148,8 +148,8 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
     // Single-annotation control layer: `#[laplace::verify]` self-contains the
     // model rewrite, so users no longer need a separate `#[laplace::model]`
     // line. Apply the shared model rewrite (qualified `std::thread::spawn` →
-    // `::laplace_rt::spawn`, `std::sync::{Mutex,RwLock}` →
-    // `::laplace_rt::{ModelMutex,ModelRwLock}`, plus un-modeled blind-spot
+    // `::laplace_sdk::rt::spawn`, `std::sync::{Mutex,RwLock}` →
+    // `::laplace_sdk::rt::{ModelMutex,ModelRwLock}`, plus un-modeled blind-spot
     // markers) to the parsed function body BEFORE generating the harness below,
     // so the emitted `#func` already carries the rewritten primitives.
     //
@@ -252,25 +252,29 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
         quote! {}
     };
 
+    let _ = buffer; // legacy `buffer` arg is a no-op under the unbounded session sink
+
     let expanded = quote! {
         // 원본 함수 — 변경 없이 보존
         #func
 
-        // 생성된 Ki-DPOR 검증 테스트
+        // 생성된 검증 테스트
         #[cfg(test)]
         #[test]
         #[allow(non_snake_case)]
         fn #test_fn_name() {
-            use ::std::sync::{Arc, mpsc};
             use ::laplace_sdk::__macro_support::{
-                set_probe_sender,
                 set_probe_thread_id,
+                CaptureSession,
                 ProbeSessionConfig,
                 ProbeEvent,
             };
 
-            // 1. 이벤트 수집 채널
-            let (tx, rx) = mpsc::sync_channel::<ProbeEvent>(#buffer);
+            // 1. 스코프드 캡처 세션 시작.
+            //    프로세스 전역 배타(병렬 테스트 교차 오염 차단) + unbounded 싱크
+            //    (버퍼 데드락 없음) + 백그라운드 동시 드레인(hang 없음). 워커·모델
+            //    스폰 자식 스레드는 별도 등록 없이 이 세션 싱크로 방출한다.
+            let __laplace_session = CaptureSession::begin();
 
             // 2. 공유 상태 초기화 (스레드 루프 밖 — 모든 스레드가 공유)
             #state_init
@@ -278,11 +282,9 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
             // 3. N개 OS 스레드 스폰
             let mut handles = Vec::new();
             for i in 0usize..#threads {
-                let tx2 = tx.clone();
                 #state_clone  // Arc::clone
                 handles.push(::std::thread::spawn(move || {
-                    // 각 OS 스레드에서 thread-local 초기화
-                    set_probe_sender(tx2);
+                    // 논리 스레드 id만 등록 (이벤트 싱크는 세션 전역)
                     set_probe_thread_id(i as u64);
 
                     // 개별 tokio 런타임으로 async 함수 실행
@@ -295,18 +297,15 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
                 }));
             }
 
-            // 4. 송신단 drop → 채널 종료 신호
-            drop(tx);
-
-            // 5. 모든 스레드 완료 대기
+            // 4. 모든 스레드 완료 대기
             for h in handles {
                 h.join().expect("laplace verify: verification thread panicked");
             }
 
-            // 6. 이벤트 수집
-            let events: Vec<ProbeEvent> = rx.into_iter().collect();
+            // 5. 세션 종료 → 이벤트 수집(싱크 해제 후 collector join)
+            let events: Vec<ProbeEvent> = __laplace_session.finish();
 
-            // 7. 이벤트 0건 경고 (Silent CLEAN 방지)
+            // 6. 이벤트 0건 경고 (Silent CLEAN 방지)
             if events.is_empty() {
                 eprintln!(
                     "[laplace] WARNING: 0 events collected for '{}'. \

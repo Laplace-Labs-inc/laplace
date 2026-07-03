@@ -79,6 +79,14 @@ jobs:
             -p laplace-harness \
             -p laplace-sdk
 
+      # Adopter first-mile gate: the generated `#[verify]` harness + hand-written
+      # capture examples must run to completion. This is a HARD gate (no
+      # continue-on-error): it deterministically reproduced the capture-session
+      # hang regression, so a re-introduction fails CI instead of hanging unseen.
+      - name: Adopter gate (integration-test capture session)
+        run: cargo test -p integration-test
+        timeout-minutes: 5
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Job 3: Bug-Detection Hunt Examples (patched vendor 사용)
 # ─────────────────────────────────────────────────────────────────────────────

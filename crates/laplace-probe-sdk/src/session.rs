@@ -5,7 +5,8 @@ use std::cell::Cell;
 use std::collections::{HashMap, HashSet};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc;
-use std::sync::{Mutex as StdMutex, OnceLock};
+use std::sync::{Mutex as StdMutex, MutexGuard, OnceLock, PoisonError};
+use std::thread::JoinHandle;
 
 use crate::event::ProbeEvent;
 use crate::license::load_axiom_max_depth;
@@ -23,6 +24,21 @@ static GLOBAL_PROBE_SENDER: OnceLock<StdMutex<Option<mpsc::SyncSender<ProbeEvent
     OnceLock::new();
 static NEXT_IMPLICIT_THREAD_ID: AtomicU64 = AtomicU64::new(0);
 
+/// Active [`CaptureSession`] event sink (unbounded — never blocks a sender, so a
+/// producer that outruns the collector cannot deadlock a joining harness).
+///
+/// This is the sink used by generated `#[laplace::verify]` harnesses: worker and
+/// model-spawned child threads emit here without per-thread registration, and the
+/// owning session drains it concurrently. Distinct from the legacy
+/// [`set_probe_sender`] thread-local/global path so hand-written examples keep
+/// working unchanged.
+static SESSION_SENDER: OnceLock<StdMutex<Option<mpsc::Sender<ProbeEvent>>>> = OnceLock::new();
+
+/// Process-wide capture exclusivity. Only one [`CaptureSession`] is active at a
+/// time so parallel generated tests in one binary cannot cross-pollute the shared
+/// [`SESSION_SENDER`] slot or the implicit thread-id counter.
+static CAPTURE_LOCK: StdMutex<()> = StdMutex::new(());
+
 /// Registers the current OS thread's probe event sink.
 pub fn set_probe_sender(tx: mpsc::SyncSender<ProbeEvent>) {
     PROBE_SENDER.with(|s| *s.borrow_mut() = Some(tx.clone()));
@@ -36,6 +52,89 @@ pub fn clear_probe_sender() {
     PROBE_SENDER.with(|s| *s.borrow_mut() = None);
     if let Some(slot) = GLOBAL_PROBE_SENDER.get() {
         *slot.lock().expect("global probe sender lock poisoned") = None;
+    }
+}
+
+/// A scoped event-capture session for generated verification harnesses.
+///
+/// `begin` installs the process-wide session sink and starts a background
+/// collector that drains events *concurrently* with the run, then `finish`
+/// tears the sink down and returns every captured event in order. This replaces
+/// the earlier "register a global sender, then drain the channel after joining"
+/// harness shape, which had three defects a generated test could not avoid:
+///
+/// 1. **Hang** — a process-global sender clone was never cleared, so the
+///    post-join `rx.into_iter()` waited forever for a sender that never dropped.
+/// 2. **Buffer deadlock** — a bounded channel drained only after `join` would
+///    block a producing thread (hence `join`) once event count exceeded the
+///    buffer. The session sink is unbounded and drained live, so producers
+///    never block.
+/// 3. **Parallel cross-pollution** — two generated tests in one binary shared
+///    the single global slot and implicit-id counter. [`CAPTURE_LOCK`] makes a
+///    session exclusive for its lifetime, so parallel tests serialize cleanly.
+///
+/// The session is RAII: dropping it without calling [`finish`](Self::finish)
+/// still tears the sink down and joins the collector, so a panicking harness
+/// cannot leave a dangling global sink for the next test.
+///
+/// > [GHOST_CONSTRAINT: target=CaptureSession] Exactly one session may be active
+/// > per process; `begin` blocks until any prior session finishes. Events emitted
+/// > with no active session (and no legacy sender) are dropped, never buffered.
+#[must_use = "a CaptureSession must be finished to collect events and release the capture lock"]
+pub struct CaptureSession {
+    _guard: MutexGuard<'static, ()>,
+    collector: Option<JoinHandle<Vec<ProbeEvent>>>,
+}
+
+impl CaptureSession {
+    /// Begins an exclusive capture session.
+    ///
+    /// Blocks until any currently active session finishes, then installs the
+    /// unbounded session sink, resets implicit thread-id allocation, and starts
+    /// the background collector.
+    pub fn begin() -> Self {
+        let guard = CAPTURE_LOCK.lock().unwrap_or_else(PoisonError::into_inner);
+        NEXT_IMPLICIT_THREAD_ID.store(0, Ordering::SeqCst);
+
+        let (tx, rx) = mpsc::channel::<ProbeEvent>();
+        let slot = SESSION_SENDER.get_or_init(|| StdMutex::new(None));
+        *slot.lock().unwrap_or_else(PoisonError::into_inner) = Some(tx);
+
+        let collector = std::thread::Builder::new()
+            .name("laplace-capture-collector".to_string())
+            .spawn(move || rx.into_iter().collect::<Vec<ProbeEvent>>())
+            .expect("laplace: failed to spawn capture collector thread");
+
+        Self {
+            _guard: guard,
+            collector: Some(collector),
+        }
+    }
+
+    /// Finishes the session and returns every captured event, in emission order.
+    #[must_use]
+    pub fn finish(mut self) -> Vec<ProbeEvent> {
+        self.tear_down()
+    }
+
+    /// Clears the session sink (dropping the sole sender so the collector's
+    /// `rx` closes) and joins the collector.
+    fn tear_down(&mut self) -> Vec<ProbeEvent> {
+        if let Some(slot) = SESSION_SENDER.get() {
+            *slot.lock().unwrap_or_else(PoisonError::into_inner) = None;
+        }
+        self.collector
+            .take()
+            .map(|collector| collector.join().unwrap_or_default())
+            .unwrap_or_default()
+    }
+}
+
+impl Drop for CaptureSession {
+    fn drop(&mut self) {
+        if self.collector.is_some() {
+            let _ = self.tear_down();
+        }
     }
 }
 
@@ -62,7 +161,12 @@ pub fn current_thread_id() -> u64 {
     })
 }
 
-/// Emits a public probe event to the registered thread-local sink.
+/// Emits a public probe event to the active sink.
+///
+/// Priority: the OS-thread-local sink (legacy hand-written harnesses), then the
+/// legacy process-global sink, then the active [`CaptureSession`] sink. A
+/// generated `#[laplace::verify]` harness registers none of the legacy sinks, so
+/// its worker and model-spawned child threads land on the session sink.
 pub fn emit(event: ProbeEvent) {
     let emitted_to_thread_local = PROBE_SENDER.with(|s| {
         if let Some(tx) = s.borrow().as_ref() {
@@ -73,13 +177,19 @@ pub fn emit(event: ProbeEvent) {
     });
 
     if !emitted_to_thread_local {
-        if let Some(slot) = GLOBAL_PROBE_SENDER.get() {
-            if let Some(tx) = slot
-                .lock()
-                .expect("global probe sender lock poisoned")
-                .as_ref()
-            {
+        let emitted_to_global = GLOBAL_PROBE_SENDER.get().is_some_and(|slot| {
+            if let Some(tx) = slot.lock().unwrap_or_else(PoisonError::into_inner).as_ref() {
                 let _ = tx.send(event.clone());
+                return true;
+            }
+            false
+        });
+
+        if !emitted_to_global {
+            if let Some(slot) = SESSION_SENDER.get() {
+                if let Some(tx) = slot.lock().unwrap_or_else(PoisonError::into_inner).as_ref() {
+                    let _ = tx.send(event.clone());
+                }
             }
         }
     }
@@ -344,6 +454,17 @@ mod tests {
         let events: Vec<ProbeEvent> = rx.into_iter().collect();
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].resource_name(), Some("a"));
+    }
+
+    #[test]
+    fn capture_session_begin_finish_is_exclusive_and_returns_empty_when_idle() {
+        // A session with no emitters drains to empty (collector joins cleanly);
+        // exercising begin→finish twill in sequence proves CAPTURE_LOCK releases
+        // on finish so a second session is not deadlocked by the first.
+        let events = CaptureSession::begin().finish();
+        assert!(events.is_empty());
+        let again = CaptureSession::begin().finish();
+        assert!(again.is_empty());
     }
 
     #[test]

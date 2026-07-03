@@ -39,7 +39,8 @@ pub use event::ProbeEvent;
 pub use model_lock::{install_probe_lock_hook, ProbeLockHook};
 pub use session::{
     clear_probe_sender, current_thread_id, dump_events_if_configured, emit, run_verification_from,
-    set_probe_sender, set_probe_thread_id, ProbeSessionConfig, ReferenceVerdict, VerifyResult,
+    set_probe_sender, set_probe_thread_id, CaptureSession, ProbeSessionConfig, ReferenceVerdict,
+    VerifyResult,
 };
 pub use tracked::{TrackedGuard, TrackedMutex};
 pub use tracked_atomic::{
@@ -70,7 +71,8 @@ pub use session::init_cloud_probe;
 pub mod __macro_support {
     pub use crate::ProbeEvent;
     pub use crate::{
-        set_probe_sender, set_probe_thread_id, ProbeSessionConfig, TrackedMutex, TrackedRwLock,
+        set_probe_sender, set_probe_thread_id, CaptureSession, ProbeSessionConfig, TrackedMutex,
+        TrackedRwLock,
     };
     pub use tokio;
 }

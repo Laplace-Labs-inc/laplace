@@ -23,8 +23,8 @@ struct DualLockState {
 #[test]
 fn test_dual_lock_ab_ba() {
     use laplace_sdk::{
-        run_verification_from, set_probe_sender, set_probe_thread_id, ProbeEvent,
-        ProbeSessionConfig,
+        clear_probe_sender, run_verification_from, set_probe_sender, set_probe_thread_id,
+        ProbeEvent, ProbeSessionConfig,
     };
     use std::sync::{mpsc, Arc};
 
@@ -33,48 +33,46 @@ fn test_dual_lock_ab_ba() {
     // #[laplace_tracked]가 생성한 Default 사용
     let state = Arc::new(DualLockState::default());
 
-    let mut handles = Vec::new();
-
-    // Thread 0: A → B
-    {
+    // [결정성 메모]: `TrackedMutex`는 실제 `tokio::sync::Mutex`를 감싼다. 두 스레드를
+    // 동시에 돌리면 이 프로그램은 *진짜* AB-BA 교착에 빠질 수 있고(스레드 0이 a,b를
+    // 모두 잡기 전에 스레드 1이 b를 잡으면 영구 블록), 캡처가 완료되지 못한다. 우리가
+    // 필요한 것은 순서 관계를 담은 *트레이스*이지 실제 동시 실행이 아니므로, 두 락
+    // 시퀀스를 순차로 실행한다 — 트레이스는 여전히 T0:a→b, T1:b→a 순환을 담아
+    // 레퍼런스 검증기가 교착을 탐지한다. (실제 동시 인터리빙 탐색은 엔진의 몫이다.)
+    let run_locker = |thread_id: u64, first_is_a: bool| {
         let s = state.clone();
         let tx2 = tx.clone();
-        handles.push(std::thread::spawn(move || {
+        std::thread::spawn(move || {
             set_probe_sender(tx2);
-            set_probe_thread_id(0u64);
+            set_probe_thread_id(thread_id);
             let rt = tokio::runtime::Builder::new_current_thread()
                 .enable_all()
                 .build()
                 .expect("rt");
             rt.block_on(async {
-                let _a = s.lock_a.lock().await;
-                let _b = s.lock_b.lock().await;
+                if first_is_a {
+                    // Thread 0: A → B
+                    let _a = s.lock_a.lock().await;
+                    let _b = s.lock_b.lock().await;
+                } else {
+                    // Thread 1: B → A (역순!)
+                    let _b = s.lock_b.lock().await;
+                    let _a = s.lock_a.lock().await;
+                }
             });
-        }));
-    }
+        })
+        .join()
+        .expect("thread panicked");
+    };
 
-    // Thread 1: B → A (역순!)
-    {
-        let s = state.clone();
-        let tx2 = tx.clone();
-        handles.push(std::thread::spawn(move || {
-            set_probe_sender(tx2);
-            set_probe_thread_id(1u64);
-            let rt = tokio::runtime::Builder::new_current_thread()
-                .enable_all()
-                .build()
-                .expect("rt");
-            rt.block_on(async {
-                let _b = s.lock_b.lock().await;
-                let _a = s.lock_a.lock().await;
-            });
-        }));
-    }
+    run_locker(0, true);
+    run_locker(1, false);
 
+    // Legacy hand-written harness: the per-thread `set_probe_sender` also
+    // registers a process-global sender clone. Clear it after both phases so the
+    // last live clone drops and `rx` closes — otherwise `into_iter` hangs.
     drop(tx);
-    for h in handles {
-        h.join().expect("thread panicked");
-    }
+    clear_probe_sender();
 
     let events: Vec<ProbeEvent> = rx.into_iter().collect();
 

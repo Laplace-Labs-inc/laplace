@@ -127,6 +127,9 @@ pub use laplace_probe_sdk::TrackedSemaphorePermit;
 /// Set the probe event sender for the current thread.
 pub use laplace_probe_sdk::set_probe_sender;
 
+/// Clears the legacy per-thread and process-global probe sender.
+pub use laplace_probe_sdk::clear_probe_sender;
+
 /// Set the thread ID for probe event correlation.
 pub use laplace_probe_sdk::set_probe_thread_id;
 
@@ -147,6 +150,9 @@ pub use laplace_probe_sdk::ReferenceVerdict;
 
 /// Run the public reference verifier on a stream of probe events.
 pub use laplace_probe_sdk::run_verification_from;
+
+/// Scoped event-capture session used by generated `#[verify]` harnesses.
+pub use laplace_probe_sdk::CaptureSession;
 
 /// Project-level configuration loaded from laplace.toml.
 pub use laplace_probe_sdk::ProjectConfig;
@@ -171,9 +177,10 @@ pub use laplace_probe_sdk::init_cloud_probe;
 pub mod __macro_support {
     pub use crate::ProbeEvent;
     pub use crate::{
-        dump_events_if_configured, set_probe_sender, set_probe_thread_id, ProbeSessionConfig,
-        TrackedAtomicBool, TrackedAtomicU32, TrackedAtomicU64, TrackedAtomicUsize, TrackedMutex,
-        TrackedRwLock, TrackedSemaphore, TrackedStdMutex, TrackedStdRwLock,
+        dump_events_if_configured, set_probe_sender, set_probe_thread_id, CaptureSession,
+        ProbeSessionConfig, TrackedAtomicBool, TrackedAtomicU32, TrackedAtomicU64,
+        TrackedAtomicUsize, TrackedMutex, TrackedRwLock, TrackedSemaphore, TrackedStdMutex,
+        TrackedStdRwLock,
     };
     pub use tokio;
 }
