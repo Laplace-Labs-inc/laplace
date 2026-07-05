@@ -1,4 +1,5 @@
 #![deny(clippy::all, clippy::pedantic)]
+#![allow(clippy::doc_markdown)]
 
 //! bb8 실전 버그 사냥 — Ki-DPOR 최대 깊이 탐색
 //!

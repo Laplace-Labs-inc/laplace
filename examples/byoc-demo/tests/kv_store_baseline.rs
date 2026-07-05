@@ -1,4 +1,5 @@
 #![deny(clippy::all, clippy::pedantic)]
+#![allow(clippy::doc_markdown)]
 
 //! KvStore CLEAN Baseline.
 //!

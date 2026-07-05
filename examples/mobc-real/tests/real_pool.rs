@@ -1,4 +1,5 @@
 #![deny(clippy::all, clippy::pedantic)]
+#![allow(clippy::doc_markdown)]
 
 //! mobc v0.9 (patched with TrackedMutex) 실제 Pool API를 사용한 Ki-DPOR 검증.
 //!

@@ -1,4 +1,5 @@
 #![deny(clippy::all, clippy::pedantic)]
+#![allow(clippy::doc_markdown)]
 
 //! mobc v0.9 — 새 매크로 시스템으로 포팅 (v2)
 //!

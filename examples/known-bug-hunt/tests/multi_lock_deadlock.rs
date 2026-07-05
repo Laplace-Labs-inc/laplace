@@ -1,4 +1,5 @@
 #![deny(clippy::all, clippy::pedantic)]
+#![allow(clippy::doc_markdown)]
 
 //! Phase 4-C: Known Deadlock Pattern — mobc + HealthChecker (multi-lock AB-BA)
 //!
@@ -141,7 +142,7 @@ fn multi_lock_ab_ba_deadlock() {
         .collect();
 
     println!("\n자원 수 (= 내부 Mutex 수): {}", resources.len());
-    println!("자원: {:?}", resources);
+    println!("자원: {resources:?}");
 
     let config = ProbeSessionConfig {
         write_ard: true,

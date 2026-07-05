@@ -1,4 +1,5 @@
 #![deny(clippy::all, clippy::pedantic)]
+#![allow(clippy::doc_markdown)]
 
 //! rayon 중첩 scope + external Mutex 교착 (GitHub Issue #1174 패턴)
 //!
@@ -113,7 +114,9 @@ fn rayon_scope_with_tracked_mutex() {
             set_probe_thread_id(tid);
 
             let mut guard = shared.lock();
-            guard[tid as usize] = tid as i64;
+            let index = usize::try_from(tid).expect("thread id fits in usize");
+            let value = i64::try_from(tid).expect("thread id fits in i64");
+            guard[index] = value;
             drop(guard);
         })
         .join()

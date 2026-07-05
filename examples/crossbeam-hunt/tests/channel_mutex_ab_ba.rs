@@ -1,4 +1,5 @@
 #![deny(clippy::all, clippy::pedantic)]
+#![allow(clippy::doc_markdown)]
 
 //! crossbeam-channel sender + external Mutex AB-BA (Novel)
 //!

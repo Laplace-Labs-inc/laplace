@@ -1,4 +1,5 @@
 #![deny(clippy::all, clippy::pedantic)]
+#![allow(clippy::doc_markdown)]
 
 //! rayon par_iter + external RwLock 조합 (Novel)
 //!
@@ -47,7 +48,8 @@ fn parallel_iter_rwlock_deadlock() {
 
             let cache_guard = cache.read();
             let mut index_guard = index.lock();
-            *index_guard += cache_guard.len() as i64;
+            let cache_len = i64::try_from(cache_guard.len()).expect("cache length fits in i64");
+            *index_guard += cache_len;
             drop(index_guard);
             drop(cache_guard);
         })

@@ -93,7 +93,7 @@ fn bb8_dual_lock_ab_ba() {
         "관측 자원 수 (= TrackedStdMutex 수): {}",
         resource_names.len()
     );
-    println!("자원: {:?}", resource_names);
+    println!("자원: {resource_names:?}");
 
     // 자원 2개 필수 확인
     assert_eq!(

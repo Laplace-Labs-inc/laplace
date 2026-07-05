@@ -1,4 +1,5 @@
 #![deny(clippy::all, clippy::pedantic)]
+#![allow(clippy::doc_markdown)]
 
 //! r2d2 실전 버그 사냥 — Ki-DPOR 최대 깊이 탐색
 //!
@@ -64,12 +65,12 @@ fn r2d2_pool_get_2thread() {
     let state = Arc::new(R2d2PoolState::default());
     let mut handles = Vec::new();
 
-    for thread_id in 0..2 {
+    for thread_id in 0_u64..2 {
         let s = state.clone();
         let tx2 = tx.clone();
         handles.push(std::thread::spawn(move || {
             laplace_probe_sdk::set_probe_sender(tx2);
-            laplace_probe_sdk::set_probe_thread_id(thread_id as u64);
+            laplace_probe_sdk::set_probe_thread_id(thread_id);
 
             let conn = s.pool.get().unwrap();
             let _ = *conn;
@@ -88,7 +89,7 @@ fn r2d2_pool_get_2thread() {
         output_dir: std::env::temp_dir().to_string_lossy().into_owned(),
     };
 
-    laplace_probe_sdk::run_verification_from(&events, "r2d2_pool_get_2thread", &config);
+    let _ = laplace_probe_sdk::run_verification_from(&events, "r2d2_pool_get_2thread", &config);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -105,12 +106,12 @@ fn r2d2_pool_get_3thread() {
     let state = Arc::new(R2d2PoolState::default());
     let mut handles = Vec::new();
 
-    for thread_id in 0..3 {
+    for thread_id in 0_u64..3 {
         let s = state.clone();
         let tx2 = tx.clone();
         handles.push(std::thread::spawn(move || {
             laplace_probe_sdk::set_probe_sender(tx2);
-            laplace_probe_sdk::set_probe_thread_id(thread_id as u64);
+            laplace_probe_sdk::set_probe_thread_id(thread_id);
 
             let conn = s.pool.get().unwrap();
             let _ = *conn;
@@ -129,7 +130,7 @@ fn r2d2_pool_get_3thread() {
         output_dir: std::env::temp_dir().to_string_lossy().into_owned(),
     };
 
-    laplace_probe_sdk::run_verification_from(&events, "r2d2_pool_get_3thread", &config);
+    let _ = laplace_probe_sdk::run_verification_from(&events, "r2d2_pool_get_3thread", &config);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -149,7 +150,6 @@ fn r2d2_pool_get_3thread() {
 /// (TrackedStdMutex는 parking_lot::Condvar와 호환되지 않으므로)
 ///
 /// max_depth = 100_000
-
 struct AbBaState {
     pool: Pool<MockManager>,
     external_lock: TrackedStdMutex<u64>,
@@ -184,12 +184,12 @@ fn r2d2_external_lock_get() {
     let state = Arc::new(AbBaState::default());
     let mut handles = Vec::new();
 
-    for thread_id in 0..2 {
+    for thread_id in 0_u64..2 {
         let s = state.clone();
         let tx2 = tx.clone();
         handles.push(std::thread::spawn(move || {
             laplace_probe_sdk::set_probe_sender(tx2);
-            laplace_probe_sdk::set_probe_thread_id(thread_id as u64);
+            laplace_probe_sdk::set_probe_thread_id(thread_id);
 
             let _guard = s.external_lock.lock();
             let conn = s.pool.get().unwrap();
@@ -209,7 +209,7 @@ fn r2d2_external_lock_get() {
         output_dir: std::env::temp_dir().to_string_lossy().into_owned(),
     };
 
-    laplace_probe_sdk::run_verification_from(&events, "r2d2_external_lock_get", &config);
+    let _ = laplace_probe_sdk::run_verification_from(&events, "r2d2_external_lock_get", &config);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -253,11 +253,11 @@ fn r2d2_manual_ab_ba_deadlock() {
             set_probe_sender(tx2);
             set_probe_thread_id(0u64);
 
-            let _guard = ext.lock(); // Lock A
+            let guard = ext.lock(); // Lock A
             let conn = p.get().unwrap(); // Lock B (r2d2 internal)
             let _ = *conn;
             drop(conn); // Release B (put_back)
-            drop(_guard); // Release A
+            drop(guard); // Release A
         }));
     }
 
@@ -271,9 +271,9 @@ fn r2d2_manual_ab_ba_deadlock() {
             set_probe_thread_id(1u64);
 
             let conn = p.get().unwrap(); // Lock B (r2d2 internal)
-            let _guard = ext.lock(); // Lock A — 역순!
+            let guard = ext.lock(); // Lock A — 역순!
             let _ = *conn;
-            drop(_guard); // Release A
+            drop(guard); // Release A
             drop(conn); // Release B (put_back)
         }));
     }
@@ -326,12 +326,12 @@ fn r2d2_pool_exhaustion() {
     let state = Arc::new(SmallR2d2State::default());
     let mut handles = Vec::new();
 
-    for thread_id in 0..3 {
+    for thread_id in 0_u64..3 {
         let s = state.clone();
         let tx2 = tx.clone();
         handles.push(std::thread::spawn(move || {
             laplace_probe_sdk::set_probe_sender(tx2);
-            laplace_probe_sdk::set_probe_thread_id(thread_id as u64);
+            laplace_probe_sdk::set_probe_thread_id(thread_id);
 
             let conn = s.pool.get().unwrap();
             let _ = *conn;
@@ -350,7 +350,7 @@ fn r2d2_pool_exhaustion() {
         output_dir: std::env::temp_dir().to_string_lossy().into_owned(),
     };
 
-    laplace_probe_sdk::run_verification_from(&events, "r2d2_pool_exhaustion", &config);
+    let _ = laplace_probe_sdk::run_verification_from(&events, "r2d2_pool_exhaustion", &config);
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -364,12 +364,12 @@ fn r2d2_single_thread() {
     let state = Arc::new(R2d2PoolState::default());
     let mut handles = Vec::new();
 
-    for thread_id in 0..1 {
+    for thread_id in 0_u64..1 {
         let s = state.clone();
         let tx2 = tx.clone();
         handles.push(std::thread::spawn(move || {
             laplace_probe_sdk::set_probe_sender(tx2);
-            laplace_probe_sdk::set_probe_thread_id(thread_id as u64);
+            laplace_probe_sdk::set_probe_thread_id(thread_id);
 
             let conn = s.pool.get().unwrap();
             let _ = *conn;
@@ -388,5 +388,5 @@ fn r2d2_single_thread() {
         output_dir: std::env::temp_dir().to_string_lossy().into_owned(),
     };
 
-    laplace_probe_sdk::run_verification_from(&events, "r2d2_single_thread", &config);
+    let _ = laplace_probe_sdk::run_verification_from(&events, "r2d2_single_thread", &config);
 }

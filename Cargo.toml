@@ -31,6 +31,30 @@ exclude = [
     "examples/parking_lot-hunt",
     # Patched tokio exposes unstable all-features knobs that require tokio_unstable.
     "examples/tokio-hunt",
+    # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
+    "vendor/bb8-patched",
+    # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
+    "vendor/crossbeam-patched",
+    # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
+    "vendor/dashmap-patched",
+    # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
+    "vendor/deadpool-patched",
+    # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
+    "vendor/deadpool-runtime",
+    # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
+    "vendor/futures-util-patched",
+    # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
+    "vendor/lock_api-patched",
+    # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
+    "vendor/mobc",
+    # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
+    "vendor/parking_lot-patched",
+    # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
+    "vendor/r2d2-patched",
+    # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
+    "vendor/rayon-patched",
+    # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
+    "vendor/tokio-patched",
 ]
 
 [workspace.package]
