@@ -1,0 +1,5 @@
+error: unsupported `#[laplace_sdk::verify(scenario)]` function signature; scenario mode supports only `fn name()` or `async fn name()`
+ --> tests/ui/fail/verify_scenario_ref_param.rs:7:23
+  |
+7 | fn scenario_ref_param(_state: &State) {}
+  |                       ^^^^^^^^^^^^^^

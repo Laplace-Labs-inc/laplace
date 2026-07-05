@@ -49,7 +49,9 @@ pub use spawn::{spawn, JoinToken};
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::mpsc;
     use std::sync::{Arc, Mutex, MutexGuard, PoisonError, TryLockError};
+    use std::time::Duration;
 
     /// Serializes every test that touches the process-global lock hook and
     /// resource-id counter, so `cargo test`'s default parallelism cannot let one
@@ -99,6 +101,7 @@ mod tests {
         let _serial = serial();
         reset_model_mutex_ids_for_model();
         clear_lock_hook();
+        clear_spawn_hook();
         let hook = Arc::new(RecordingLockHook::new());
         install_lock_hook(hook.clone());
 
@@ -117,6 +120,7 @@ mod tests {
         let _serial = serial();
         reset_model_mutex_ids_for_model();
         clear_lock_hook();
+        clear_spawn_hook();
         let mutex = ModelMutex::new(1_u8);
 
         *mutex.lock().expect("model mutex lock") = 2;
@@ -125,10 +129,68 @@ mod tests {
     }
 
     #[test]
+    fn model_mutex_blocks_with_probe_only_lock_hook() {
+        let _serial = serial();
+        reset_model_mutex_ids_for_model();
+        clear_lock_hook();
+        clear_spawn_hook();
+        let hook = Arc::new(RecordingLockHook::new());
+        install_lock_hook(hook.clone());
+
+        let mutex = Arc::new(ModelMutex::new(0_u8));
+        let (locked_tx, locked_rx) = mpsc::channel();
+        let (release_tx, release_rx) = mpsc::channel();
+
+        let first_mutex = Arc::clone(&mutex);
+        let first = std::thread::spawn(move || {
+            let guard = first_mutex.lock().expect("first lock");
+            locked_tx.send(()).expect("send locked");
+            release_rx.recv().expect("wait for release");
+            drop(guard);
+        });
+
+        locked_rx.recv().expect("first worker locked");
+
+        let second_mutex = Arc::clone(&mutex);
+        let (acquired_tx, acquired_rx) = mpsc::channel();
+        let second = std::thread::spawn(move || {
+            let guard = second_mutex
+                .lock()
+                .expect("second lock blocks then succeeds");
+            acquired_tx.send(()).expect("send acquired");
+            drop(guard);
+        });
+
+        assert!(
+            acquired_rx.recv_timeout(Duration::from_millis(25)).is_err(),
+            "second worker should block while the first guard is held"
+        );
+        release_tx.send(()).expect("release first guard");
+        acquired_rx
+            .recv_timeout(Duration::from_secs(1))
+            .expect("second worker acquired after release");
+
+        first.join().expect("first worker");
+        second.join().expect("second worker");
+        clear_lock_hook();
+
+        assert_eq!(
+            hook.events(),
+            vec![
+                ("acquire", 1),
+                ("acquire", 1),
+                ("release", 1),
+                ("release", 1),
+            ]
+        );
+    }
+
+    #[test]
     fn model_mutex_try_lock_reports_acquire_on_success_only() {
         let _serial = serial();
         reset_model_mutex_ids_for_model();
         clear_lock_hook();
+        clear_spawn_hook();
         let hook = Arc::new(RecordingLockHook::new());
         install_lock_hook(hook.clone());
 
@@ -149,6 +211,7 @@ mod tests {
         let _serial = serial();
         reset_model_mutex_ids_for_model();
         clear_lock_hook();
+        clear_spawn_hook();
         let hook = Arc::new(RecordingLockHook::new());
         install_lock_hook(hook.clone());
 
@@ -183,6 +246,7 @@ mod tests {
         let _serial = serial();
         reset_model_mutex_ids_for_model();
         clear_lock_hook();
+        clear_spawn_hook();
         let rw = ModelRwLock::new(1_u8);
 
         *rw.write().expect("model rwlock write") = 5;

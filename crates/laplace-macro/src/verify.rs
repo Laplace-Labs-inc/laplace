@@ -4,6 +4,12 @@
 //! The `#[laplace::verify(threads = N)]` attribute is an enhanced version of
 //! `#[axiom_target]` that supports `&T` references (in addition to `Arc<T>`),
 //! includes zero-event warnings, and is more configurable.
+//!
+//! `#[laplace::verify(scenario)]` captures one native scenario execution. A
+//! real `expected = "bug"` AB-BA body can deadlock during capture; use the
+//! tier-2 `laplace axiom verify --capture` gate as the authoritative bug
+//! reproduction path. `laplace_sdk::check!` is a reserved invariant hook name;
+//! this macro does not implement it yet.
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -12,7 +18,7 @@ use syn::punctuated::Punctuated;
 use syn::{Expr, ItemFn, Lit, Meta, Token};
 
 const VALID_VERIFY_KEYS: &str =
-    "threads, name, expected, determinism, write_ard, output_dir, buffer, max_depth";
+    "scenario, threads, name, expected, determinism, write_ard, output_dir, buffer, max_depth";
 
 const VALID_DETERMINISM_LABELS: &[&str] = &[
     "fully_deterministic",
@@ -25,8 +31,10 @@ const VALID_DETERMINISM_LABELS: &[&str] = &[
 ];
 
 /// Parsed arguments from `#[laplace::verify(...)]`.
+#[derive(Debug)]
 pub(crate) struct VerifyArgs {
-    pub(crate) threads: usize,
+    pub(crate) threads: Option<usize>,
+    pub(crate) scenario: bool,
     pub(crate) name: Option<String>,
     pub(crate) expected: Option<String>,
     pub(crate) determinism: String,
@@ -39,6 +47,7 @@ pub(crate) struct VerifyArgs {
 impl Parse for VerifyArgs {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut threads = None;
+        let mut scenario = false;
         let mut name = None;
         let mut expected = None;
         let mut determinism = None;
@@ -49,6 +58,13 @@ impl Parse for VerifyArgs {
 
         let metas = Punctuated::<Meta, Token![,]>::parse_terminated(input)?;
         for meta in metas {
+            if let Meta::Path(path) = &meta {
+                if path.is_ident("scenario") {
+                    scenario = true;
+                    continue;
+                }
+            }
+
             let Meta::NameValue(nv) = meta else {
                 return Err(syn::Error::new_spanned(
                     meta,
@@ -181,8 +197,17 @@ impl Parse for VerifyArgs {
             }
         }
 
+        if threads.is_some() && scenario {
+            return Err(input.error("verify: `threads` and `scenario` are mutually exclusive"));
+        }
+
+        if threads.is_none() && !scenario {
+            return Err(input.error("verify: either `threads = N` or `scenario` is required"));
+        }
+
         Ok(VerifyArgs {
-            threads: threads.ok_or_else(|| input.error("verify: `threads` is required"))?,
+            threads,
+            scenario,
             name,
             expected,
             determinism: determinism.unwrap_or_else(|| "fully_deterministic".to_string()),
@@ -194,17 +219,20 @@ impl Parse for VerifyArgs {
     }
 }
 
-/// 함수에 `#[laplace::verify(threads = N)]`을 붙이면 DPOR 검증 테스트를 자동 생성한다.
+/// 함수에 `#[laplace::verify(threads = N)]` 또는
+/// `#[laplace::verify(scenario)]`를 붙이면 검증 테스트를 자동 생성한다.
 ///
 /// # 지원 시그니처
 ///
 /// - `async fn test(state: &T)` — 공유 상태 참조 (권장)
 /// - `async fn test(state: Arc<T>)` — 공유 상태 Arc (하위 호환)
 /// - `async fn test()` — 상태 없이 각 스레드가 독립적으로 실행
+/// - `fn test()` / `async fn test()` with `scenario` — 본문 1회가 전체 시나리오
 ///
 /// # 파라미터
 ///
-/// - `threads` (필수): 동시 스레드 수 (≤ 8)
+/// - `threads`: replica 모드 동시 스레드 수 (≤ 8)
+/// - `scenario`: 상태 인자 없는 native 1회 실행 캡처
 /// - `expected` (기본: "clean"): "clean" 또는 "bug"
 /// - `write_ard` (기본: false): ARD 출력 여부
 /// - `output_dir` (기본: "."): 출력 디렉토리
@@ -250,7 +278,6 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
     crate::model::apply_model_rewrite(&mut func);
 
     let func_ident = &func.sig.ident;
-    let threads = args.threads;
     let target_name_expr = if let Some(name) = args.name {
         quote! { #name }
     } else {
@@ -259,6 +286,7 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
     };
     let expected_declared = args.expected.is_some();
     let expected = args.expected.as_deref().unwrap_or("clean").to_string();
+    let scenario = args.scenario;
     let determinism = &args.determinism;
     let write_ard = args.write_ard;
     let output_dir = &args.output_dir;
@@ -329,6 +357,139 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
     };
 
     let is_async = func.sig.asyncness.is_some();
+
+    let max_depth_config = if let Some(md) = max_depth {
+        quote! {
+            max_depth: #md,
+        }
+    } else {
+        quote! {}
+    };
+
+    let verification_tail = quote! {
+        let config = ProbeSessionConfig {
+            write_ard: #write_ard,
+            output_dir: #output_dir.to_string(),
+            #max_depth_config
+            ..ProbeSessionConfig::default()
+        };
+        let __laplace_target_name = #target_name_expr;
+
+        // Public reference check (tier 1), not the private engine verdict.
+        // This assert is the public conservative lock-order checker over the
+        // single captured trace. Full schedule-space engine gating (tier 2) is
+        // performed by `laplace axiom verify`.
+        let __laplace_expected = #expected;
+        if events.is_empty() {
+            if #expected_declared {
+                panic!(
+                    "laplace verify: 0 events + declared expected -- vacuous verdict blocked for '{}'. \
+                     Check that TrackedMutex/RwLock instrumentation is wired.",
+                    __laplace_target_name
+                );
+            } else {
+                eprintln!(
+                    "[laplace] WARNING: 0 events collected for '{}'. \
+                     Check that TrackedMutex/RwLock are being used.",
+                    __laplace_target_name
+                );
+            }
+        } else {
+            let __laplace_reference =
+                run_verification_from(&events, __laplace_target_name, &config);
+            match __laplace_expected {
+                "clean" => __laplace_reference.assert_clean(),
+                "bug" => __laplace_reference.assert_bug(),
+                other => panic!(
+                    "laplace verify: unsupported expected value '{}' for '{}'; expected \"clean\" or \"bug\"",
+                    other,
+                    __laplace_target_name
+                ),
+            }
+        }
+
+        // Public macro output collects trace data only. Commercial engine
+        // verification runs through the private CLI/API boundary: when
+        // `$LAPLACE_VERIFY_EVENTS_DIR` is set the captured trace (with the
+        // declared expectation) is dumped as `<target>.json` for
+        // `laplace axiom verify --model-events <dir>` to drive the engine.
+        // No-op under a plain `cargo test`.
+        ::laplace_sdk::__macro_support::dump_events_if_configured(
+            __laplace_target_name, __laplace_expected, #determinism, &events,
+        );
+    };
+
+    let _ = buffer; // legacy `buffer` arg is a no-op under the unbounded session sink
+
+    if scenario {
+        if !matches!(&state_signature, StateSignature::None) {
+            return syn::Error::new_spanned(
+                &func.sig.inputs,
+                "unsupported `#[laplace_sdk::verify(scenario)]` function signature; scenario mode supports only `fn name()` or `async fn name()`",
+            )
+            .to_compile_error()
+            .into();
+        }
+
+        let scenario_pass = if is_async {
+            quote! {
+                let rt = ::laplace_sdk::__macro_support::tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("laplace verify: tokio runtime build failed");
+                rt.block_on(#func_ident());
+            }
+        } else {
+            quote! {
+                #func_ident();
+            }
+        };
+
+        let expanded = quote! {
+            // 원본 함수 — 변경 없이 보존
+            #func
+
+            // 생성된 scenario 검증 테스트
+            #[cfg(test)]
+            #[test]
+            #[allow(non_snake_case)]
+            fn #test_fn_name() {
+                use ::laplace_sdk::__macro_support::{
+                    install_probe_lock_hook,
+                    set_probe_thread_id,
+                    CaptureSession,
+                    ProbeSessionConfig,
+                    ProbeEvent,
+                    run_verification_from,
+                };
+
+                // 1. 스코프드 캡처 세션 시작.
+                let __laplace_session = CaptureSession::begin();
+
+                // 2. Annotated `std::sync::Mutex` model rewrite emits lock
+                //    events only after the probe lock hook is installed.
+                install_probe_lock_hook();
+
+                // 3. The scenario body is executed exactly once. Child model
+                //    threads inherit capture via the session-global sink and
+                //    receive implicit logical ids when they emit events.
+                set_probe_thread_id(0);
+                #scenario_pass
+
+                // 4. 세션 종료 → 이벤트 수집(싱크 해제 후 collector join)
+                let events: Vec<ProbeEvent> = __laplace_session.finish();
+
+                #verification_tail
+            }
+        };
+
+        return TokenStream::from(expanded);
+    }
+
+    let threads = args
+        .threads
+        .expect("verify args parser requires threads outside scenario mode");
+
     let (state_init, state_clone, state_pass) = match (state_signature, is_async) {
         (StateSignature::Reference(st), true) => {
             let state_init = quote! {
@@ -408,16 +569,6 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
         }
     };
 
-    let max_depth_config = if let Some(md) = max_depth {
-        quote! {
-            max_depth: #md,
-        }
-    } else {
-        quote! {}
-    };
-
-    let _ = buffer; // legacy `buffer` arg is a no-op under the unbounded session sink
-
     let expanded = quote! {
         // 원본 함수 — 변경 없이 보존
         #func
@@ -470,56 +621,7 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
             // 5. 세션 종료 → 이벤트 수집(싱크 해제 후 collector join)
             let events: Vec<ProbeEvent> = __laplace_session.finish();
 
-            let config = ProbeSessionConfig {
-                write_ard: #write_ard,
-                output_dir: #output_dir.to_string(),
-                #max_depth_config
-                ..ProbeSessionConfig::default()
-            };
-            let __laplace_target_name = #target_name_expr;
-
-            // 6. Public reference check (tier 1), not the private engine verdict.
-            //    This assert is the public conservative lock-order checker over the
-            //    single captured trace. Full schedule-space engine gating (tier 2)
-            //    is performed by `laplace axiom verify`.
-            let __laplace_expected = #expected;
-            if events.is_empty() {
-                if #expected_declared {
-                    panic!(
-                        "laplace verify: 0 events + declared expected -- vacuous verdict blocked for '{}'. \
-                         Check that TrackedMutex/RwLock instrumentation is wired.",
-                        __laplace_target_name
-                    );
-                } else {
-                    eprintln!(
-                        "[laplace] WARNING: 0 events collected for '{}'. \
-                         Check that TrackedMutex/RwLock are being used.",
-                        __laplace_target_name
-                    );
-                }
-            } else {
-                let __laplace_reference =
-                    run_verification_from(&events, __laplace_target_name, &config);
-                match __laplace_expected {
-                    "clean" => __laplace_reference.assert_clean(),
-                    "bug" => __laplace_reference.assert_bug(),
-                    other => panic!(
-                        "laplace verify: unsupported expected value '{}' for '{}'; expected \"clean\" or \"bug\"",
-                        other,
-                        __laplace_target_name
-                    ),
-                }
-            }
-
-            // 7. Public macro output collects trace data only. Commercial
-            //    engine verification runs through the private CLI/API boundary: when
-            //    `$LAPLACE_VERIFY_EVENTS_DIR` is set the captured trace (with the
-            //    declared expectation) is dumped as `<target>.json` for
-            //    `laplace axiom verify --model-events <dir>` to drive the engine.
-            //    No-op under a plain `cargo test`.
-            ::laplace_sdk::__macro_support::dump_events_if_configured(
-                __laplace_target_name, __laplace_expected, #determinism, &events,
-            );
+            #verification_tail
         }
     };
 
@@ -554,5 +656,33 @@ mod tests {
         let args = parse_args(r#"threads = 2, expected = "bug""#);
 
         assert_eq!(args.expected.as_deref(), Some("bug"));
+    }
+
+    #[test]
+    fn scenario_flag_is_accepted_without_value() {
+        let args = parse_args(r#"scenario, expected = "clean", max_depth = 8"#);
+
+        assert!(args.scenario);
+        assert_eq!(args.threads, None);
+        assert_eq!(args.expected.as_deref(), Some("clean"));
+        assert_eq!(args.max_depth, Some(8));
+    }
+
+    #[test]
+    fn threads_and_scenario_are_mutually_exclusive() {
+        let err = syn::parse_str::<VerifyArgs>("threads = 2, scenario")
+            .expect_err("scenario and threads must be rejected together");
+
+        assert!(err.to_string().contains("mutually exclusive"));
+    }
+
+    #[test]
+    fn either_threads_or_scenario_is_required() {
+        let err = syn::parse_str::<VerifyArgs>(r#"expected = "clean""#)
+            .expect_err("missing execution mode should be rejected");
+
+        assert!(err
+            .to_string()
+            .contains("either `threads = N` or `scenario` is required"));
     }
 }

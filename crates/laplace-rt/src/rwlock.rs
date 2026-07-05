@@ -14,7 +14,7 @@ use std::sync::{
     RwLockWriteGuard as StdRwLockWriteGuard, TryLockError, TryLockResult,
 };
 
-use crate::hooks::{lock_hook, next_lock_resource_id};
+use crate::hooks::{lock_hook, next_lock_resource_id, spawn_hook};
 
 /// `std::sync::RwLock<T>` compatible model rwlock for annotated code.
 pub struct ModelRwLock<T: ?Sized> {
@@ -48,7 +48,7 @@ impl<T: ?Sized> ModelRwLock<T> {
             hook.acquire(self.resource);
         }
 
-        if hook.is_some() {
+        if hook.is_some() && spawn_hook().is_some() {
             return self.inner.try_read().map_or_else(
                 |err| match err {
                     TryLockError::Poisoned(poisoned) => {
@@ -99,7 +99,7 @@ impl<T: ?Sized> ModelRwLock<T> {
             hook.acquire(self.resource);
         }
 
-        if hook.is_some() {
+        if hook.is_some() && spawn_hook().is_some() {
             return self.inner.try_write().map_or_else(
                 |err| match err {
                     TryLockError::Poisoned(poisoned) => {

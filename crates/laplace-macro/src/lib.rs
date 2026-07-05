@@ -168,15 +168,17 @@ pub fn laplace_probe(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// # Signature Requirements
 ///
-/// - `async fn <name>(state: &T)` — state reference (recommended)
-/// - `async fn <name>(state: Arc<T>)` — state Arc (backward compatible)
-/// - `async fn <name>()` — no shared state
+/// - `async fn <name>(state: &T)` — replica mode state reference (recommended)
+/// - `async fn <name>(state: Arc<T>)` — replica mode state Arc (backward compatible)
+/// - `async fn <name>()` / `fn <name>()` — no shared state
+/// - `#[laplace::verify(scenario)] fn <name>()` — one native scenario execution
 ///
 /// Where T must implement `Default`.
 ///
 /// # Parameters
 ///
-/// - `threads` (required): Number of concurrent threads (≤ 8)
+/// - `threads`: Replica mode with this many concurrent workers (≤ 8)
+/// - `scenario`: Scenario mode; no state parameter, body owns all worker setup
 /// - `expected` (default: "clean"): Expected verdict: "clean" or "bug"
 /// - `write_ard` (default: false): Write ARD output
 /// - `output_dir` (default: "."): Output directory path
@@ -190,6 +192,12 @@ pub fn laplace_probe(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// async fn test_cache(state: &AppState) {
 ///     let mut cache = state.cache.lock().await;
 ///     cache.insert("key".into(), "value".into());
+/// }
+///
+/// #[laplace::verify(scenario, expected = "clean")]
+/// fn test_scenario() {
+///     let handle = std::thread::spawn(|| {});
+///     handle.join().unwrap();
 /// }
 /// ```
 #[proc_macro_attribute]

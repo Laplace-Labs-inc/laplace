@@ -7,7 +7,7 @@ use std::sync::{
     TryLockResult,
 };
 
-use crate::hooks::{lock_hook, next_lock_resource_id};
+use crate::hooks::{lock_hook, next_lock_resource_id, spawn_hook};
 
 /// `std::sync::Mutex<T>` compatible model mutex for annotated code.
 pub struct ModelMutex<T: ?Sized> {
@@ -46,7 +46,7 @@ impl<T: ?Sized> ModelMutex<T> {
             hook.acquire(self.resource);
         }
 
-        if hook.is_some() {
+        if hook.is_some() && spawn_hook().is_some() {
             return self.inner.try_lock().map_or_else(
                 |err| match err {
                     TryLockError::Poisoned(poisoned) => Err(PoisonError::new(ModelMutexGuard {

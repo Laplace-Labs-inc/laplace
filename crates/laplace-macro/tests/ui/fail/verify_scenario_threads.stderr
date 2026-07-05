@@ -1,0 +1,7 @@
+error: unexpected end of input, verify: `threads` and `scenario` are mutually exclusive
+ --> tests/ui/fail/verify_scenario_threads.rs:3:1
+  |
+3 | #[laplace_macro::laplace_verify(scenario, threads = 2)]
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: this error originates in the attribute macro `laplace_macro::laplace_verify` (in Nightly builds, run with -Z macro-backtrace for more info)
