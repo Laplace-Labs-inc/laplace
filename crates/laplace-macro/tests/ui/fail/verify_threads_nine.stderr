@@ -1,0 +1,5 @@
+error: `threads` must not exceed 8
+ --> tests/ui/fail/verify_threads_nine.rs:3:43
+  |
+3 | #[laplace_macro::laplace_verify(threads = 9)]
+  |                                           ^

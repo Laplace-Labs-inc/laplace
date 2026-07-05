@@ -1,0 +1,5 @@
+error: `threads` must be between 1 and 8
+ --> tests/ui/fail/verify_threads_zero.rs:3:43
+  |
+3 | #[laplace_macro::laplace_verify(threads = 0)]
+  |                                           ^

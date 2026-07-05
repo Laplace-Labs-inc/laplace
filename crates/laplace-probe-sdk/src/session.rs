@@ -204,7 +204,9 @@ pub fn emit(event: ProbeEvent) {
 
 /// Dumps captured events (with the declared expectation and determinism class)
 /// to `$LAPLACE_VERIFY_EVENTS_DIR/<target>.json` when that env var is set — the
-/// ingestion contract for the private CLI/API verdict boundary
+/// ingestion contract for the private CLI/API verdict boundary. Only the file
+/// name is sanitized (`::` → `__`); the envelope `target` field preserves the
+/// full target name.
 /// (`laplace axiom verify --model-events <dir>`). No-op when the var is unset,
 /// so it is invisible to a plain `cargo test`.
 ///
@@ -231,7 +233,8 @@ pub fn dump_events_if_configured(
     if std::fs::create_dir_all(&dir).is_err() {
         return;
     }
-    let path = std::path::Path::new(&dir).join(format!("{target_name}.json"));
+    let filename = format!("{}.json", target_name.replace("::", "__"));
+    let path = std::path::Path::new(&dir).join(filename);
     let envelope = serde_json::json!({
         "target": target_name,
         "expected": expected,
@@ -425,15 +428,15 @@ mod tests {
                 .as_nanos()
         ));
         std::env::set_var("LAPLACE_VERIFY_EVENTS_DIR", &dir);
-        dump_events_if_configured("my_target", "bug", "best_effort", &events);
+        dump_events_if_configured("my_crate::module::my_target", "bug", "declared", &events);
         std::env::remove_var("LAPLACE_VERIFY_EVENTS_DIR");
 
-        let path = dir.join("my_target.json");
+        let path = dir.join("my_crate__module__my_target.json");
         let text = std::fs::read_to_string(&path).expect("envelope written");
         let value: serde_json::Value = serde_json::from_str(&text).expect("valid json");
-        assert_eq!(value["target"], "my_target");
+        assert_eq!(value["target"], "my_crate::module::my_target");
         assert_eq!(value["expected"], "bug");
-        assert_eq!(value["determinism"], "best_effort");
+        assert_eq!(value["determinism"], "declared");
         assert_eq!(value["events"].as_array().map(|a| a.len()), Some(1));
 
         let _ = std::fs::remove_dir_all(&dir);

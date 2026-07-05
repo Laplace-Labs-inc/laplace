@@ -11,6 +11,19 @@ use syn::parse::{Parse, ParseStream, Result};
 use syn::punctuated::Punctuated;
 use syn::{Expr, ItemFn, Lit, Meta, Token};
 
+const VALID_VERIFY_KEYS: &str =
+    "threads, name, expected, determinism, write_ard, output_dir, buffer, max_depth";
+
+const VALID_DETERMINISM_LABELS: &[&str] = &[
+    "fully_deterministic",
+    "fully-deterministic",
+    "full",
+    "deterministic_with_declared_inputs",
+    "deterministic-with-declared-inputs",
+    "declared_inputs",
+    "declared",
+];
+
 /// Parsed arguments from `#[laplace::verify(...)]`.
 pub(crate) struct VerifyArgs {
     pub(crate) threads: usize,
@@ -36,66 +49,137 @@ impl Parse for VerifyArgs {
 
         let metas = Punctuated::<Meta, Token![,]>::parse_terminated(input)?;
         for meta in metas {
-            if let Meta::NameValue(nv) = meta {
-                let key = nv.path.get_ident().map(|i| i.to_string());
-                match key.as_deref() {
-                    Some("threads") => {
-                        if let Expr::Lit(expr_lit) = &nv.value {
-                            if let Lit::Int(i) = &expr_lit.lit {
-                                threads = Some(i.base10_parse::<usize>()?);
-                            }
-                        }
+            let Meta::NameValue(nv) = meta else {
+                return Err(syn::Error::new_spanned(
+                    meta,
+                    format!(
+                        "expected `key = value` argument for `#[laplace_sdk::verify]`; valid keys: {VALID_VERIFY_KEYS}"
+                    ),
+                ));
+            };
+
+            let key = nv.path.get_ident().map(|i| i.to_string());
+            let literal = match &nv.value {
+                Expr::Lit(expr_lit) => &expr_lit.lit,
+                _ => {
+                    let key_name = key.as_deref().unwrap_or("<unknown>");
+                    return Err(syn::Error::new_spanned(
+                        &nv.value,
+                        format!("expected literal value for `{key_name}`"),
+                    ));
+                }
+            };
+
+            match key.as_deref() {
+                Some("threads") => {
+                    let Lit::Int(i) = literal else {
+                        return Err(syn::Error::new_spanned(
+                            literal,
+                            "expected integer literal for `threads`",
+                        ));
+                    };
+                    let value = i.base10_parse::<usize>()?;
+                    if value == 0 {
+                        return Err(syn::Error::new_spanned(
+                            i,
+                            "`threads` must be between 1 and 8",
+                        ));
                     }
-                    Some("name") => {
-                        if let Expr::Lit(expr_lit) = &nv.value {
-                            if let Lit::Str(s) = &expr_lit.lit {
-                                name = Some(s.value());
-                            }
-                        }
+                    if value > 8 {
+                        return Err(syn::Error::new_spanned(i, "`threads` must not exceed 8"));
                     }
-                    Some("expected") => {
-                        if let Expr::Lit(expr_lit) = &nv.value {
-                            if let Lit::Str(s) = &expr_lit.lit {
-                                expected = Some(s.value());
-                            }
-                        }
+                    threads = Some(value);
+                }
+                Some("name") => {
+                    let Lit::Str(s) = literal else {
+                        return Err(syn::Error::new_spanned(
+                            literal,
+                            "expected string literal for `name`",
+                        ));
+                    };
+                    name = Some(s.value());
+                }
+                Some("expected") => {
+                    let Lit::Str(s) = literal else {
+                        return Err(syn::Error::new_spanned(
+                            literal,
+                            "expected string literal for `expected`",
+                        ));
+                    };
+                    let value = s.value();
+                    if value != "clean" && value != "bug" {
+                        return Err(syn::Error::new_spanned(
+                            s,
+                            "unsupported `expected` value; expected \"clean\" or \"bug\"",
+                        ));
                     }
-                    Some("determinism") => {
-                        if let Expr::Lit(expr_lit) = &nv.value {
-                            if let Lit::Str(s) = &expr_lit.lit {
-                                determinism = Some(s.value());
-                            }
-                        }
+                    expected = Some(value);
+                }
+                Some("determinism") => {
+                    let Lit::Str(s) = literal else {
+                        return Err(syn::Error::new_spanned(
+                            literal,
+                            "expected string literal for `determinism`",
+                        ));
+                    };
+                    let value = s.value();
+                    if !VALID_DETERMINISM_LABELS.contains(&value.as_str()) {
+                        return Err(syn::Error::new_spanned(
+                            s,
+                            "unsupported `determinism` value; expected one of: fully_deterministic, fully-deterministic, full, deterministic_with_declared_inputs, deterministic-with-declared-inputs, declared_inputs, declared",
+                        ));
                     }
-                    Some("write_ard") => {
-                        if let Expr::Lit(expr_lit) = &nv.value {
-                            if let Lit::Bool(b) = &expr_lit.lit {
-                                write_ard = Some(b.value());
-                            }
-                        }
-                    }
-                    Some("output_dir") => {
-                        if let Expr::Lit(expr_lit) = &nv.value {
-                            if let Lit::Str(s) = &expr_lit.lit {
-                                output_dir = Some(s.value());
-                            }
-                        }
-                    }
-                    Some("buffer") => {
-                        if let Expr::Lit(expr_lit) = &nv.value {
-                            if let Lit::Int(i) = &expr_lit.lit {
-                                buffer = Some(i.base10_parse::<usize>()?);
-                            }
-                        }
-                    }
-                    Some("max_depth") => {
-                        if let Expr::Lit(expr_lit) = &nv.value {
-                            if let Lit::Int(i) = &expr_lit.lit {
-                                max_depth = Some(i.base10_parse::<usize>()?);
-                            }
-                        }
-                    }
-                    _ => {}
+                    determinism = Some(value);
+                }
+                Some("write_ard") => {
+                    let Lit::Bool(b) = literal else {
+                        return Err(syn::Error::new_spanned(
+                            literal,
+                            "expected boolean literal for `write_ard`",
+                        ));
+                    };
+                    write_ard = Some(b.value());
+                }
+                Some("output_dir") => {
+                    let Lit::Str(s) = literal else {
+                        return Err(syn::Error::new_spanned(
+                            literal,
+                            "expected string literal for `output_dir`",
+                        ));
+                    };
+                    output_dir = Some(s.value());
+                }
+                Some("buffer") => {
+                    let Lit::Int(i) = literal else {
+                        return Err(syn::Error::new_spanned(
+                            literal,
+                            "expected integer literal for `buffer`",
+                        ));
+                    };
+                    buffer = Some(i.base10_parse::<usize>()?);
+                }
+                Some("max_depth") => {
+                    let Lit::Int(i) = literal else {
+                        return Err(syn::Error::new_spanned(
+                            literal,
+                            "expected integer literal for `max_depth`",
+                        ));
+                    };
+                    max_depth = Some(i.base10_parse::<usize>()?);
+                }
+                _ => {
+                    let key_name = nv
+                        .path
+                        .segments
+                        .last()
+                        .map(|segment| segment.ident.to_string())
+                        .unwrap_or_else(|| "<unknown>".to_string());
+                    return Err(syn::Error::new_spanned(
+                        &nv,
+                        format!(
+                            "unknown argument `{key_name}` for `#[laplace_sdk::verify]`; valid keys: {VALID_VERIFY_KEYS}"
+                        ),
+                    ));
                 }
             }
         }
@@ -145,6 +229,15 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
     let args = parse_macro_input!(attr as VerifyArgs);
     let mut func = parse_macro_input!(item as ItemFn);
 
+    if let Some(attr) = func.attrs.iter().find(|attr| is_test_attribute(attr)) {
+        return syn::Error::new_spanned(
+            attr,
+            "#[laplace_sdk::verify] generates the test fn; remove #[test]",
+        )
+        .to_compile_error()
+        .into();
+    }
+
     // Single-annotation control layer: `#[laplace::verify]` self-contains the
     // model rewrite, so users no longer need a separate `#[laplace::model]`
     // line. Apply the shared model rewrite (qualified `std::thread::spawn` →
@@ -161,7 +254,13 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
 
     let func_ident = &func.sig.ident;
     let threads = args.threads;
-    let target_name = args.name.unwrap_or_else(|| func_ident.to_string());
+    let target_name_expr = match args.name {
+        Some(name) => quote! { #name },
+        None => {
+            let func_name = func_ident.to_string();
+            quote! { concat!(module_path!(), "::", #func_name) }
+        }
+    };
     let expected_declared = args.expected.is_some();
     let expected = args.expected.as_deref().unwrap_or("clean").to_string();
     let determinism = &args.determinism;
@@ -180,38 +279,62 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
         None,
     }
 
-    let state_signature = if let Some(syn::FnArg::Typed(pat_type)) = func.sig.inputs.first() {
-        // &T 검사
-        if let syn::Type::Reference(type_ref) = &*pat_type.ty {
-            StateSignature::Reference((*type_ref.elem).clone())
-        } else if let syn::Type::Path(type_path) = &*pat_type.ty {
-            // Arc<T> 검사
-            if let Some(seg) = type_path.path.segments.last() {
-                if seg.ident == "Arc" {
-                    if let syn::PathArguments::AngleBracketed(ab) = &seg.arguments {
-                        if let Some(syn::GenericArgument::Type(inner)) = ab.args.first() {
-                            StateSignature::Arc(inner.clone())
-                        } else {
-                            StateSignature::None
-                        }
-                    } else {
-                        StateSignature::None
-                    }
-                } else {
-                    StateSignature::None
-                }
-            } else {
-                StateSignature::None
-            }
-        } else {
-            StateSignature::None
+    fn classify_state_type(ty: &syn::Type) -> Option<StateSignature> {
+        if let syn::Type::Reference(type_ref) = ty {
+            return Some(StateSignature::Reference((*type_ref.elem).clone()));
         }
-    } else {
-        StateSignature::None
+
+        let syn::Type::Path(type_path) = ty else {
+            return None;
+        };
+        let seg = type_path.path.segments.last()?;
+        if seg.ident != "Arc" {
+            return None;
+        }
+        let syn::PathArguments::AngleBracketed(ab) = &seg.arguments else {
+            return None;
+        };
+        if ab.args.len() != 1 {
+            return None;
+        }
+        match ab.args.first()? {
+            syn::GenericArgument::Type(inner) => Some(StateSignature::Arc(inner.clone())),
+            _ => None,
+        }
+    }
+
+    let unsupported_signature_msg =
+        "unsupported `#[laplace_sdk::verify]` function signature; supported signatures are `fn name()`, `fn name(state: &T)`, or `fn name(state: Arc<T>)` (sync or async)";
+
+    let mut inputs = func.sig.inputs.iter();
+    let first_input = inputs.next();
+    if inputs.next().is_some() {
+        return syn::Error::new_spanned(&func.sig.inputs, unsupported_signature_msg)
+            .to_compile_error()
+            .into();
+    }
+
+    let state_signature = match first_input {
+        None => StateSignature::None,
+        Some(syn::FnArg::Receiver(receiver)) => {
+            return syn::Error::new_spanned(receiver, unsupported_signature_msg)
+                .to_compile_error()
+                .into();
+        }
+        Some(syn::FnArg::Typed(pat_type)) => {
+            if let Some(signature) = classify_state_type(&pat_type.ty) {
+                signature
+            } else {
+                return syn::Error::new_spanned(&pat_type.ty, unsupported_signature_msg)
+                    .to_compile_error()
+                    .into();
+            }
+        }
     };
 
-    let (state_init, state_clone, state_pass) = match state_signature {
-        StateSignature::Reference(st) => {
+    let is_async = func.sig.asyncness.is_some();
+    let (state_init, state_clone, state_pass) = match (state_signature, is_async) {
+        (StateSignature::Reference(st), true) => {
             let state_init = quote! {
                 let state = ::std::sync::Arc::new(<#st as ::std::default::Default>::default());
             };
@@ -219,11 +342,15 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
                 let s = state.clone();
             };
             let state_pass = quote! {
+                let rt = ::laplace_sdk::__macro_support::tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("laplace verify: tokio runtime build failed");
                 rt.block_on(#func_ident(&*s));
             };
             (state_init, state_clone, state_pass)
         }
-        StateSignature::Arc(st) => {
+        (StateSignature::Reference(st), false) => {
             let state_init = quote! {
                 let state = ::std::sync::Arc::new(<#st as ::std::default::Default>::default());
             };
@@ -231,15 +358,55 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
                 let s = state.clone();
             };
             let state_pass = quote! {
+                #func_ident(&*s);
+            };
+            (state_init, state_clone, state_pass)
+        }
+        (StateSignature::Arc(st), true) => {
+            let state_init = quote! {
+                let state = ::std::sync::Arc::new(<#st as ::std::default::Default>::default());
+            };
+            let state_clone = quote! {
+                let s = state.clone();
+            };
+            let state_pass = quote! {
+                let rt = ::laplace_sdk::__macro_support::tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("laplace verify: tokio runtime build failed");
                 rt.block_on(#func_ident(s));
             };
             (state_init, state_clone, state_pass)
         }
-        StateSignature::None => {
+        (StateSignature::Arc(st), false) => {
+            let state_init = quote! {
+                let state = ::std::sync::Arc::new(<#st as ::std::default::Default>::default());
+            };
+            let state_clone = quote! {
+                let s = state.clone();
+            };
+            let state_pass = quote! {
+                #func_ident(s);
+            };
+            (state_init, state_clone, state_pass)
+        }
+        (StateSignature::None, true) => {
             let state_init = quote! {};
             let state_clone = quote! {};
             let state_pass = quote! {
+                let rt = ::laplace_sdk::__macro_support::tokio::runtime::Builder::new_current_thread()
+                    .enable_all()
+                    .build()
+                    .expect("laplace verify: tokio runtime build failed");
                 rt.block_on(#func_ident());
+            };
+            (state_init, state_clone, state_pass)
+        }
+        (StateSignature::None, false) => {
+            let state_init = quote! {};
+            let state_clone = quote! {};
+            let state_pass = quote! {
+                #func_ident();
             };
             (state_init, state_clone, state_pass)
         }
@@ -247,7 +414,7 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
 
     let max_depth_config = if let Some(md) = max_depth {
         quote! {
-            max_depth: Some(#md),
+            max_depth: #md,
         }
     } else {
         quote! {}
@@ -313,6 +480,7 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
                 #max_depth_config
                 ..ProbeSessionConfig::default()
             };
+            let __laplace_target_name = #target_name_expr;
 
             // 6. Public reference check (tier 1), not the private engine verdict.
             //    This assert is the public conservative lock-order checker over the
@@ -324,25 +492,25 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
                     panic!(
                         "laplace verify: 0 events + declared expected -- vacuous verdict blocked for '{}'. \
                          Check that TrackedMutex/RwLock instrumentation is wired.",
-                        #target_name
+                        __laplace_target_name
                     );
                 } else {
                     eprintln!(
                         "[laplace] WARNING: 0 events collected for '{}'. \
                          Check that TrackedMutex/RwLock are being used.",
-                        #target_name
+                        __laplace_target_name
                     );
                 }
             } else {
                 let __laplace_reference =
-                    run_verification_from(&events, #target_name, &config);
+                    run_verification_from(&events, __laplace_target_name, &config);
                 match __laplace_expected {
                     "clean" => __laplace_reference.assert_clean(),
                     "bug" => __laplace_reference.assert_bug(),
                     other => panic!(
                         "laplace verify: unsupported expected value '{}' for '{}'; expected \"clean\" or \"bug\"",
                         other,
-                        #target_name
+                        __laplace_target_name
                     ),
                 }
             }
@@ -354,12 +522,20 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
             //    `laplace axiom verify --model-events <dir>` to drive the engine.
             //    No-op under a plain `cargo test`.
             ::laplace_sdk::__macro_support::dump_events_if_configured(
-                #target_name, __laplace_expected, #determinism, &events,
+                __laplace_target_name, __laplace_expected, #determinism, &events,
             );
         }
     };
 
     TokenStream::from(expanded)
+}
+
+fn is_test_attribute(attr: &syn::Attribute) -> bool {
+    let path = attr.path();
+    path.is_ident("test")
+        || (path.segments.len() == 2
+            && path.segments[0].ident == "tokio"
+            && path.segments[1].ident == "test")
 }
 
 #[cfg(test)]

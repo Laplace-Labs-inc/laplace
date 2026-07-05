@@ -1,0 +1,5 @@
+error: #[laplace_sdk::verify] generates the test fn; remove #[test]
+ --> tests/ui/fail/verify_double_test.rs:4:1
+  |
+4 | #[test]
+  | ^^^^^^^

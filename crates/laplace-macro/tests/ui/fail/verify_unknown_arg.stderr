@@ -1,0 +1,5 @@
+error: unknown argument `threds` for `#[laplace_sdk::verify]`; valid keys: threads, name, expected, determinism, write_ard, output_dir, buffer, max_depth
+ --> tests/ui/fail/verify_unknown_arg.rs:3:46
+  |
+3 | #[laplace_macro::laplace_verify(threads = 1, threds = 2)]
+  |                                              ^^^^^^^^^^

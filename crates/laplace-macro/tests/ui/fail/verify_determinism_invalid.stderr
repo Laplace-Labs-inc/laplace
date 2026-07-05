@@ -1,0 +1,5 @@
+error: unsupported `determinism` value; expected one of: fully_deterministic, fully-deterministic, full, deterministic_with_declared_inputs, deterministic-with-declared-inputs, declared_inputs, declared
+ --> tests/ui/fail/verify_determinism_invalid.rs:3:60
+  |
+3 | #[laplace_macro::laplace_verify(threads = 1, determinism = "best_effort")]
+  |                                                            ^^^^^^^^^^^^^

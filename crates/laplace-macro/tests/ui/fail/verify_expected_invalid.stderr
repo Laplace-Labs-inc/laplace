@@ -1,0 +1,5 @@
+error: unsupported `expected` value; expected "clean" or "bug"
+ --> tests/ui/fail/verify_expected_invalid.rs:3:57
+  |
+3 | #[laplace_macro::laplace_verify(threads = 1, expected = "maybe")]
+  |                                                         ^^^^^^^

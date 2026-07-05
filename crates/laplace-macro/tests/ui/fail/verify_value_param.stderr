@@ -1,0 +1,5 @@
+error: unsupported `#[laplace_sdk::verify]` function signature; supported signatures are `fn name()`, `fn name(state: &T)`, or `fn name(state: Arc<T>)` (sync or async)
+ --> tests/ui/fail/verify_value_param.rs:7:30
+  |
+7 | async fn value_param(_state: State) {}
+  |                              ^^^^^
