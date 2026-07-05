@@ -17,7 +17,7 @@ use crate::ProbeEvent;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::ops::{Deref, DerefMut};
 
-/// `parking_lot::RwLock<T>` 래퍼. read 재진입 지원 + Ki-DPOR 이벤트 방출.
+/// `parking_lot::RwLock<T>` 래퍼. read 재진입 지원 + 엔진 이벤트 방출.
 pub struct TrackedParkingLotRwLock<T> {
     inner: RwLock<T>,
     resource_name: &'static str,
@@ -29,7 +29,7 @@ impl<T> TrackedParkingLotRwLock<T> {
     /// # Arguments
     ///
     /// * `value` — 보호할 값
-    /// * `resource_name` — Ki-DPOR 추적용 리소스 이름 (&'static str)
+    /// * `resource_name` — 엔진 추적용 리소스 이름 (&'static str)
     pub fn new(value: T, resource_name: &'static str) -> Self {
         Self {
             inner: RwLock::new(value),

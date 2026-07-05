@@ -57,7 +57,7 @@ impl Parse for HarnessArgs {
 
         for meta in metas {
             if let Meta::NameValue(nv) = meta {
-                let key = nv.path.get_ident().map(|i| i.to_string());
+                let key = nv.path.get_ident().map(std::string::ToString::to_string);
                 match key.as_deref() {
                     Some("name") => {
                         if let Expr::Lit(expr_lit) = &nv.value {

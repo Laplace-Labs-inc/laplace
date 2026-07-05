@@ -44,7 +44,7 @@ pub use laplace_macro::laplace_tracked;
 /// `#[laplace_tracked]`와 동일한 타입 변환 + 클라우드 관측 활성 시 이벤트 전달.
 pub use laplace_macro::laplace_probe;
 
-/// Improved Ki-DPOR verification harness attribute.
+/// Improved DPOR verification harness attribute.
 ///
 /// Supports both `&T` references and `Arc<T>` state parameters.
 pub use laplace_macro::laplace_verify as verify;
@@ -53,12 +53,7 @@ pub use laplace_macro::laplace_verify as verify;
 /// through the Laplace runtime spawn seam.
 pub use laplace_macro::model;
 
-/// Register a function as a verification harness via `inventory`.
-///
-/// Lower-level alternative to `#[laplace_sdk::verify(...)]` for advanced use cases.
-pub use laplace_macro::axiom_harness;
-
-/// Automated Ki-DPOR verification harness (legacy API).
+/// Automated DPOR verification harness (legacy no-op public API).
 ///
 /// Use `#[laplace_sdk::verify(...)]` for new code.
 pub use laplace_macro::axiom_target;
@@ -133,7 +128,7 @@ pub use laplace_probe_sdk::clear_probe_sender;
 /// Set the thread ID for probe event correlation.
 pub use laplace_probe_sdk::set_probe_thread_id;
 
-/// Configuration for Ki-DPOR verification sessions.
+/// Configuration for DPOR verification sessions.
 pub use laplace_probe_sdk::ProbeSessionConfig;
 
 /// Enumeration of all probe event types.

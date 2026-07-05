@@ -30,12 +30,20 @@ pub trait LockHook: Send + Sync {
 }
 
 /// Installs or replaces the process-local spawn hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
 pub fn install_spawn_hook(hook: Arc<dyn SpawnHook>) {
     let slot = SPAWN_HOOK.get_or_init(|| StdMutex::new(None));
     *slot.lock().expect("spawn hook lock poisoned") = Some(hook);
 }
 
 /// Clears the process-local spawn hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
 pub fn clear_spawn_hook() {
     if let Some(slot) = SPAWN_HOOK.get() {
         *slot.lock().expect("spawn hook lock poisoned") = None;
@@ -49,12 +57,20 @@ pub(crate) fn spawn_hook() -> Option<Arc<dyn SpawnHook>> {
 }
 
 /// Installs or replaces the process-local lock hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
 pub fn install_lock_hook(hook: Arc<dyn LockHook>) {
     let slot = LOCK_HOOK.get_or_init(|| StdMutex::new(None));
     *slot.lock().expect("lock hook lock poisoned") = Some(hook);
 }
 
 /// Clears the process-local lock hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
 pub fn clear_lock_hook() {
     if let Some(slot) = LOCK_HOOK.get() {
         *slot.lock().expect("lock hook lock poisoned") = None;

@@ -205,7 +205,7 @@ pub fn harness_three_way(thread: ThreadId, pc: usize) -> Option<(Operation, Reso
 /// | T2     | Slow consumer: tries to acquire B, waits |
 ///
 /// T0 cycles rapidly through slot A while T1 waits.  Under an unfair scheduler
-/// T1 can be starved indefinitely.  The Ki-DPOR starvation detection fires when
+/// T1 can be starved indefinitely.  The DPOR starvation detection fires when
 /// T1 or T2 exceeds `MAX_STARVATION_LIMIT` steps without being scheduled.
 ///
 /// **Source correspondence**: `deadpool` uses `tokio::sync::Semaphore` which is
@@ -217,7 +217,7 @@ pub fn harness_three_way(thread: ThreadId, pc: usize) -> Option<(Operation, Reso
 ///
 /// Expected: `OracleVerdict::BugFound` (starvation of T1 or T2).
 ///
-/// Coverage-boundary: starvation / fairness was a retired Ki-DPOR detection;
+/// Coverage-boundary: starvation / fairness was a retired DPOR detection;
 /// the frozen Classic DPOR engine does not flag it and returns Clean. Off by
 /// default.
 #[cfg(feature = "scenarios-coverage-boundary")]

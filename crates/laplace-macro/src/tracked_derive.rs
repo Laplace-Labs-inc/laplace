@@ -2,24 +2,29 @@
 //! `#[laplace_tracked]` — attribute macro for automatic Tracked* type substitution.
 //!
 //! Transforms fields with `#[track]` attributes from standard sync primitives
-//! (Mutex, RwLock, Atomic*, Semaphore) to their Tracked* equivalents, and
+//! (`Mutex`, `RwLock`, `Atomic*`, `Semaphore`) to their `Tracked*` equivalents, and
 //! generates a `Default` impl that instantiates each tracked field with
 //! appropriate resource names.
 
 use quote::quote;
 use std::collections::HashSet;
+use syn::punctuated::Punctuated;
 use syn::{
-    Attribute, Error, Expr, Fields, GenericArgument, ItemStruct, Meta, PathArguments, Result, Type,
+    Attribute, Error, Expr, Fields, GenericArgument, ItemStruct, Lit, Meta, PathArguments, Result,
+    Token, Type,
 };
+
+#[derive(Debug, Default)]
+struct TrackOptions {
+    name: Option<String>,
+    permits: Option<usize>,
+}
 
 /// Expand `#[laplace_tracked]` attribute macro.
 pub(crate) fn expand_attribute(
-    attr: proc_macro2::TokenStream,
+    _attr: proc_macro2::TokenStream,
     item: ItemStruct,
 ) -> Result<proc_macro2::TokenStream> {
-    // For now, ignore any arguments (reserved for future use)
-    let _ = attr;
-
     let struct_name = item.ident.clone();
     let mut modified_fields = Vec::new();
     let mut default_assignments = Vec::new();
@@ -35,9 +40,12 @@ pub(crate) fn expand_attribute(
             let has_track = field.attrs.iter().any(|attr| attr.path().is_ident("track"));
 
             if has_track {
-                // Parse #[track] for optional name override
-                let track_name = extract_track_name(&field.attrs)?;
-                let resource_name = track_name.unwrap_or_else(|| field_name_str.clone());
+                // Parse #[track] for optional name override and primitive-specific knobs.
+                let track_options = extract_track_options(&field.attrs)?;
+                let resource_name = track_options
+                    .name
+                    .clone()
+                    .unwrap_or_else(|| field_name_str.clone());
 
                 // Check for duplicate resource names
                 if !resource_names.insert(resource_name.clone()) {
@@ -49,7 +57,7 @@ pub(crate) fn expand_attribute(
 
                 // Map field type to Tracked* type
                 let (tracked_type, default_code) =
-                    map_field_type_to_tracked(&field.ty, &resource_name)?;
+                    map_field_type_to_tracked(&field.ty, &resource_name, &track_options)?;
 
                 // Create modified field (without #[track] attribute)
                 let mut modified_field = field.clone();
@@ -86,8 +94,9 @@ pub(crate) fn expand_attribute(
     };
 
     // Generate Default impl
+    let (impl_generics, ty_generics, where_clause) = modified_item.generics.split_for_impl();
     let default_impl = quote! {
-        impl ::std::default::Default for #struct_name {
+        impl #impl_generics ::std::default::Default for #struct_name #ty_generics #where_clause {
             fn default() -> Self {
                 Self {
                     #(#default_assignments),*
@@ -104,31 +113,61 @@ pub(crate) fn expand_attribute(
     Ok(expanded)
 }
 
-/// Extract the `name = "..."` attribute from `#[track(...)]`.
-fn extract_track_name(attrs: &[Attribute]) -> Result<Option<String>> {
+/// Extract supported options from `#[track(...)]`.
+fn extract_track_options(attrs: &[Attribute]) -> Result<TrackOptions> {
+    let mut options = TrackOptions::default();
     for attr in attrs {
         if attr.path().is_ident("track") {
             if let Meta::List(meta_list) = &attr.meta {
-                // #[track(...)] — parse as NameValue
-                let content = meta_list.parse_args::<syn::MetaNameValue>()?;
-                if content.path.is_ident("name") {
-                    if let Expr::Lit(expr_lit) = &content.value {
-                        if let syn::Lit::Str(s) = &expr_lit.lit {
-                            return Ok(Some(s.value()));
+                let metas =
+                    meta_list.parse_args_with(Punctuated::<Meta, Token![,]>::parse_terminated)?;
+
+                for meta in metas {
+                    if let Meta::NameValue(content) = &meta {
+                        if content.path.is_ident("name") {
+                            if let Expr::Lit(expr_lit) = &content.value {
+                                if let Lit::Str(s) = &expr_lit.lit {
+                                    options.name = Some(s.value());
+                                    continue;
+                                }
+                            }
+                            return Err(Error::new_spanned(
+                                &content.value,
+                                "#[track(name = ...)] requires a string literal",
+                            ));
+                        }
+
+                        if content.path.is_ident("permits") {
+                            if let Expr::Lit(expr_lit) = &content.value {
+                                if let Lit::Int(i) = &expr_lit.lit {
+                                    options.permits = Some(i.base10_parse::<usize>()?);
+                                    continue;
+                                }
+                            }
+                            return Err(Error::new_spanned(
+                                &content.value,
+                                "#[track(permits = ...)] requires an integer literal",
+                            ));
                         }
                     }
+
+                    return Err(Error::new_spanned(
+                        meta,
+                        "unsupported #[track] argument; expected name = \"...\" or permits = N",
+                    ));
                 }
             }
         }
     }
-    Ok(None)
+    Ok(options)
 }
 
-/// Map a field type (Mutex<T>, RwLock<T>, etc.) to its Tracked* equivalent
+/// Map a field type (`Mutex<T>`, `RwLock<T>`, etc.) to its `Tracked*` equivalent
 /// and generate Default code.
 fn map_field_type_to_tracked(
     field_type: &Type,
     resource_name: &str,
+    track_options: &TrackOptions,
 ) -> Result<(Type, proc_macro2::TokenStream)> {
     // Try to extract the type name and generic args
     if let Type::Path(type_path) = field_type {
@@ -240,8 +279,14 @@ fn map_field_type_to_tracked(
         if path_str.ends_with("Semaphore") {
             let tracked_type: Type =
                 syn::parse_str("::laplace_sdk::__macro_support::TrackedSemaphore")?;
+            let Some(permits) = track_options.permits else {
+                return Err(Error::new_spanned(
+                    field_type,
+                    "Semaphore fields require #[track(permits = N)]",
+                ));
+            };
             let default_code = quote! {
-                ::laplace_sdk::__macro_support::TrackedSemaphore::new(0, #resource_name)
+                ::laplace_sdk::__macro_support::TrackedSemaphore::new(#permits, #resource_name)
             };
             return Ok((tracked_type, default_code));
         }
@@ -256,7 +301,7 @@ fn map_field_type_to_tracked(
     ))
 }
 
-/// Convert a syn::Path to a string representation.
+/// Convert a `syn::Path` to a string representation.
 fn typepath_to_string(path: &syn::Path) -> String {
     path.segments
         .iter()
@@ -265,7 +310,7 @@ fn typepath_to_string(path: &syn::Path) -> String {
         .join("::")
 }
 
-/// Convert any syn::Type to string.
+/// Convert any `syn::Type` to string.
 fn type_to_string(ty: &Type) -> String {
     quote!(#ty).to_string()
 }
@@ -279,4 +324,68 @@ fn extract_first_generic(path: &syn::Path) -> Option<&Type> {
         }
     }
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use super::expand_attribute;
+    use quote::quote;
+    use syn::{parse_quote, ItemStruct};
+
+    #[test]
+    fn default_impl_preserves_struct_generics() {
+        let item: ItemStruct = parse_quote! {
+            struct Service<T: Default> {
+                #[track]
+                lock: tokio::sync::Mutex<u64>,
+                extra: T,
+            }
+        };
+
+        let expanded = expand_attribute(quote! {}, item)
+            .expect("tracked expansion succeeds")
+            .to_string();
+
+        assert!(
+            expanded
+                .contains("impl < T : Default > :: std :: default :: Default for Service < T >"),
+            "{expanded}"
+        );
+    }
+
+    #[test]
+    fn semaphore_default_uses_declared_permits() {
+        let item: ItemStruct = parse_quote! {
+            struct Gate {
+                #[track(permits = 2)]
+                limiter: tokio::sync::Semaphore,
+            }
+        };
+
+        let expanded = expand_attribute(quote! {}, item)
+            .expect("tracked expansion succeeds")
+            .to_string();
+
+        assert!(
+            expanded.contains("TrackedSemaphore :: new (2usize , \"limiter\")"),
+            "{expanded}"
+        );
+    }
+
+    #[test]
+    fn semaphore_without_permits_is_rejected() {
+        let item: ItemStruct = parse_quote! {
+            struct Gate {
+                #[track]
+                limiter: tokio::sync::Semaphore,
+            }
+        };
+
+        let err = expand_attribute(quote! {}, item).expect_err("missing permits rejects");
+        assert!(
+            err.to_string()
+                .contains("Semaphore fields require #[track(permits = N)]"),
+            "{err}"
+        );
+    }
 }

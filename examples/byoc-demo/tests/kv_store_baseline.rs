@@ -1,5 +1,7 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(clippy::doc_markdown)]
+// legacy 표면 커버리지용, 이관은 후속; attribute macro lint는 item-level allow보다 먼저 발생한다.
+#![allow(deprecated)]
 
 //! KvStore CLEAN Baseline.
 //!
@@ -29,6 +31,8 @@ impl Default for KvStore {
 
 // ── 검증 대상 함수 — 단순 단일락 순차 접근 ────────────────────────────────────
 
+// legacy 표면 커버리지용, 이관은 후속
+#[allow(deprecated)]
 #[axiom_target(threads = 2, name = "kv_single_lock")]
 async fn kv_single_lock(store: Arc<KvStore>) {
     // 단일 lock 획득 및 해제
@@ -52,6 +56,8 @@ impl Default for Counter {
     }
 }
 
+// legacy 표면 커버리지용, 이관은 후속
+#[allow(deprecated)]
 #[axiom_target(threads = 3, name = "counter_increment")]
 async fn counter_increment(state: Arc<Counter>) {
     let mut val = state.value.lock().await;

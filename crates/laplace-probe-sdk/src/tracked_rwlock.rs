@@ -28,7 +28,7 @@ impl<T> TrackedRwLock<T> {
     /// # Arguments
     ///
     /// * `value` — 보호할 값
-    /// * `resource_name` — Ki-DPOR 추적용 리소스 이름 (&'static str)
+    /// * `resource_name` — 엔진 추적용 리소스 이름 (&'static str)
     pub fn new(value: T, resource_name: &'static str) -> Self {
         Self {
             inner: RwLock::new(value),

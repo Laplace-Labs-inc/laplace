@@ -1,5 +1,7 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(clippy::doc_markdown)]
+// legacy 표면 커버리지용, 이관은 후속; attribute macro lint는 item-level allow보다 먼저 발생한다.
+#![allow(deprecated)]
 
 //! mobc v0.9 (patched with TrackedMutex) 실제 Pool API를 사용한 Ki-DPOR 검증.
 //!
@@ -53,6 +55,8 @@ impl Default for PoolState {
 /// mobc 내부 TrackedMutex (internals)가 이벤트를 자동으로 수집한다.
 ///
 /// 단일 Mutex만 있으므로 AB-BA 불가능 → CLEAN 기대
+// legacy 표면 커버리지용, 이관은 후속
+#[allow(deprecated)]
 #[axiom_target(threads = 2, name = "real_mobc_pool_get")]
 async fn real_mobc_pool_get(state: Arc<PoolState>) {
     let conn = state.pool.get().await.expect("pool get failed");
@@ -65,6 +69,8 @@ async fn real_mobc_pool_get(state: Arc<PoolState>) {
 
 /// 3개 스레드가 동시에 get(). 단일 Mutex.
 /// 어떤 인터리빙도 교착 불가 → CLEAN.
+// legacy 표면 커버리지용, 이관은 후속
+#[allow(deprecated)]
 #[axiom_target(threads = 3, name = "real_mobc_pool_concurrent")]
 async fn real_mobc_pool_concurrent(state: Arc<PoolState>) {
     let conn = state.pool.get().await.expect("pool get");

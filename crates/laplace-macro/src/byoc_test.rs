@@ -5,7 +5,7 @@
 //! 1) creates a probe event channel,
 //! 2) injects `byoc_thread!` macro for per-thread setup,
 //! 3) executes original function body,
-//! 4) runs Ki-DPOR verification with configured expectation.
+//! 4) runs DPOR verification with configured expectation.
 
 use proc_macro::TokenStream;
 use quote::quote;

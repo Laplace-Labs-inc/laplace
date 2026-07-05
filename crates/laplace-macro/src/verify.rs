@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-//! `#[laplace::verify]` — improved Ki-DPOR verification harness.
+//! `#[laplace::verify]` — improved DPOR verification harness.
 //!
 //! The `#[laplace::verify(threads = N)]` attribute is an enhanced version of
 //! `#[axiom_target]` that supports `&T` references (in addition to `Arc<T>`),
@@ -58,16 +58,15 @@ impl Parse for VerifyArgs {
                 ));
             };
 
-            let key = nv.path.get_ident().map(|i| i.to_string());
-            let literal = match &nv.value {
-                Expr::Lit(expr_lit) => &expr_lit.lit,
-                _ => {
-                    let key_name = key.as_deref().unwrap_or("<unknown>");
-                    return Err(syn::Error::new_spanned(
-                        &nv.value,
-                        format!("expected literal value for `{key_name}`"),
-                    ));
-                }
+            let key = nv.path.get_ident().map(std::string::ToString::to_string);
+            let literal = if let Expr::Lit(expr_lit) = &nv.value {
+                &expr_lit.lit
+            } else {
+                let key_name = key.as_deref().unwrap_or("<unknown>");
+                return Err(syn::Error::new_spanned(
+                    &nv.value,
+                    format!("expected literal value for `{key_name}`"),
+                ));
             };
 
             match key.as_deref() {
@@ -168,12 +167,10 @@ impl Parse for VerifyArgs {
                     max_depth = Some(i.base10_parse::<usize>()?);
                 }
                 _ => {
-                    let key_name = nv
-                        .path
-                        .segments
-                        .last()
-                        .map(|segment| segment.ident.to_string())
-                        .unwrap_or_else(|| "<unknown>".to_string());
+                    let key_name = nv.path.segments.last().map_or_else(
+                        || "<unknown>".to_string(),
+                        |segment| segment.ident.to_string(),
+                    );
                     return Err(syn::Error::new_spanned(
                         &nv,
                         format!(
@@ -197,7 +194,7 @@ impl Parse for VerifyArgs {
     }
 }
 
-/// 함수에 `#[laplace::verify(threads = N)]`을 붙이면 Ki-DPOR 검증 테스트를 자동 생성한다.
+/// 함수에 `#[laplace::verify(threads = N)]`을 붙이면 DPOR 검증 테스트를 자동 생성한다.
 ///
 /// # 지원 시그니처
 ///
@@ -254,12 +251,11 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
 
     let func_ident = &func.sig.ident;
     let threads = args.threads;
-    let target_name_expr = match args.name {
-        Some(name) => quote! { #name },
-        None => {
-            let func_name = func_ident.to_string();
-            quote! { concat!(module_path!(), "::", #func_name) }
-        }
+    let target_name_expr = if let Some(name) = args.name {
+        quote! { #name }
+    } else {
+        let func_name = func_ident.to_string();
+        quote! { concat!(module_path!(), "::", #func_name) }
     };
     let expected_declared = args.expected.is_some();
     let expected = args.expected.as_deref().unwrap_or("clean").to_string();

@@ -27,7 +27,7 @@ impl TrackedSemaphore {
     /// # Arguments
     ///
     /// * `permits` — 초기 permit 개수
-    /// * `resource_name` — Ki-DPOR 추적용 리소스 이름 (&'static str)
+    /// * `resource_name` — 엔진 추적용 리소스 이름 (&'static str)
     pub fn new(permits: usize, resource_name: &'static str) -> Self {
         Self {
             inner: Arc::new(Semaphore::new(permits)),

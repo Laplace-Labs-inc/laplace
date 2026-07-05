@@ -257,7 +257,7 @@ pub enum LaplaceError {
 
     /// Scheduler error (6002).
     ///
-    /// The kernel scheduler (DPOR, Ki-DPOR, or round-robin) encountered an error.
+    /// The kernel scheduler (DPOR or round-robin) encountered an error.
     /// May indicate state corruption or algorithm failure.
     /// Recommendation: Escalate; likely indicates a bug.
     SchedulerError = 6002,

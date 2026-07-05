@@ -32,6 +32,14 @@ impl<T: ?Sized> ModelMutex<T> {
     /// source to keep `.lock().unwrap()` unchanged. When a hook is installed,
     /// the acquire boundary is reported before the underlying lock attempt and
     /// the release boundary is reported when the returned guard is dropped.
+    ///
+    /// # Errors
+    ///
+    /// Returns a [`PoisonError`] if a previous holder panicked.
+    ///
+    /// # Panics
+    ///
+    /// Panics if an installed engine hook grants a lock that is still contended.
     pub fn lock(&self) -> LockResult<ModelMutexGuard<'_, T>> {
         let hook = lock_hook();
         if let Some(hook) = &hook {

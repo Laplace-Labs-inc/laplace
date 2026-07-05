@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-//! `#[axiom_target]` — automated Ki-DPOR verification harness.
+//! `#[axiom_target]` — automated DPOR verification harness.
 //!
 //! The `#[axiom_target(threads = N)]` attribute automatically generates a test
 //! that runs a function with N concurrent OS threads, each executing the function
-//! body with isolated tokio runtimes. Probe events are collected and fed to Ki-DPOR
-//! for exhaustive concurrency verification.
+//! body with isolated tokio runtimes. Public output collects probe events then
+//! discards them at the macro boundary.
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -30,7 +30,7 @@ impl Parse for AxiomTargetArgs {
         let metas = Punctuated::<Meta, Token![,]>::parse_terminated(input)?;
         for meta in metas {
             if let Meta::NameValue(nv) = meta {
-                let key = nv.path.get_ident().map(|i| i.to_string());
+                let key = nv.path.get_ident().map(std::string::ToString::to_string);
                 match key.as_deref() {
                     Some("threads") => {
                         if let Expr::Lit(expr_lit) = &nv.value {
@@ -74,7 +74,7 @@ impl Parse for AxiomTargetArgs {
     }
 }
 
-/// 함수에 `#[axiom_target(threads = N)]`을 붙이면 Ki-DPOR 검증 테스트를 자동 생성한다.
+/// 함수에 `#[axiom_target(threads = N)]`을 붙이면 legacy DPOR 테스트를 자동 생성한다.
 ///
 /// # 요구사항
 ///
@@ -148,7 +148,7 @@ pub(crate) fn axiom_target_impl(attr: TokenStream, item: TokenStream) -> TokenSt
         // 원본 함수 — 변경 없이 보존
         #func
 
-        // 생성된 Ki-DPOR 검증 테스트
+        // 생성된 legacy DPOR 테스트
         #[cfg(test)]
         #[test]
         #[allow(non_snake_case)]

@@ -38,6 +38,10 @@ impl<T: ?Sized> ModelRwLock<T> {
     /// # Errors
     ///
     /// Returns a [`PoisonError`] if a writer panicked while holding the lock.
+    ///
+    /// # Panics
+    ///
+    /// Panics if an installed engine hook grants a read lock that is still contended.
     pub fn read(&self) -> LockResult<ModelRwLockReadGuard<'_, T>> {
         let hook = lock_hook();
         if let Some(hook) = &hook {
@@ -85,6 +89,10 @@ impl<T: ?Sized> ModelRwLock<T> {
     /// # Errors
     ///
     /// Returns a [`PoisonError`] if a previous holder panicked.
+    ///
+    /// # Panics
+    ///
+    /// Panics if an installed engine hook grants a write lock that is still contended.
     pub fn write(&self) -> LockResult<ModelRwLockWriteGuard<'_, T>> {
         let hook = lock_hook();
         if let Some(hook) = &hook {

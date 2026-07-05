@@ -1,4 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
+#![deny(clippy::all, clippy::pedantic)]
+
 //! Runtime seams for annotated Laplace model code.
 //!
 //! `spawn` routes unit-returning model threads through an installed engine hook.

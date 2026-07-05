@@ -395,7 +395,7 @@ pub struct LaplaceConfig {
 
 /// Axiom deterministic verification engine parameters.
 ///
-/// All tuning knobs for the DPOR / Ki-DPOR Oracle.
+/// All tuning knobs for the DPOR Oracle.
 ///
 /// **Memory layout (24 bytes, 8-byte aligned)**:
 /// ```text
@@ -411,9 +411,9 @@ pub struct LaplaceConfig {
 pub struct AxiomConfig {
     /// Maximum concurrent threads tracked by DPOR (≤ 64, TinyBitSet limit).
     pub max_threads: u32,
-    /// Maximum exploration depth / step budget for Classic and Ki-DPOR.
+    /// Maximum exploration depth / step budget for Classic DPOR.
     pub max_depth: u32,
-    /// Maximum steps a thread may wait before Ki-DPOR flags a liveness violation.
+    /// Maximum steps a thread may wait before DPOR flags a liveness violation.
     pub max_starvation_limit: u32,
     /// Upper bound on the heuristic danger score used by A*-Ki prioritisation.
     pub max_danger: u32,

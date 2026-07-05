@@ -57,7 +57,7 @@ pub fn std_sync_mutex_ab_ba_program() {
 
 /// AB-BA deadlock over annotated `std::sync::RwLock` write locks.
 ///
-/// `#[laplace::model]` rewrites `std::sync::RwLock` to `laplace_rt::ModelRwLock`,
+/// `#[laplace::model]` rewrites `std::sync::RwLock` to `laplace_sdk::rt::ModelRwLock`,
 /// whose `write` acquisitions route through the same exclusive engine boundary
 /// as `ModelMutex`. The two write locks are grabbed in opposite orders, so the
 /// engine must prove the classic circular-wait deadlock (P-3 coverage).

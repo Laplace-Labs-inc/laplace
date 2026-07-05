@@ -42,10 +42,10 @@ pub trait ResourceTracker: Send + Sync + fmt::Debug {
     /// Get the set of threads involved in a deadlock
     fn deadlocked_threads(&self) -> Vec<ThreadId>;
 
-    /// Get contention score for Ki-DPOR heuristic
+    /// Get contention score for scheduler heuristic
     fn contention_score(&self) -> u32;
 
-    /// Get interleaving score for Ki-DPOR heuristic
+    /// Get interleaving score for scheduler heuristic
     fn interleaving_score(&self) -> u32;
 }
 

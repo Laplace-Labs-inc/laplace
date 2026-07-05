@@ -1,7 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
+#![deny(clippy::all, clippy::pedantic)]
+// Proc-macro parser/emitter functions keep token contracts local for auditability.
+#![allow(clippy::items_after_statements, clippy::too_many_lines)]
+
 //! Laplace procedural macros.
 //!
-//! Provides attribute and derive macros for Ki-DPOR verification and
+//! Provides attribute and derive macros for DPOR verification and
 //! automatic Tracked* primitive instrumentation.
 
 use proc_macro::TokenStream;
@@ -63,10 +67,11 @@ pub fn rwlock(input: TokenStream) -> TokenStream {
     convenience::rwlock_impl(input)
 }
 
-/// Automated Ki-DPOR verification harness attribute.
+/// Automated DPOR verification harness attribute (legacy no-op public API).
 ///
 /// Generates a test function that runs a closure with N concurrent OS threads,
-/// collects probe events, and runs Ki-DPOR verification.
+/// collects probe events, then discards them at the public macro boundary.
+/// Use `#[laplace_tracked]` plus `#[laplace_sdk::verify]` for new code.
 ///
 /// # Signature Requirements
 ///
@@ -86,6 +91,10 @@ pub fn rwlock(input: TokenStream) -> TokenStream {
 ///     *g += 1;
 /// }
 /// ```
+#[deprecated(
+    since = "0.1.0-alpha-1",
+    note = "collects then discards events (target.rs `let _ = (...)`); use #[laplace_tracked] + #[laplace_sdk::verify] — the two-tier gate"
+)]
 #[proc_macro_attribute]
 pub fn axiom_target(attr: TokenStream, item: TokenStream) -> TokenStream {
     target::axiom_target_impl(attr, item)
@@ -94,7 +103,7 @@ pub fn axiom_target(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// Attribute macro for automatic Tracked* type substitution and Default impl generation.
 ///
 /// Transforms fields with `#[track]` attributes from standard sync primitives
-/// (Mutex, RwLock, Atomic*, Semaphore) to their Tracked* equivalents.
+/// (`Mutex`, `RwLock`, `Atomic*`, `Semaphore`) to their `Tracked*` equivalents.
 ///
 /// # Field Annotation
 ///
@@ -118,7 +127,7 @@ pub fn laplace_tracked(attr: TokenStream, item: TokenStream) -> TokenStream {
         .into()
 }
 
-/// 프로덕션 관측용 구조체 매크로.
+/// `#[laplace_tracked]`의 deprecated alias.
 ///
 /// `#[laplace_tracked]`와 동일하게 `#[track]` 필드를 TrackedMutex/TrackedRwLock 등으로 변환한다.
 /// 클라우드 Probe 관측 활성 시 이벤트가 `GLOBAL_PROBE_CLIENT`를 통해 probe-edge로 전송된다.
@@ -132,6 +141,7 @@ pub fn laplace_tracked(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///     balance: tokio::sync::Mutex<i64>,
 /// }
 /// ```
+#[deprecated(note = "identical to #[laplace_tracked]; use that")]
 #[proc_macro_attribute]
 pub fn laplace_probe(attr: TokenStream, item: TokenStream) -> TokenStream {
     let input = parse_macro_input!(item as syn::ItemStruct);
@@ -140,10 +150,10 @@ pub fn laplace_probe(attr: TokenStream, item: TokenStream) -> TokenStream {
         .into()
 }
 
-/// Improved Ki-DPOR verification harness attribute.
+/// Improved DPOR verification harness attribute.
 ///
 /// Generates a test function that runs a closure with N concurrent OS threads,
-/// collects probe events, and runs Ki-DPOR verification. Supports both `&T`
+/// collects probe events, and runs DPOR verification. Supports both `&T`
 /// references and `Arc<T>`, with automatic state initialization and management.
 ///
 /// # Single-annotation control layer

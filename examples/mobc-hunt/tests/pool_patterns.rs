@@ -1,5 +1,7 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(clippy::doc_markdown)]
+// legacy 표면 커버리지용, 이관은 후속; attribute macro lint는 item-level allow보다 먼저 발생한다.
+#![allow(deprecated)]
 
 //! mobc connection pool 패턴 검증.
 //!
@@ -58,6 +60,8 @@ impl Default for MobcPool {
 ///
 /// 각 스레드가 동일한 코드를 실행하면 DPOR가 같은 인터리빙을 탐색하므로
 /// 단순화: 단일 lock/unlock 쌍만 수행.
+// legacy 표면 커버리지용, 이관은 후속
+#[allow(deprecated)]
 #[axiom_target(threads = 2, name = "pool_get_put")]
 async fn pool_get_put(pool: Arc<MobcPool>) {
     // 단일 락 획득/해제 (모든 스레드가 동일)
@@ -73,6 +77,8 @@ async fn pool_get_put(pool: Arc<MobcPool>) {
 
 /// Scenario B: 4개 스레드가 동시에 get/put_back. 단일 락.
 /// 락 하나만 존재하므로 어떤 인터리빙도 교착 불가 → CLEAN.
+// legacy 표면 커버리지용, 이관은 후속
+#[allow(deprecated)]
 #[axiom_target(threads = 4, name = "pool_concurrent")]
 async fn pool_concurrent(pool: Arc<MobcPool>) {
     {

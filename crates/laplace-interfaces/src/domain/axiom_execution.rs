@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Axiom Execution v2 op-source contracts.
 //!
-//! This module contains the public contract that lets the Ki-DPOR core consume
+//! This module contains the public contract that lets the DPOR core consume
 //! operations from either a static replay trace or a controlled re-execution
 //! runtime without depending on either implementation.
 
@@ -9,7 +9,7 @@ use crate::domain::resource::{ResourceId, ThreadId};
 use serde::{Deserialize, Serialize};
 use std::ffi::c_void;
 
-/// Ki-DPOR-compatible synchronization operation.
+/// DPOR-compatible synchronization operation.
 ///
 /// The variants intentionally mirror the seven `laplace-dpor::Operation`
 /// variants. They live in `laplace-interfaces` to avoid a circular dependency
@@ -84,7 +84,7 @@ impl PanicReport {
 #[repr(C, u8)]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum StepOutcome {
-    /// A Ki-DPOR operation occurred.
+    /// A DPOR operation occurred.
     Op(AxiomOperation, ResourceId),
     /// The thread entered a resource wait.
     Blocked(ResourceId),
@@ -158,10 +158,10 @@ pub enum SourceError {
     },
 }
 
-/// Ki-DPOR op supply contract.
+/// DPOR op supply contract.
 ///
 /// Implementations may be replay-backed or live controlled re-execution
-/// runtimes. The Ki-DPOR core consumes only this contract through an adapter.
+/// runtimes. The DPOR core consumes only this contract through an adapter.
 pub trait ExecutionSource {
     /// Starts a new schedule exploration from the beginning.
     fn reset(&mut self) -> Result<(), SourceError>;
