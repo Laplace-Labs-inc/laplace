@@ -43,6 +43,36 @@ pub enum ProbeEvent {
     SemaphoreAcquired { thread_id: u64, resource: String },
     /// A semaphore was released.
     SemaphoreReleased { thread_id: u64, resource: String },
+    /// [v2] An async task was spawned.
+    TaskSpawned {
+        task_id: u64,
+        parent_task_id: Option<u64>,
+        source_location: Option<String>,
+    },
+    /// [v2] An async task's root future was polled.
+    TaskPolled { task_id: u64, poll_attempt_id: u64 },
+    /// [v2] A poll returned Poll::Pending.
+    FuturePending {
+        task_id: u64,
+        future_id: Option<u64>,
+        poll_attempt_id: u64,
+    },
+    /// [v2] A poll returned Poll::Ready.
+    FutureReady {
+        task_id: u64,
+        future_id: Option<u64>,
+        poll_attempt_id: u64,
+    },
+    /// [v2] A waker was invoked (wake causality edge).
+    WakeIssued {
+        source_task_id: Option<u64>,
+        target_task_id: u64,
+        waker_id: u64,
+    },
+    /// [v2] Cancellation was requested for a task.
+    CancelRequested { task_id: u64 },
+    /// [v2] An async task completed (ready or cancelled).
+    TaskCompleted { task_id: u64 },
 }
 
 impl ProbeEvent {
@@ -62,6 +92,15 @@ impl ProbeEvent {
             | Self::SemaphoreAcquired { resource, .. }
             | Self::SemaphoreReleased { resource, .. } => Some(resource),
             Self::DbQuery { .. } | Self::HttpRequest { .. } | Self::Custom { .. } => None,
+            // [v2] Async vocabulary carries task/future/waker identity, not a
+            // named resource — the engine has no async mapping yet (AXM2 A2-1+).
+            Self::TaskSpawned { .. }
+            | Self::TaskPolled { .. }
+            | Self::FuturePending { .. }
+            | Self::FutureReady { .. }
+            | Self::WakeIssued { .. }
+            | Self::CancelRequested { .. }
+            | Self::TaskCompleted { .. } => None,
         }
     }
 }

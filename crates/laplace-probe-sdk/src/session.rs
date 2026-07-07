@@ -218,6 +218,14 @@ pub fn emit(event: ProbeEvent) {
 /// downstream `--strict` gate refuses to bless anything weaker than
 /// `fully_deterministic`.
 ///
+/// `events` may carry the [v2] async vocabulary (`TaskSpawned`/`TaskPolled`/…)
+/// alongside the v1 thread/resource events; the envelope declares
+/// `"schema_version": "2"` unconditionally since this producer version, so a
+/// consumer can tell an async-capable dump from a pre-v2 one without sniffing
+/// the event list. This is additive: a consumer that only understands v1
+/// events keeps parsing the `events` array unchanged and simply observes the
+/// new field.
+///
 /// Trace data only: the verdict is computed downstream by the private engine,
 /// never here. Best-effort — any I/O error is swallowed so verification runs are
 /// never broken by a dump failure.
@@ -236,6 +244,7 @@ pub fn dump_events_if_configured(
     let filename = format!("{}.json", target_name.replace("::", "__"));
     let path = std::path::Path::new(&dir).join(filename);
     let envelope = serde_json::json!({
+        "schema_version": "2",
         "target": target_name,
         "expected": expected,
         "determinism": determinism,
@@ -434,10 +443,73 @@ mod tests {
         let path = dir.join("my_crate__module__my_target.json");
         let text = std::fs::read_to_string(&path).expect("envelope written");
         let value: serde_json::Value = serde_json::from_str(&text).expect("valid json");
+        assert_eq!(value["schema_version"], "2");
         assert_eq!(value["target"], "my_crate::module::my_target");
         assert_eq!(value["expected"], "bug");
         assert_eq!(value["determinism"], "declared");
         assert_eq!(value["events"].as_array().map(|a| a.len()), Some(1));
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn dump_events_round_trips_async_variants_under_schema_version_2() {
+        let events = vec![
+            ProbeEvent::TaskSpawned {
+                task_id: 1,
+                parent_task_id: None,
+                source_location: Some("src/main.rs:10".to_string()),
+            },
+            ProbeEvent::TaskPolled {
+                task_id: 1,
+                poll_attempt_id: 0,
+            },
+            ProbeEvent::FuturePending {
+                task_id: 1,
+                future_id: Some(2),
+                poll_attempt_id: 0,
+            },
+            ProbeEvent::WakeIssued {
+                source_task_id: None,
+                target_task_id: 1,
+                waker_id: 9,
+            },
+            ProbeEvent::FutureReady {
+                task_id: 1,
+                future_id: Some(2),
+                poll_attempt_id: 1,
+            },
+            ProbeEvent::TaskCompleted { task_id: 1 },
+            ProbeEvent::CancelRequested { task_id: 2 },
+            ProbeEvent::LockAcquired {
+                thread_id: 0,
+                resource: "a".to_string(),
+            },
+        ];
+
+        let dir = std::env::temp_dir().join(format!(
+            "laplace-dump-v2-test-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        ));
+        std::env::set_var("LAPLACE_VERIFY_EVENTS_DIR", &dir);
+        dump_events_if_configured("async_target", "clean", "fully_deterministic", &events);
+        std::env::remove_var("LAPLACE_VERIFY_EVENTS_DIR");
+
+        let path = dir.join("async_target.json");
+        let text = std::fs::read_to_string(&path).expect("envelope written");
+        let value: serde_json::Value = serde_json::from_str(&text).expect("valid json");
+        assert_eq!(value["schema_version"], "2");
+
+        // Round-trip the events array back through the real enum, not just JSON.
+        let round_tripped: Vec<ProbeEvent> =
+            serde_json::from_value(value["events"].clone()).expect("events round-trip");
+        assert_eq!(round_tripped.len(), events.len());
+        assert!(matches!(round_tripped[0], ProbeEvent::TaskSpawned { .. }));
+        assert!(matches!(round_tripped[7], ProbeEvent::LockAcquired { .. }));
 
         let _ = std::fs::remove_dir_all(&dir);
     }
