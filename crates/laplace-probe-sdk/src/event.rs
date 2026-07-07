@@ -73,6 +73,26 @@ pub enum ProbeEvent {
     CancelRequested { task_id: u64 },
     /// [v2] An async task completed (ready or cancelled).
     TaskCompleted { task_id: u64 },
+    /// [v2] A task registered as a waiter on a Notify slot.
+    NotifyWaiterRegistered { notify_id: u64, task_id: u64 },
+    /// [v2] A notify call stored the single permit bit.
+    NotifyStoredPermit { notify_id: u64, bit: bool },
+    /// [v2] A notify call woke one registered waiter.
+    NotifyWakeEdge {
+        notify_id: u64,
+        source_task_id: Option<u64>,
+        target_task_id: u64,
+    },
+    /// [v2] A waiter supplied its latest waker identity.
+    NotifyLatestWaker {
+        notify_id: u64,
+        task_id: u64,
+        waker_id: u64,
+    },
+    /// [v2] A notify call was coalesced into an already-stored permit.
+    NotifyWakeCoalesced { notify_id: u64 },
+    /// [v2] A waiter returned from wait after a wake edge.
+    NotifyWaiterCompleted { notify_id: u64, task_id: u64 },
 }
 
 impl ProbeEvent {
@@ -101,6 +121,15 @@ impl ProbeEvent {
             | Self::WakeIssued { .. }
             | Self::CancelRequested { .. }
             | Self::TaskCompleted { .. } => None,
+            // [v2] Notify vocabulary carries a numeric `notify_id` identity
+            // (mirrors `laplace_sync::notify::NotifyEvent`), not a named
+            // resource — same policy as the other [v2] async variants above.
+            Self::NotifyWaiterRegistered { .. }
+            | Self::NotifyStoredPermit { .. }
+            | Self::NotifyWakeEdge { .. }
+            | Self::NotifyLatestWaker { .. }
+            | Self::NotifyWakeCoalesced { .. }
+            | Self::NotifyWaiterCompleted { .. } => None,
         }
     }
 }
