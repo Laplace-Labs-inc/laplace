@@ -31,27 +31,6 @@ pub const ATOMIC: () = ();
 #[doc(hidden)]
 pub const CHANNEL: () = ();
 
-/// Marker for an un-modeled `tokio::sync::RwLock`.
-#[deprecated(
-    note = "#[laplace::model]: `tokio::sync::RwLock` is not modeled yet (AXM2 A2-3 residue); waits here are a verification blind spot"
-)]
-#[doc(hidden)]
-pub const TOKIO_RWLOCK: () = ();
-
-/// Marker for an un-modeled `tokio::sync::Semaphore`.
-#[deprecated(
-    note = "#[laplace::model]: `tokio::sync::Semaphore` is not modeled yet (AXM2 A2-3 residue); waits here are a verification blind spot"
-)]
-#[doc(hidden)]
-pub const TOKIO_SEMAPHORE: () = ();
-
-/// Marker for an un-modeled `tokio::sync::Notify`.
-#[deprecated(
-    note = "#[laplace::model]: `tokio::sync::Notify` is not modeled yet (AXM2 A2-3 residue); waits here are a verification blind spot"
-)]
-#[doc(hidden)]
-pub const TOKIO_NOTIFY: () = ();
-
 /// Marker for an un-modeled `tokio::sync` channel (`mpsc`, `oneshot`,
 /// `watch`, or `broadcast`).
 #[deprecated(
@@ -59,3 +38,10 @@ pub const TOKIO_NOTIFY: () = ();
 )]
 #[doc(hidden)]
 pub const TOKIO_CHANNEL: () = ();
+
+/// Marker for an un-modeled `tokio::spawn` (or `tokio::task::spawn*`) task.
+#[deprecated(
+    note = "#[laplace::model]: `tokio::spawn` is not yet under deterministic executor control (AXM2 executor scope); tasks spawned here are a verification blind spot"
+)]
+#[doc(hidden)]
+pub const TOKIO_SPAWN: () = ();

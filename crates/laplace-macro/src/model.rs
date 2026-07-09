@@ -58,10 +58,8 @@ enum Unmodeled {
     Condvar,
     Atomic,
     Channel,
-    TokioRwLock,
-    TokioSemaphore,
-    TokioNotify,
     TokioChannel,
+    TokioSpawn,
 }
 
 impl Unmodeled {
@@ -71,10 +69,8 @@ impl Unmodeled {
             Unmodeled::Condvar => "CONDVAR",
             Unmodeled::Atomic => "ATOMIC",
             Unmodeled::Channel => "CHANNEL",
-            Unmodeled::TokioRwLock => "TOKIO_RWLOCK",
-            Unmodeled::TokioSemaphore => "TOKIO_SEMAPHORE",
-            Unmodeled::TokioNotify => "TOKIO_NOTIFY",
             Unmodeled::TokioChannel => "TOKIO_CHANNEL",
+            Unmodeled::TokioSpawn => "TOKIO_SPAWN",
         };
         Ident::new(name, proc_macro2::Span::call_site())
     }
@@ -227,12 +223,18 @@ fn model_path(target: &str, arguments: PathArguments, method: Option<PathSegment
 }
 
 /// The `::laplace_rt` model type name for a `tokio::sync` type, if
-/// supported. Only `Mutex` is modeled so far (AXM2 A2-3 slice 1);
-/// `RwLock`/`Semaphore`/`Notify`/channels are recognized-but-un-modeled via
-/// [`classify_tokio_sync_unmodeled`].
+/// supported. `Mutex`/`RwLock`/`Semaphore`/`Notify` are all modeled as of
+/// AXM2 A2-3 slice 2; the `tokio::sync` channel family remains
+/// recognized-but-un-modeled via [`classify_tokio_sync_unmodeled`].
 fn tokio_model_target_for(ident: &Ident) -> Option<&'static str> {
     if ident == "Mutex" {
         Some("ModelAsyncMutex")
+    } else if ident == "RwLock" {
+        Some("ModelAsyncRwLock")
+    } else if ident == "Semaphore" {
+        Some("ModelAsyncSemaphore")
+    } else if ident == "Notify" {
+        Some("ModelAsyncNotify")
     } else {
         None
     }
@@ -258,7 +260,13 @@ fn rewrite_tokio_sync_type_path(path: &Path) -> Option<Path> {
     Some(model_path(target, ty.arguments.clone(), None))
 }
 
-/// Rewrites a `tokio::sync::Mutex::new` *constructor* path.
+/// Rewrites a `tokio::sync::{Mutex,RwLock,Semaphore,Notify}::new` or
+/// `::const_new` *constructor* path.
+///
+/// Unlike the `std::sync` constructor rewriter, `const_new` is accepted here
+/// too — every tokio-side model type provides it (mirroring the real
+/// `tokio::sync` types), whereas `ModelMutex`/`ModelRwLock` (`std::sync`
+/// side) do not.
 fn rewrite_tokio_sync_constructor_path(path: &Path) -> Option<Path> {
     let segments: Vec<_> = path.segments.iter().collect();
     let [tokio, sync, ty, method] = segments.as_slice() else {
@@ -269,7 +277,7 @@ fn rewrite_tokio_sync_constructor_path(path: &Path) -> Option<Path> {
     }
     if !matches!(tokio.arguments, PathArguments::None)
         || !matches!(sync.arguments, PathArguments::None)
-        || method.ident != "new"
+        || !matches!(method.ident.to_string().as_str(), "new" | "const_new")
         || !matches!(method.arguments, PathArguments::None)
     {
         return None;
@@ -285,10 +293,11 @@ fn rewrite_tokio_sync_constructor_path(path: &Path) -> Option<Path> {
 
 /// Classifies a recognized-but-un-modeled `tokio::sync::X` primitive by its
 /// first three path segments (`tokio::sync::X`, ignoring any trailing method
-/// segment such as `::new`/`::channel`). `Mutex` is excluded here — it is
-/// modeled and handled by [`rewrite_tokio_sync_type_path`] /
-/// [`rewrite_tokio_sync_constructor_path`], which run before this
-/// classifier in [`ModelRewrite`]'s visitor methods.
+/// segment such as `::new`/`::channel`). `Mutex`/`RwLock`/`Semaphore`/
+/// `Notify` are excluded here — all four are modeled and handled by
+/// [`rewrite_tokio_sync_type_path`] / [`rewrite_tokio_sync_constructor_path`],
+/// which run before this classifier in [`ModelRewrite`]'s visitor methods.
+/// Only the `tokio::sync` channel family remains un-modeled.
 fn classify_tokio_sync_unmodeled(path: &Path) -> Option<Unmodeled> {
     let segments: Vec<_> = path.segments.iter().take(3).collect();
     let [tokio, sync, ty] = segments.as_slice() else {
@@ -303,13 +312,7 @@ fn classify_tokio_sync_unmodeled(path: &Path) -> Option<Unmodeled> {
         return None;
     }
 
-    if ty.ident == "RwLock" {
-        Some(Unmodeled::TokioRwLock)
-    } else if ty.ident == "Semaphore" {
-        Some(Unmodeled::TokioSemaphore)
-    } else if ty.ident == "Notify" {
-        Some(Unmodeled::TokioNotify)
-    } else if matches!(
+    if matches!(
         ty.ident.to_string().as_str(),
         "mpsc" | "oneshot" | "watch" | "broadcast"
     ) {
@@ -319,12 +322,49 @@ fn classify_tokio_sync_unmodeled(path: &Path) -> Option<Unmodeled> {
     }
 }
 
+/// Whether `path` is a supported `tokio::spawn`/`tokio::task::spawn*` call,
+/// by exact plain-segment match. Unqualified bare `spawn(...)` is
+/// intentionally excluded — too high a false-positive risk against an
+/// unrelated user function of the same name.
+fn is_unmodeled_tokio_spawn_path(path: &Path) -> bool {
+    let segments: Vec<_> = path
+        .segments
+        .iter()
+        .map(|segment| (&segment.ident, &segment.arguments))
+        .collect();
+
+    let all_plain = segments
+        .iter()
+        .all(|(_, arguments)| matches!(arguments, PathArguments::None));
+    if !all_plain {
+        return false;
+    }
+
+    matches!(
+        segments.as_slice(),
+        [(tokio, _), (spawn, _)] if *tokio == "tokio" && *spawn == "spawn"
+    ) || matches!(
+        segments.as_slice(),
+        [(tokio, _), (task, _), (method, _)]
+            if *tokio == "tokio"
+                && *task == "task"
+                && matches!(
+                    method.to_string().as_str(),
+                    "spawn" | "spawn_blocking" | "spawn_local"
+                )
+    )
+}
+
 /// Classifies a recognized-but-un-modeled concurrency primitive by its path
-/// segments. Modeled primitives (Mutex/RwLock/spawn/`tokio::sync::Mutex`)
-/// return `None` and are handled by the rewriters above.
+/// segments. Modeled primitives (`Mutex`/`RwLock`/`spawn`/
+/// `tokio::sync::{Mutex,RwLock,Semaphore,Notify}`) return `None` and are
+/// handled by the rewriters above.
 fn classify_unmodeled(path: &Path) -> Option<Unmodeled> {
     if let Some(primitive) = classify_tokio_sync_unmodeled(path) {
         return Some(primitive);
+    }
+    if is_unmodeled_tokio_spawn_path(path) {
+        return Some(Unmodeled::TokioSpawn);
     }
 
     let has = |name: &str| path.segments.iter().any(|segment| segment.ident == name);
@@ -460,22 +500,73 @@ mod tests {
     }
 
     #[test]
-    fn rewrite_injects_blind_spot_marker_for_unmodeled_tokio_rwlock() {
-        let out = rewrite_to_string("fn f() { let r = tokio::sync::RwLock::new(0); }");
-        assert!(
-            out.contains("laplace_sdk")
-                && out.contains("unmodeled")
-                && out.contains("TOKIO_RWLOCK"),
-            "tokio rwlock blind-spot marker missing: {out}"
+    fn rewrite_maps_qualified_tokio_sync_rwlock_semaphore_notify() {
+        let out = rewrite_to_string(
+            "fn f() { \
+                let r: tokio::sync::RwLock<u8> = tokio::sync::RwLock::new(0); \
+                let s: tokio::sync::Semaphore = tokio::sync::Semaphore::new(1); \
+                let n: tokio::sync::Notify = tokio::sync::Notify::new(); \
+            }",
         );
+        assert!(
+            out.contains("ModelAsyncRwLock"),
+            "tokio rwlock rewrite missing: {out}"
+        );
+        assert!(
+            out.contains("ModelAsyncSemaphore"),
+            "tokio semaphore rewrite missing: {out}"
+        );
+        assert!(
+            out.contains("ModelAsyncNotify"),
+            "tokio notify rewrite missing: {out}"
+        );
+        // All four tokio::sync lock-family primitives are modeled now — no
+        // blind-spot marker injected.
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
     }
 
     #[test]
-    fn rewrite_does_not_mark_tokio_sync_mutex_as_unmodeled() {
-        let out = rewrite_to_string("fn f() { let m = tokio::sync::Mutex::new(0); }");
+    fn rewrite_maps_qualified_tokio_sync_const_new_constructors() {
+        let out = rewrite_to_string(
+            "fn f() { \
+                static M: tokio::sync::Mutex<u8> = tokio::sync::Mutex::const_new(0); \
+                static R: tokio::sync::RwLock<u8> = tokio::sync::RwLock::const_new(0); \
+                static S: tokio::sync::Semaphore = tokio::sync::Semaphore::const_new(1); \
+                static N: tokio::sync::Notify = tokio::sync::Notify::const_new(); \
+            }",
+        );
+        assert!(
+            out.contains("ModelAsyncMutex") && out.contains("const_new"),
+            "tokio mutex const_new rewrite missing: {out}"
+        );
+        assert!(
+            out.contains("ModelAsyncRwLock"),
+            "tokio rwlock const_new rewrite missing: {out}"
+        );
+        assert!(
+            out.contains("ModelAsyncSemaphore"),
+            "tokio semaphore const_new rewrite missing: {out}"
+        );
+        assert!(
+            out.contains("ModelAsyncNotify"),
+            "tokio notify const_new rewrite missing: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_does_not_mark_tokio_sync_mutex_family_as_unmodeled() {
+        let out = rewrite_to_string(
+            "fn f() { \
+                let m = tokio::sync::Mutex::new(0); \
+                let r = tokio::sync::RwLock::new(0); \
+                let s = tokio::sync::Semaphore::new(1); \
+                let n = tokio::sync::Notify::new(); \
+            }",
+        );
         assert!(
             !out.contains("TOKIO_") && !out.contains("unmodeled"),
-            "tokio::sync::Mutex must not be flagged as un-modeled: {out}"
+            "tokio::sync lock-family types must not be flagged as un-modeled: {out}"
         );
     }
 
@@ -487,6 +578,40 @@ mod tests {
                 && out.contains("unmodeled")
                 && out.contains("TOKIO_CHANNEL"),
             "tokio channel blind-spot marker missing: {out}"
+        );
+    }
+
+    #[test]
+    fn classify_flags_tokio_spawn_and_task_spawn_variants() {
+        assert_eq!(classify("tokio::spawn"), Some(Unmodeled::TokioSpawn));
+        assert_eq!(classify("tokio::task::spawn"), Some(Unmodeled::TokioSpawn));
+        assert_eq!(
+            classify("tokio::task::spawn_blocking"),
+            Some(Unmodeled::TokioSpawn)
+        );
+        assert_eq!(
+            classify("tokio::task::spawn_local"),
+            Some(Unmodeled::TokioSpawn)
+        );
+        // Bare unqualified `spawn` is excluded (false-positive risk).
+        assert_eq!(classify("spawn"), None);
+    }
+
+    #[test]
+    fn rewrite_injects_blind_spot_marker_for_unmodeled_tokio_spawn() {
+        let out = rewrite_to_string(
+            "fn f() { tokio::spawn(async {}); tokio::task::spawn_blocking(|| {}); }",
+        );
+        assert!(
+            out.contains("laplace_sdk") && out.contains("unmodeled") && out.contains("TOKIO_SPAWN"),
+            "tokio spawn blind-spot marker missing: {out}"
+        );
+        // Deduplicated via the BTreeSet: exactly one TOKIO_SPAWN marker for
+        // two distinct spawn call sites.
+        assert_eq!(
+            out.matches("TOKIO_SPAWN").count(),
+            1,
+            "expected one marker: {out}"
         );
     }
 }

@@ -24,12 +24,15 @@
 //! annotated source are flagged as un-modeled blind spots via
 //! [`unmodeled`] rather than silently passing.
 //!
-//! AXM2 A2-3 adds the async side of this seam: [`async_mutex`] rewrites
-//! qualified `tokio::sync::Mutex` to a wrap-real [`ModelAsyncMutex`], see
-//! that module's honesty contract for what is and is not observable through
-//! it. `tokio::sync::RwLock`/`Semaphore`/`Notify` and the `tokio::sync`
-//! channel family are recognized-but-un-modeled for now and flagged via
-//! [`unmodeled`], same as their `std::sync`/`mpsc` counterparts.
+//! AXM2 A2-3 adds the async side of this seam: [`async_mutex`],
+//! [`async_rwlock`], and [`async_semaphore`] rewrite qualified
+//! `tokio::sync::{Mutex,RwLock,Semaphore}` to wrap-real model types, and
+//! [`async_notify`] provides a `tokio::sync::Notify`-compatible model type —
+//! see each module's honesty contract for what is and is not observable
+//! through it. The `tokio::sync` channel family (`mpsc`/`oneshot`/`watch`/
+//! `broadcast`) remains recognized-but-un-modeled and flagged via
+//! [`unmodeled`], same as `std::sync::mpsc`; `tokio::spawn` is also flagged
+//! as un-modeled (the deterministic executor does not yet control it).
 //!
 //! ## Module layout
 //!
@@ -38,9 +41,15 @@
 //! - [`mutex`] — [`ModelMutex`].
 //! - [`rwlock`] — [`ModelRwLock`].
 //! - [`async_mutex`] — [`ModelAsyncMutex`], the `tokio::sync::Mutex` seam.
+//! - [`async_rwlock`] — [`ModelAsyncRwLock`], the `tokio::sync::RwLock` seam.
+//! - [`async_semaphore`] — [`ModelAsyncSemaphore`], the `tokio::sync::Semaphore` seam.
+//! - [`async_notify`] — [`ModelAsyncNotify`], the `tokio::sync::Notify` seam.
 //! - [`unmodeled`] — compile-time blind-spot markers.
 
 mod async_mutex;
+mod async_notify;
+mod async_rwlock;
+mod async_semaphore;
 mod hooks;
 mod mutex;
 mod rwlock;
@@ -48,10 +57,17 @@ mod spawn;
 pub mod unmodeled;
 
 pub use async_mutex::{ModelAsyncLock, ModelAsyncMutex, ModelAsyncMutexGuard};
+pub use async_notify::{ModelAsyncNotify, ModelNotified};
+pub use async_rwlock::{
+    ModelAsyncRead, ModelAsyncRwLock, ModelAsyncRwLockReadGuard, ModelAsyncRwLockWriteGuard,
+    ModelAsyncWrite,
+};
+pub use async_semaphore::{ModelAsyncSemaphore, ModelSemaphoreAcquire, ModelSemaphorePermit};
 pub use hooks::{
-    clear_async_lock_hook, clear_lock_hook, clear_spawn_hook, install_async_lock_hook,
-    install_lock_hook, install_spawn_hook, reset_model_async_mutex_ids_for_model,
-    reset_model_mutex_ids_for_model, AsyncLockHook, LockHook, SpawnHook,
+    clear_async_lock_hook, clear_async_notify_hook, clear_lock_hook, clear_spawn_hook,
+    install_async_lock_hook, install_async_notify_hook, install_lock_hook, install_spawn_hook,
+    reset_model_async_ids_for_model, reset_model_mutex_ids_for_model, AsyncAcquireKind,
+    AsyncLockHook, AsyncNotifyHook, LockHook, SpawnHook,
 };
 pub use mutex::{ModelMutex, ModelMutexGuard};
 pub use rwlock::{ModelRwLock, ModelRwLockReadGuard, ModelRwLockWriteGuard};

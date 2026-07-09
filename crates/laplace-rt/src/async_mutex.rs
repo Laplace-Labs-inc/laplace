@@ -28,21 +28,33 @@ use std::ops::{Deref, DerefMut};
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use crate::hooks::{async_lock_hook, next_async_lock_resource_id, next_async_lock_waiter_id};
+use crate::hooks::{async_lock_hook, next_async_lock_waiter_id, AsyncAcquireKind, AsyncResourceId};
 
 /// `tokio::sync::Mutex<T>` compatible model async mutex for annotated code.
 pub struct ModelAsyncMutex<T: ?Sized> {
-    resource: u64,
+    resource: AsyncResourceId,
     inner: tokio::sync::Mutex<T>,
 }
 
 impl<T> ModelAsyncMutex<T> {
     /// Creates a new model async mutex with a distinct process-local
-    /// resource id.
+    /// resource id, allocated immediately.
     pub fn new(t: T) -> Self {
         Self {
-            resource: next_async_lock_resource_id(),
+            resource: AsyncResourceId::new_eager(),
             inner: tokio::sync::Mutex::new(t),
+        }
+    }
+
+    /// Creates a new model async mutex in a `const` context.
+    ///
+    /// Mirrors `tokio::sync::Mutex::const_new`. The resource id is not
+    /// allocated until this mutex's first observed hook boundary (`static`
+    /// storage cannot run a resource-id allocator at compile time).
+    pub const fn const_new(t: T) -> Self {
+        Self {
+            resource: AsyncResourceId::new_lazy(),
+            inner: tokio::sync::Mutex::const_new(t),
         }
     }
 
@@ -71,7 +83,7 @@ impl<T: ?Sized + Send> ModelAsyncMutex<T> {
     /// (Send-parity, asserted by the fidelity gate).
     pub fn lock(&self) -> ModelAsyncLock<'_, T> {
         ModelAsyncLock {
-            resource: self.resource,
+            resource: self.resource.get(),
             waiter: next_async_lock_waiter_id(),
             inner: Box::pin(self.inner.lock()),
             requested_emitted: false,
@@ -95,12 +107,15 @@ impl<T: ?Sized> ModelAsyncMutex<T> {
     /// Returns [`tokio::sync::TryLockError`] if the lock is already held.
     pub fn try_lock(&self) -> Result<ModelAsyncMutexGuard<'_, T>, tokio::sync::TryLockError> {
         let inner = self.inner.try_lock()?;
+        let resource = self.resource.get();
+        let waiter = next_async_lock_waiter_id();
         if let Some(hook) = async_lock_hook() {
-            hook.acquired(self.resource, next_async_lock_waiter_id());
+            hook.acquired(resource, waiter, AsyncAcquireKind::Mutex);
         }
         Ok(ModelAsyncMutexGuard {
-            inner: Some(inner),
-            resource: self.resource,
+            inner,
+            resource,
+            waiter,
         })
     }
 
@@ -137,7 +152,7 @@ impl<'a, T: ?Sized> Future for ModelAsyncLock<'a, T> {
                 if !self.requested_emitted {
                     self.requested_emitted = true;
                     if let Some(hook) = async_lock_hook() {
-                        hook.requested(self.resource, self.waiter);
+                        hook.requested(self.resource, self.waiter, AsyncAcquireKind::Mutex);
                     }
                 }
                 Poll::Pending
@@ -145,11 +160,12 @@ impl<'a, T: ?Sized> Future for ModelAsyncLock<'a, T> {
             Poll::Ready(inner) => {
                 self.acquired = true;
                 if let Some(hook) = async_lock_hook() {
-                    hook.acquired(self.resource, self.waiter);
+                    hook.acquired(self.resource, self.waiter, AsyncAcquireKind::Mutex);
                 }
                 Poll::Ready(ModelAsyncMutexGuard {
-                    inner: Some(inner),
+                    inner,
                     resource: self.resource,
+                    waiter: self.waiter,
                 })
             }
         }
@@ -169,34 +185,29 @@ impl<T: ?Sized> Drop for ModelAsyncLock<'_, T> {
 /// Guard returned by a resolved [`ModelAsyncLock`] or by
 /// [`ModelAsyncMutex::try_lock`].
 pub struct ModelAsyncMutexGuard<'a, T: ?Sized> {
-    inner: Option<tokio::sync::MutexGuard<'a, T>>,
+    inner: tokio::sync::MutexGuard<'a, T>,
     resource: u64,
+    waiter: u64,
 }
 
 impl<T: ?Sized> Deref for ModelAsyncMutexGuard<'_, T> {
     type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.inner
-            .as_deref()
-            .expect("model async mutex guard is present")
+        &self.inner
     }
 }
 
 impl<T: ?Sized> DerefMut for ModelAsyncMutexGuard<'_, T> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        self.inner
-            .as_deref_mut()
-            .expect("model async mutex guard is present")
+        &mut self.inner
     }
 }
 
 impl<T: ?Sized> Drop for ModelAsyncMutexGuard<'_, T> {
     fn drop(&mut self) {
-        if self.inner.is_some() {
-            if let Some(hook) = async_lock_hook() {
-                hook.released(self.resource);
-            }
+        if let Some(hook) = async_lock_hook() {
+            hook.released(self.resource, self.waiter, AsyncAcquireKind::Mutex);
         }
     }
 }

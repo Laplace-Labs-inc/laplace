@@ -14,6 +14,10 @@ static SPAWN_HOOK: OnceLock<StdMutex<Option<Arc<dyn SpawnHook>>>> = OnceLock::ne
 static LOCK_HOOK: OnceLock<StdMutex<Option<Arc<dyn LockHook>>>> = OnceLock::new();
 static NEXT_LOCK_RESOURCE_ID: AtomicU64 = AtomicU64::new(1);
 static ASYNC_LOCK_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncLockHook>>>> = OnceLock::new();
+static ASYNC_NOTIFY_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncNotifyHook>>>> = OnceLock::new();
+/// Shared across all four async lock-family primitives (Mutex, `RwLock`,
+/// Semaphore, Notify) so resource ids never collide across the family, even
+/// when several are mixed in one model run.
 static NEXT_ASYNC_LOCK_RESOURCE_ID: AtomicU64 = AtomicU64::new(1);
 static NEXT_ASYNC_LOCK_WAITER_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -32,25 +36,71 @@ pub trait LockHook: Send + Sync {
     fn release(&self, resource: u64);
 }
 
-/// Engine- or probe-installed surface for model async mutex boundaries.
+/// Acquisition mode for an async lock-family boundary.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AsyncAcquireKind {
+    /// [`crate::ModelAsyncMutex::lock`]/`try_lock`.
+    Mutex,
+    /// [`crate::ModelAsyncRwLock::read`]/`try_read`.
+    RwRead,
+    /// [`crate::ModelAsyncRwLock::write`]/`try_write`.
+    RwWrite,
+    /// `n` permits (`acquire`/`try_acquire` = 1, `acquire_many`/
+    /// `try_acquire_many(n)` = `n`).
+    SemaphorePermits(u32),
+}
+
+/// Engine- or probe-installed surface for model async lock-family boundaries.
 ///
-/// Mirrors [`LockHook`] but for the `tokio::sync::Mutex`-compatible async seam
-/// ([`crate::ModelAsyncMutex`]), which additionally distinguishes a queued
-/// waiter (a live, unpolled `lock()` future) from an acquired guard.
+/// Mirrors [`LockHook`] but for the `tokio::sync::{Mutex,RwLock,Semaphore}`-
+/// compatible async seam ([`crate::ModelAsyncMutex`], [`crate::ModelAsyncRwLock`],
+/// [`crate::ModelAsyncSemaphore`]), which additionally distinguishes a queued
+/// waiter (a live, unpolled acquisition future) from an acquired guard/permit,
+/// and an acquisition's mode via [`AsyncAcquireKind`].
+/// [`crate::ModelAsyncNotify`] is a distinct wait/wake vocabulary, not an
+/// acquisition — see [`AsyncNotifyHook`].
 pub trait AsyncLockHook: Send + Sync {
-    /// Reports that a `lock()` future's first poll found contention and
-    /// queued behind the current holder.
-    fn requested(&self, resource: u64, waiter: u64);
+    /// Reports that an acquisition future's first poll found contention and
+    /// queued behind the current holder(s).
+    fn requested(&self, resource: u64, waiter: u64, kind: AsyncAcquireKind);
 
-    /// Reports a guard acquisition, either immediately (uncontended) or by
-    /// resolving a previously queued waiter.
-    fn acquired(&self, resource: u64, waiter: u64);
+    /// Reports a guard/permit acquisition, either immediately (uncontended)
+    /// or by resolving a previously queued waiter.
+    fn acquired(&self, resource: u64, waiter: u64, kind: AsyncAcquireKind);
 
-    /// Reports a model async mutex release boundary.
-    fn released(&self, resource: u64);
+    /// Reports a model async lock-family release boundary.
+    fn released(&self, resource: u64, waiter: u64, kind: AsyncAcquireKind);
 
-    /// Reports that a queued-but-unacquired `lock()` future was dropped
+    /// Reports that a queued-but-unacquired acquisition future was dropped
     /// (cancelled) before it resolved.
+    fn waiter_dropped(&self, resource: u64, waiter: u64);
+
+    /// Reported once per semaphore, lazily at its first observed boundary,
+    /// before that boundary's event — carries the initial permit capacity.
+    fn semaphore_created(&self, resource: u64, permits: usize);
+
+    /// `Semaphore::add_permits(n)` capacity increase.
+    fn permits_added(&self, resource: u64, n: usize);
+}
+
+/// Engine- or probe-installed surface for [`crate::ModelAsyncNotify`]
+/// wait/wake boundaries.
+pub trait AsyncNotifyHook: Send + Sync {
+    /// `notified()` future's first poll found no stored permit and queued.
+    fn wait_requested(&self, resource: u64, waiter: u64);
+
+    /// `notified()` future resolved (immediately via a stored permit, or by
+    /// a wake).
+    fn wait_resolved(&self, resource: u64, waiter: u64);
+
+    /// `notify_one()` boundary.
+    fn notify_one(&self, resource: u64);
+
+    /// `notify_waiters()` boundary.
+    fn notify_waiters(&self, resource: u64);
+
+    /// Reports that a queued-but-unresolved `notified()` future was dropped
+    /// before it resolved.
     fn waiter_dropped(&self, resource: u64, waiter: u64);
 }
 
@@ -150,25 +200,103 @@ pub(crate) fn async_lock_hook() -> Option<Arc<dyn AsyncLockHook>> {
         .and_then(|slot| slot.lock().expect("async lock hook lock poisoned").clone())
 }
 
-/// Resets deterministic model async mutex resource-id and waiter-id
+/// Installs or replaces the process-local async notify hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn install_async_notify_hook(hook: Arc<dyn AsyncNotifyHook>) {
+    let slot = ASYNC_NOTIFY_HOOK.get_or_init(|| StdMutex::new(None));
+    *slot.lock().expect("async notify hook lock poisoned") = Some(hook);
+}
+
+/// Clears the process-local async notify hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn clear_async_notify_hook() {
+    if let Some(slot) = ASYNC_NOTIFY_HOOK.get() {
+        *slot.lock().expect("async notify hook lock poisoned") = None;
+    }
+}
+
+pub(crate) fn async_notify_hook() -> Option<Arc<dyn AsyncNotifyHook>> {
+    ASYNC_NOTIFY_HOOK.get().and_then(|slot| {
+        slot.lock()
+            .expect("async notify hook lock poisoned")
+            .clone()
+    })
+}
+
+/// Resets deterministic model async lock-family resource-id and waiter-id
 /// allocation for controlled re-execution.
 ///
 /// This is separate from hook installation so free-tier code keeps
 /// process-wide distinct resource/waiter ids, while the private engine can
-/// make each reset replay the same resource/waiter shape.
+/// make each reset replay the same resource/waiter shape. Shared by all four
+/// async primitives (Mutex, RwLock, Semaphore, Notify) since they share one
+/// id space.
 #[doc(hidden)]
-pub fn reset_model_async_mutex_ids_for_model() {
+pub fn reset_model_async_ids_for_model() {
     NEXT_ASYNC_LOCK_RESOURCE_ID.store(1, Ordering::SeqCst);
     NEXT_ASYNC_LOCK_WAITER_ID.store(1, Ordering::SeqCst);
 }
 
-/// Allocates the next distinct process-local model async lock resource id.
+/// Allocates the next distinct process-local model async lock-family resource
+/// id.
 pub(crate) fn next_async_lock_resource_id() -> u64 {
     NEXT_ASYNC_LOCK_RESOURCE_ID.fetch_add(1, Ordering::SeqCst)
 }
 
-/// Allocates the next distinct process-local model async lock waiter id, one
-/// per `lock()` future call (not per task — see [`crate::ModelAsyncLock`]).
+/// Allocates the next distinct process-local model async lock-family waiter
+/// id, one per acquisition-future call (not per task — see
+/// [`crate::ModelAsyncLock`]).
 pub(crate) fn next_async_lock_waiter_id() -> u64 {
     NEXT_ASYNC_LOCK_WAITER_ID.fetch_add(1, Ordering::SeqCst)
+}
+
+/// Lazily-assigned resource id for `const fn` constructors (`const_new`).
+///
+/// `0` is the unassigned sentinel; real ids run from 1 (mirrors
+/// [`next_async_lock_resource_id`]). Assignment happens on first
+/// [`AsyncResourceId::get`] call rather than at construction, so this type
+/// itself can be built in a `const` context.
+pub(crate) struct AsyncResourceId(AtomicU64);
+
+impl AsyncResourceId {
+    /// Allocates a resource id immediately (mirrors the existing eager
+    /// constructors' behavior — `new`, not `const_new`).
+    pub(crate) fn new_eager() -> Self {
+        Self(AtomicU64::new(next_async_lock_resource_id()))
+    }
+
+    /// Defers allocation until the first [`AsyncResourceId::get`] call, so
+    /// `const fn` constructors can build this at compile time.
+    pub(crate) const fn new_lazy() -> Self {
+        Self(AtomicU64::new(0))
+    }
+
+    /// Returns this resource's id, allocating it on first use.
+    ///
+    /// Concurrent first calls on free-tier (multi-threaded, no engine hook)
+    /// code may race: both see the unassigned sentinel and both allocate an
+    /// id, but only one wins the `compare_exchange` and the loser adopts the
+    /// winner's id. One id number leaking unused is harmless; the
+    /// deterministic engine drives model runs single-threaded, so this race
+    /// never occurs there.
+    pub(crate) fn get(&self) -> u64 {
+        let current = self.0.load(Ordering::SeqCst);
+        if current != 0 {
+            return current;
+        }
+        let allocated = next_async_lock_resource_id();
+        match self
+            .0
+            .compare_exchange(0, allocated, Ordering::SeqCst, Ordering::SeqCst)
+        {
+            Ok(_) => allocated,
+            Err(existing) => existing,
+        }
+    }
 }

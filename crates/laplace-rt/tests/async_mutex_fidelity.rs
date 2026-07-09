@@ -31,8 +31,8 @@ use std::task::{Context, Poll, Waker};
 use std::time::Duration;
 
 use laplace_rt::{
-    clear_async_lock_hook, install_async_lock_hook, reset_model_async_mutex_ids_for_model,
-    AsyncLockHook, ModelAsyncMutex,
+    clear_async_lock_hook, install_async_lock_hook, reset_model_async_ids_for_model,
+    AsyncAcquireKind, AsyncLockHook, ModelAsyncMutex,
 };
 
 /// Serializes every test in this file. [`AsyncLockHook`] installation and
@@ -254,12 +254,16 @@ async fn s5_dropping_the_reserved_waiter_unblocks_matches() {
     scenario!(ModelAsyncMutex::new(0_u64));
 }
 
-/// Test-local [`AsyncLockHook`] that records every boundary as
-/// `(kind, resource, waiter)`. `released` carries no waiter id upstream
-/// ([`AsyncLockHook::released`] only takes `resource`), so it is recorded
-/// with a `0` placeholder in the waiter slot.
+/// `(kind, resource, waiter, acquire_kind)`. `requested`/`acquired`/
+/// `released` carry a real [`AsyncAcquireKind`]; `waiter_dropped` carries
+/// `None`.
+type RecordedEvent = (&'static str, u64, u64, Option<AsyncAcquireKind>);
+
+/// Test-local [`AsyncLockHook`] that records every boundary as a
+/// [`RecordedEvent`]. `semaphore_created`/`permits_added` are unreachable
+/// here — this file never touches a semaphore.
 struct RecordingAsyncLockHook {
-    events: StdMutex<Vec<(&'static str, u64, u64)>>,
+    events: StdMutex<Vec<RecordedEvent>>,
 }
 
 impl RecordingAsyncLockHook {
@@ -271,38 +275,46 @@ impl RecordingAsyncLockHook {
 
     /// Returns the events recorded so far and clears the buffer, so each
     /// scenario shape below asserts only its own events.
-    fn drain(&self) -> Vec<(&'static str, u64, u64)> {
+    fn drain(&self) -> Vec<RecordedEvent> {
         std::mem::take(&mut *self.events.lock().expect("events lock"))
     }
 }
 
 impl AsyncLockHook for RecordingAsyncLockHook {
-    fn requested(&self, resource: u64, waiter: u64) {
+    fn requested(&self, resource: u64, waiter: u64, kind: AsyncAcquireKind) {
         self.events
             .lock()
             .expect("events lock")
-            .push(("requested", resource, waiter));
+            .push(("requested", resource, waiter, Some(kind)));
     }
 
-    fn acquired(&self, resource: u64, waiter: u64) {
+    fn acquired(&self, resource: u64, waiter: u64, kind: AsyncAcquireKind) {
         self.events
             .lock()
             .expect("events lock")
-            .push(("acquired", resource, waiter));
+            .push(("acquired", resource, waiter, Some(kind)));
     }
 
-    fn released(&self, resource: u64) {
+    fn released(&self, resource: u64, waiter: u64, kind: AsyncAcquireKind) {
         self.events
             .lock()
             .expect("events lock")
-            .push(("released", resource, 0));
+            .push(("released", resource, waiter, Some(kind)));
     }
 
     fn waiter_dropped(&self, resource: u64, waiter: u64) {
         self.events
             .lock()
             .expect("events lock")
-            .push(("waiter_dropped", resource, waiter));
+            .push(("waiter_dropped", resource, waiter, None));
+    }
+
+    fn semaphore_created(&self, _resource: u64, _permits: usize) {
+        unreachable!("Mutex-only fidelity scenarios never touch a semaphore")
+    }
+
+    fn permits_added(&self, _resource: u64, _n: usize) {
+        unreachable!("Mutex-only fidelity scenarios never touch a semaphore")
     }
 }
 
@@ -321,7 +333,7 @@ async fn s6_event_stream_matches_expected_sequence() {
 
     // S1 shape: a single uncontended lock + release — no `requested` event,
     // since the first poll never sees contention.
-    reset_model_async_mutex_ids_for_model();
+    reset_model_async_ids_for_model();
     {
         let m = ModelAsyncMutex::new(0_u64);
         let mut f0 = Box::pin(m.lock());
@@ -333,12 +345,15 @@ async fn s6_event_stream_matches_expected_sequence() {
     }
     assert_eq!(
         hook.drain(),
-        vec![("acquired", 1, 1), ("released", 1, 0)],
+        vec![
+            ("acquired", 1, 1, Some(AsyncAcquireKind::Mutex)),
+            ("released", 1, 1, Some(AsyncAcquireKind::Mutex)),
+        ],
         "s6/s1 shape event sequence mismatch"
     );
 
     // S2 shape: FIFO handoff, draining all three guards through to release.
-    reset_model_async_mutex_ids_for_model();
+    reset_model_async_ids_for_model();
     {
         let m = ModelAsyncMutex::new(0_u64);
 
@@ -374,21 +389,21 @@ async fn s6_event_stream_matches_expected_sequence() {
     assert_eq!(
         hook.drain(),
         vec![
-            ("acquired", 1, 1),
-            ("requested", 1, 2),
-            ("requested", 1, 3),
-            ("released", 1, 0),
-            ("acquired", 1, 2),
-            ("released", 1, 0),
-            ("acquired", 1, 3),
-            ("released", 1, 0),
+            ("acquired", 1, 1, Some(AsyncAcquireKind::Mutex)),
+            ("requested", 1, 2, Some(AsyncAcquireKind::Mutex)),
+            ("requested", 1, 3, Some(AsyncAcquireKind::Mutex)),
+            ("released", 1, 1, Some(AsyncAcquireKind::Mutex)),
+            ("acquired", 1, 2, Some(AsyncAcquireKind::Mutex)),
+            ("released", 1, 2, Some(AsyncAcquireKind::Mutex)),
+            ("acquired", 1, 3, Some(AsyncAcquireKind::Mutex)),
+            ("released", 1, 3, Some(AsyncAcquireKind::Mutex)),
         ],
         "s6/s2 shape event sequence mismatch"
     );
 
     // S3 shape: cancellation succession — f1 is dropped while reserved (but
     // un-polled), and f2 must still resolve.
-    reset_model_async_mutex_ids_for_model();
+    reset_model_async_ids_for_model();
     {
         let m = ModelAsyncMutex::new(0_u64);
 
@@ -415,11 +430,11 @@ async fn s6_event_stream_matches_expected_sequence() {
     }
     let s3_events = hook.drain();
     assert!(
-        s3_events.contains(&("waiter_dropped", 1, 2)),
+        s3_events.contains(&("waiter_dropped", 1, 2, None)),
         "s6/s3 shape missing waiter_dropped(w1): {s3_events:?}"
     );
     assert!(
-        s3_events.contains(&("acquired", 1, 3)),
+        s3_events.contains(&("acquired", 1, 3, Some(AsyncAcquireKind::Mutex))),
         "s6/s3 shape missing acquired(w2): {s3_events:?}"
     );
 
@@ -439,4 +454,42 @@ fn s7_send_parity_with_raw_tokio() {
     require_send::<ModelAsyncMutex<u64>>();
     require_send::<laplace_rt::ModelAsyncLock<'static, u64>>();
     require_send::<laplace_rt::ModelAsyncMutexGuard<'static, u64>>();
+}
+
+/// `const_new` behavioral parity: a `static` built with `const_new` must
+/// compile (proving the lazy-id constructor is usable in a `const` context,
+/// unlike `new`) and behave identically to `new` under `.lock()` — and its
+/// resource id must not be allocated until the first hook-observed
+/// boundary, since `const_new` cannot run an allocator at compile time.
+#[tokio::test(flavor = "current_thread", start_paused = true)]
+async fn s8_const_new_matches_new_and_allocates_lazily() {
+    let _serial = serial();
+
+    static M: ModelAsyncMutex<u64> = ModelAsyncMutex::const_new(0);
+
+    let hook = Arc::new(RecordingAsyncLockHook::new());
+    install_async_lock_hook(hook.clone());
+    reset_model_async_ids_for_model();
+
+    let mut f0 = Box::pin(M.lock());
+    let g0 = match poll_once(f0.as_mut()) {
+        Poll::Ready(g) => g,
+        Poll::Pending => panic!("s8: const_new mutex must acquire immediately when uncontended"),
+    };
+    drop(g0);
+
+    // The lazily-allocated resource id lands on "1" (the first id after
+    // reset), exactly like an eagerly-constructed `ModelAsyncMutex::new`
+    // would get — proving allocation happened exactly once, on first use,
+    // not at `const_new` time (there is no such time to allocate at).
+    assert_eq!(
+        hook.drain(),
+        vec![
+            ("acquired", 1, 1, Some(AsyncAcquireKind::Mutex)),
+            ("released", 1, 1, Some(AsyncAcquireKind::Mutex)),
+        ],
+        "s8: const_new event sequence must match new's"
+    );
+
+    clear_async_lock_hook();
 }
