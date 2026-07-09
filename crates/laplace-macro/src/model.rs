@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: Apache-2.0
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::parse_macro_input;
+use syn::punctuated::Punctuated;
+use syn::token::PathSep;
 use syn::visit_mut::{self, VisitMut};
 use syn::{
-    parse_quote, Expr, ExprCall, Ident, ItemFn, Macro, Path, PathArguments, PathSegment, Stmt,
-    TypePath,
+    parse_quote, Expr, ExprCall, Ident, Item, ItemFn, ItemMod, Macro, Path, PathArguments,
+    PathSegment, Stmt, TypePath, UseTree,
 };
 
+/// `#[laplace::model]`'s dispatch over the annotated item kind: a plain `fn`
+/// (the original P-1 surface) or an inline `mod { ... }` (AXM2 A2-5 — a
+/// proc-macro attached to a module sees that module's own top-level `use`
+/// items, so annotating the module instead of each `fn` unlocks the
+/// dominant crates.io alias style — `use tokio::sync::mpsc;` +
+/// `mpsc::channel(1)` — for every `fn` it contains).
 pub fn model_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
     let attr = proc_macro2::TokenStream::from(attr);
     if !attr.is_empty() {
@@ -22,20 +29,108 @@ pub fn model_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
         .into();
     }
 
-    let mut input = parse_macro_input!(item as ItemFn);
-    apply_model_rewrite(&mut input);
-    quote!(#input).into()
+    let parsed = match syn::parse::<Item>(item) {
+        Ok(parsed) => parsed,
+        Err(err) => return err.to_compile_error().into(),
+    };
+
+    match parsed {
+        Item::Fn(mut func) => {
+            apply_model_rewrite(&mut func);
+            quote!(#func).into()
+        }
+        Item::Mod(mut item_mod) => match apply_model_rewrite_to_annotated_mod(&mut item_mod) {
+            Ok(()) => quote!(#item_mod).into(),
+            Err(err) => err.to_compile_error().into(),
+        },
+        other => syn::Error::new_spanned(
+            &other,
+            "`#[laplace::model]` only supports a `fn` or an inline `mod { ... }`; annotate a \
+             function directly, or annotate an inline module so its `use` imports are visible \
+             to the rewrite",
+        )
+        .to_compile_error()
+        .into(),
+    }
 }
 
 /// Applies the shared model rewrite (spawn/Mutex/RwLock routing) and injects
 /// un-modeled-primitive markers, in one pass, into an annotated function.
 ///
 /// `#[laplace::model]` and `#[laplace::verify]` share this so a single
-/// attribute performs the full rewrite before any harness is emitted.
+/// attribute performs the full rewrite before any harness is emitted. No
+/// enclosing `use`-import alias scope is available here (a bare `fn`
+/// annotation only ever sees its own body) — see
+/// [`apply_model_rewrite_with_base_aliases`] for the `mod`-annotated path
+/// that threads an enclosing scope's alias table in.
 pub(crate) fn apply_model_rewrite(func: &mut ItemFn) {
-    let mut rewrite = ModelRewrite::default();
+    apply_model_rewrite_with_base_aliases(func, &BTreeMap::new());
+}
+
+/// [`apply_model_rewrite`], but merging `base_aliases` (the alias table
+/// resolved from an enclosing `#[laplace::model] mod { ... }`'s own `use`
+/// items, if any) with this function's own body-local `use` items before
+/// the rewrite pass — a `fn`-local alias of the same binding name shadows
+/// the enclosing module's.
+fn apply_model_rewrite_with_base_aliases(
+    func: &mut ItemFn,
+    base_aliases: &BTreeMap<String, Vec<Ident>>,
+) {
+    let aliases = merge_aliases(base_aliases, &scan_use_aliases_stmts(&func.block.stmts));
+    let mut rewrite = ModelRewrite {
+        aliases,
+        ..ModelRewrite::default()
+    };
     rewrite.visit_item_fn_mut(func);
     rewrite.inject_unmodeled_markers(func);
+}
+
+/// Applies the model rewrite to every `fn` inside an annotated inline
+/// `mod { ... }`, transitively across nested inline modules, threading each
+/// scope's own top-level `use` items into the alias table available to its
+/// contents.
+///
+/// Rejects an out-of-line `mod foo;`: a proc-macro attribute only ever
+/// receives the tokens of the item it is attached to, so `mod foo;`'s
+/// `use` imports (and its `fn` bodies, in `foo.rs`) are not visible here —
+/// silently accepting it would mean silently *not* rewriting anything in
+/// that file, which is the false-green shape this crate treats as a bug.
+fn apply_model_rewrite_to_annotated_mod(item_mod: &mut ItemMod) -> syn::Result<()> {
+    let Some((_, items)) = &mut item_mod.content else {
+        return Err(syn::Error::new_spanned(
+            &item_mod.ident,
+            "`#[laplace::model]` cannot see the contents of an out-of-line `mod foo;` (a \
+             proc-macro only receives the annotated item's own tokens); annotate an inline \
+             module (`mod foo { ... }`) or annotate the `fn` directly",
+        ));
+    };
+    apply_model_rewrite_to_items(items, &BTreeMap::new());
+    Ok(())
+}
+
+/// Recurses into `items` (an inline module's contents), merging
+/// `base_aliases` (the enclosing scope's resolved alias table) with this
+/// scope's own top-level `use` items to build the alias table available to
+/// every `fn` and nested inline `mod` here. A nested scope's `use` of the
+/// same binding name shadows the enclosing one's; everything else the
+/// enclosing scope resolved is inherited.
+///
+/// A nested out-of-line `mod foo;` is left untouched — same visibility
+/// limit as the top-level annotated-item case, but not rejected here (only
+/// the item `#[laplace::model]` is directly attached to must be inline).
+fn apply_model_rewrite_to_items(items: &mut [Item], base_aliases: &BTreeMap<String, Vec<Ident>>) {
+    let scope_aliases = merge_aliases(base_aliases, &scan_use_aliases_items(items));
+    for item in items.iter_mut() {
+        match item {
+            Item::Fn(func) => apply_model_rewrite_with_base_aliases(func, &scope_aliases),
+            Item::Mod(inner_mod) => {
+                if let Some((_, inner_items)) = &mut inner_mod.content {
+                    apply_model_rewrite_to_items(inner_items, &scope_aliases);
+                }
+            }
+            _ => {}
+        }
+    }
 }
 
 /// `std`-qualified concurrency primitive rewriter shared by `#[laplace::model]`
@@ -50,9 +145,60 @@ pub(crate) fn apply_model_rewrite(func: &mut ItemFn) {
 /// (`Condvar`, `atomic`, `std::sync::mpsc`, `tokio::spawn`, and
 /// `tokio::sync::broadcast`) so a compile-time blind-spot warning can be
 /// injected.
+///
+/// AXM2 A2-5 adds `aliases`: a `use`-import-derived table (binding ident →
+/// canonical `tokio::...` path segments, see [`canonicalize`](Self::canonicalize))
+/// so the *dominant* crates.io style — `use tokio::sync::mpsc;` followed by
+/// `mpsc::channel(1)` — reaches the same rewrite chain as the fully-qualified
+/// form, instead of only being conservatively flagged.
 #[derive(Default)]
 pub(crate) struct ModelRewrite {
     unmodeled: BTreeSet<Unmodeled>,
+    aliases: BTreeMap<String, Vec<Ident>>,
+}
+
+impl ModelRewrite {
+    /// Resolves `path`'s first segment against the `use`-import alias table
+    /// for the current scope, returning the canonical `tokio::...` path with
+    /// the alias segment expanded to its full canonical prefix (generic
+    /// arguments on the original first segment are preserved on the
+    /// corresponding trailing prefix segment). Returns `None` when the first
+    /// segment is not a resolvable alias — no matching `use`, a glob import,
+    /// or a scope-shadowed binding — in which case callers fall back to
+    /// `path` unchanged, exactly reproducing the pre-A2-5 full-path-only
+    /// behavior.
+    ///
+    /// Deliberately scoped to `tokio`-rooted imports only (see
+    /// [`insert_tokio_alias`]) — extending this to `std::sync` would flip
+    /// the `model_does_not_rewrite_bare_mutex` pass test's locked-in
+    /// contract (a bare `use std::sync::Mutex; Mutex::new(..)` staying
+    /// unrewritten) into a rewrite, which is out of this pass's scope.
+    fn canonicalize(&self, path: &Path) -> Option<Path> {
+        let first = path.segments.first()?;
+        let canonical_prefix = self.aliases.get(&first.ident.to_string())?;
+
+        let mut segments: Punctuated<PathSegment, PathSep> = Punctuated::new();
+        let last_index = canonical_prefix.len().saturating_sub(1);
+        for (index, ident) in canonical_prefix.iter().enumerate() {
+            let arguments = if index == last_index {
+                first.arguments.clone()
+            } else {
+                PathArguments::None
+            };
+            segments.push(PathSegment {
+                ident: ident.clone(),
+                arguments,
+            });
+        }
+        for segment in path.segments.iter().skip(1) {
+            segments.push(segment.clone());
+        }
+
+        Some(Path {
+            leading_colon: None,
+            segments,
+        })
+    }
 }
 
 /// A concurrency primitive `#[laplace::model]` recognizes but cannot model.
@@ -110,17 +256,24 @@ impl VisitMut for ModelRewrite {
             return;
         };
 
-        if is_supported_spawn_path(&path.path) {
+        // AXM2 A2-5: resolve an aliased first segment (`mpsc::channel(1)`
+        // after `use tokio::sync::mpsc;`) to its canonical `tokio::...`
+        // shape before running the same rewrite chain the fully-qualified
+        // form always used — a single target table, reused either way.
+        let canonical = self.canonicalize(&path.path);
+        let effective = canonical.as_ref().unwrap_or(&path.path);
+
+        if is_supported_spawn_path(effective) {
             path.path = parse_quote!(::laplace_sdk::rt::spawn);
-        } else if let Some(rewritten) = rewrite_std_sync_constructor_path(&path.path) {
+        } else if let Some(rewritten) = rewrite_std_sync_constructor_path(effective) {
             path.path = rewritten;
-        } else if let Some(rewritten) = rewrite_tokio_sync_constructor_path(&path.path) {
+        } else if let Some(rewritten) = rewrite_tokio_sync_constructor_path(effective) {
             path.path = rewritten;
-        } else if let Some(rewritten) = rewrite_tokio_sync_channel_constructor_path(&path.path) {
+        } else if let Some(rewritten) = rewrite_tokio_sync_channel_constructor_path(effective) {
             path.path = rewritten;
-        } else if let Some(rewritten) = rewrite_tokio_time_fn_path(&path.path) {
+        } else if let Some(rewritten) = rewrite_tokio_time_fn_path(effective) {
             path.path = rewritten;
-        } else if let Some(primitive) = classify_unmodeled(&path.path) {
+        } else if let Some(primitive) = classify_unmodeled(effective) {
             self.unmodeled.insert(primitive);
         }
     }
@@ -128,15 +281,18 @@ impl VisitMut for ModelRewrite {
     fn visit_type_path_mut(&mut self, node: &mut TypePath) {
         visit_mut::visit_type_path_mut(self, node);
 
-        if let Some(rewritten) = rewrite_std_sync_type_path(&node.path) {
+        let canonical = self.canonicalize(&node.path);
+        let effective = canonical.as_ref().unwrap_or(&node.path);
+
+        if let Some(rewritten) = rewrite_std_sync_type_path(effective) {
             node.path = rewritten;
-        } else if let Some(rewritten) = rewrite_tokio_sync_type_path(&node.path) {
+        } else if let Some(rewritten) = rewrite_tokio_sync_type_path(effective) {
             node.path = rewritten;
-        } else if let Some(rewritten) = rewrite_tokio_sync_channel_type_path(&node.path) {
+        } else if let Some(rewritten) = rewrite_tokio_sync_channel_type_path(effective) {
             node.path = rewritten;
-        } else if let Some(rewritten) = rewrite_tokio_time_type_path(&node.path) {
+        } else if let Some(rewritten) = rewrite_tokio_time_type_path(effective) {
             node.path = rewritten;
-        } else if let Some(primitive) = classify_unmodeled(&node.path) {
+        } else if let Some(primitive) = classify_unmodeled(effective) {
             self.unmodeled.insert(primitive);
         }
     }
@@ -152,11 +308,18 @@ impl VisitMut for ModelRewrite {
     /// *inside* a `select!` branch are not seen or rewritten by this pass.
     /// Bare unqualified `select!` is intentionally excluded, mirroring the
     /// bare-`spawn` exclusion above — too high a false-positive risk against
-    /// an unrelated user macro of the same name.
+    /// an unrelated user macro of the same name. `use tokio::select;` +
+    /// bare `select! { .. }` is *not* excluded (AXM2 A2-5): the `use`
+    /// import is what proves the binding actually names `tokio::select`,
+    /// which is exactly the evidence the bare-macro exclusion above is
+    /// missing without it — see [`ModelRewrite::canonicalize`].
     fn visit_macro_mut(&mut self, node: &mut Macro) {
         visit_mut::visit_macro_mut(self, node);
 
-        if is_tokio_select_macro_path(&node.path) {
+        let canonical = self.canonicalize(&node.path);
+        let effective = canonical.as_ref().unwrap_or(&node.path);
+
+        if is_tokio_select_macro_path(effective) {
             node.path = parse_quote!(::laplace_sdk::rt::laplace_select);
         }
     }
@@ -682,6 +845,154 @@ fn is_known_atomic_type(ident: &str) -> bool {
     )
 }
 
+// ── AXM2 A2-5: use-import alias tracking ────────────────────────────────────
+//
+// The functions below build a `binding ident -> canonical tokio::... path
+// segments` table from the `use` items visible in an annotated scope (a
+// `fn` body, or an inline `mod`'s own top-level items), which
+// [`ModelRewrite::canonicalize`] then consults to resolve an aliased path
+// to the shape the existing `rewrite_*`/`classify_unmodeled` target-table
+// functions already expect — no second target table, per the single
+// source of truth constraint.
+
+/// Merges `overlay` onto `base`, with `overlay` winning on a binding-name
+/// collision (an inner scope's `use` shadows an outer scope's alias of the
+/// same name; everything else the outer scope resolved is inherited).
+fn merge_aliases(
+    base: &BTreeMap<String, Vec<Ident>>,
+    overlay: &BTreeMap<String, Vec<Ident>>,
+) -> BTreeMap<String, Vec<Ident>> {
+    let mut merged = base.clone();
+    merged.extend(overlay.iter().map(|(k, v)| (k.clone(), v.clone())));
+    merged
+}
+
+/// Records `binding -> canonical` in `table`, but only when `canonical` is
+/// rooted at `tokio` — deliberately excluding `std::sync` aliases (see
+/// [`ModelRewrite::canonicalize`]'s doc for why).
+fn insert_tokio_alias(
+    table: &mut BTreeMap<String, Vec<Ident>>,
+    binding: String,
+    canonical: Vec<Ident>,
+) {
+    if canonical.first().is_some_and(|ident| ident == "tokio") {
+        table.insert(binding, canonical);
+    }
+}
+
+/// Recursively walks one `use` tree (a single top-level `use` item may
+/// desugar to several bindings via renames/nested groups), recording every
+/// leaf binding's canonical path into `table`. `prefix` accumulates the
+/// path segments seen on the way down; glob imports (`use tokio::sync::*;`)
+/// are intentionally not recorded — an unresolvable wildcard, so the
+/// existing conservative marker path stays in effect for names it would
+/// have covered.
+fn collect_use_aliases(
+    tree: &UseTree,
+    prefix: &mut Vec<Ident>,
+    table: &mut BTreeMap<String, Vec<Ident>>,
+) {
+    match tree {
+        UseTree::Path(use_path) => {
+            prefix.push(use_path.ident.clone());
+            collect_use_aliases(&use_path.tree, prefix, table);
+            prefix.pop();
+        }
+        UseTree::Name(use_name) => {
+            if use_name.ident == "self" {
+                // `use tokio::sync::{self, mpsc};` binds `sync` itself to
+                // `tokio::sync` — the leaf name is the last prefix segment,
+                // not literally `self`.
+                if let Some(binding) = prefix.last().cloned() {
+                    insert_tokio_alias(table, binding.to_string(), prefix.clone());
+                }
+                return;
+            }
+            let mut canonical = prefix.clone();
+            canonical.push(use_name.ident.clone());
+            insert_tokio_alias(table, use_name.ident.to_string(), canonical);
+        }
+        UseTree::Rename(use_rename) => {
+            let mut canonical = prefix.clone();
+            canonical.push(use_rename.ident.clone());
+            insert_tokio_alias(table, use_rename.rename.to_string(), canonical);
+        }
+        UseTree::Group(use_group) => {
+            for item in &use_group.items {
+                collect_use_aliases(item, prefix, table);
+            }
+        }
+        UseTree::Glob(_) => {}
+    }
+}
+
+/// The declared ident of an item that can shadow a `use` binding of the
+/// same name (a `let` binding is deliberately not in scope here — only
+/// item-level declarations count, per AXM2 A2-5's shadowing contract).
+/// Item kinds without a single top-level ident (`impl`, `use` itself,
+/// macros, ...) are not covered; a same-name collision through one of
+/// those is a documented scan limitation, not a soundness bug (worst case:
+/// a still-correct-but-unrewritten conservative marker).
+fn item_ident(item: &Item) -> Option<&Ident> {
+    match item {
+        Item::Fn(i) => Some(&i.sig.ident),
+        Item::Struct(i) => Some(&i.ident),
+        Item::Enum(i) => Some(&i.ident),
+        Item::Union(i) => Some(&i.ident),
+        Item::Mod(i) => Some(&i.ident),
+        Item::Type(i) => Some(&i.ident),
+        Item::Const(i) => Some(&i.ident),
+        Item::Static(i) => Some(&i.ident),
+        Item::Trait(i) => Some(&i.ident),
+        Item::TraitAlias(i) => Some(&i.ident),
+        _ => None,
+    }
+}
+
+/// Removes any alias whose binding name collides with an item declared in
+/// the same scope — the local declaration shadows the `use` import within
+/// that scope, so rewriting through the alias would be unsound there.
+fn remove_shadowed_aliases<'a>(
+    table: &mut BTreeMap<String, Vec<Ident>>,
+    item_idents: impl Iterator<Item = &'a Ident>,
+) {
+    for ident in item_idents {
+        table.remove(&ident.to_string());
+    }
+}
+
+/// Builds the alias table visible directly inside a `fn` body: every
+/// top-level `use` statement in `stmts`, minus any binding shadowed by a
+/// sibling item declaration in the same body.
+fn scan_use_aliases_stmts(stmts: &[Stmt]) -> BTreeMap<String, Vec<Ident>> {
+    let mut table = BTreeMap::new();
+    for stmt in stmts {
+        if let Stmt::Item(Item::Use(item_use)) = stmt {
+            collect_use_aliases(&item_use.tree, &mut Vec::new(), &mut table);
+        }
+    }
+    let item_idents = stmts.iter().filter_map(|stmt| match stmt {
+        Stmt::Item(item) => item_ident(item),
+        _ => None,
+    });
+    remove_shadowed_aliases(&mut table, item_idents);
+    table
+}
+
+/// Builds the alias table visible directly inside an inline `mod`'s own
+/// items: every top-level `use` item in `items`, minus any binding
+/// shadowed by a sibling item declaration in the same module.
+fn scan_use_aliases_items(items: &[Item]) -> BTreeMap<String, Vec<Ident>> {
+    let mut table = BTreeMap::new();
+    for item in items {
+        if let Item::Use(item_use) = item {
+            collect_use_aliases(&item_use.tree, &mut Vec::new(), &mut table);
+        }
+    }
+    remove_shadowed_aliases(&mut table, items.iter().filter_map(item_ident));
+    table
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -930,18 +1241,15 @@ mod tests {
     }
 
     #[test]
-    fn rewrite_does_not_rewrite_aliased_or_unqualified_channel_calls() {
-        // Known limitation (mirrors `is_supported_spawn_path`'s bare-`spawn`
-        // exclusion): only the fully-qualified `tokio::sync::{mpsc,oneshot,
-        // watch}::...` path shape is recognized as a *rewrite* target. An
-        // import alias shortens the call path below the 4-segment match, so
-        // it is never rewritten to a `laplace_sdk::rt::mpsc` call — it still
-        // compiles correctly against real tokio via the `use`, just outside
-        // this seam's verified surface. It still gets conservatively flagged
-        // as un-modeled by the pre-existing generic `mpsc`-segment heuristic
-        // (shared with `std::sync::mpsc`, since the macro cannot tell the
-        // two apart from a bare `mpsc::channel` path alone) — honest
-        // over-flagging beats a silent, unverified pass.
+    fn rewrite_maps_aliased_channel_call_via_use_import() {
+        // AXM2 A2-5 premise change from the old
+        // `rewrite_does_not_rewrite_aliased_or_unqualified_channel_calls`
+        // test this replaces: crates.io's dominant real-world style is
+        // `use tokio::sync::mpsc;` + `mpsc::channel(1)` (34 vs. 3 for the
+        // fully-qualified form), so this is now the *rewrite* case — the
+        // `use` import is the evidence that resolves the alias to a
+        // canonical `tokio::sync::mpsc::channel` path before the same
+        // target-table chain the fully-qualified form always used.
         let out = rewrite_to_string(
             "fn f() { \
                 use tokio::sync::mpsc; \
@@ -949,12 +1257,33 @@ mod tests {
             }",
         );
         assert!(
+            out.contains("laplace_sdk :: rt :: mpsc :: channel"),
+            "aliased mpsc::channel call must be rewritten: {out}"
+        );
+        // Turbofish generics on the call segment must survive, same as the
+        // fully-qualified constructor rewrite.
+        assert!(
+            out.contains("channel :: < u8 >"),
+            "turbofish generics lost on aliased rewrite: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_does_not_rewrite_unqualified_channel_calls_without_use_import() {
+        // Without a `use` import as evidence, a bare `mpsc::channel(1)` call
+        // is genuinely ambiguous between `std::sync::mpsc` and
+        // `tokio::sync::mpsc` — the pre-existing conservative behavior for
+        // this case is preserved exactly: no rewrite, honest over-flagging
+        // via the generic `mpsc`-segment heuristic.
+        let out = rewrite_to_string("fn f() { let (tx, rx) = mpsc::channel::<u8>(1); }");
+        assert!(
             !out.contains("laplace_sdk :: rt :: mpsc"),
-            "aliased channel call must not be rewritten: {out}"
+            "unqualified channel call must not be rewritten without a use import: {out}"
         );
         assert!(
             out.contains("unmodeled") && out.contains("CHANNEL"),
-            "aliased channel call must still be conservatively flagged: {out}"
+            "unqualified channel call must still be conservatively flagged: {out}"
         );
     }
 
@@ -1090,5 +1419,241 @@ mod tests {
             !out.contains("laplace_select"),
             "bare select! must not be rewritten: {out}"
         );
+    }
+
+    // ── AXM2 A2-5: use-import alias resolution ──────────────────────────
+
+    /// Applies [`apply_model_rewrite_to_annotated_mod`] to a parsed inline
+    /// `mod { ... }` and returns the emitted source as a
+    /// whitespace-normalized string, mirroring [`rewrite_to_string`] for
+    /// the `fn`-annotated path.
+    fn rewrite_mod_to_string(module: &str) -> String {
+        let mut item_mod: ItemMod = syn::parse_str(module).expect("valid inline mod");
+        apply_model_rewrite_to_annotated_mod(&mut item_mod).expect("inline mod rewrite succeeds");
+        item_mod.into_token_stream().to_string()
+    }
+
+    #[test]
+    fn rewrite_maps_aliased_oneshot_channel_via_use_import() {
+        let out = rewrite_to_string(
+            "fn f() { \
+                use tokio::sync::oneshot; \
+                let (tx, rx) = oneshot::channel::<u8>(); \
+            }",
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: oneshot :: channel"),
+            "aliased oneshot::channel call must be rewritten: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_maps_aliased_watch_channel_via_use_import() {
+        let out = rewrite_to_string(
+            "fn f() { \
+                use tokio::sync::watch; \
+                let (tx, rx) = watch::channel(0u8); \
+            }",
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: watch :: channel"),
+            "aliased watch::channel call must be rewritten: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_maps_aliased_time_sleep_via_use_import() {
+        let out = rewrite_to_string(
+            "fn f() { \
+                use tokio::time; \
+                let s: tokio::time::Sleep = time::sleep(D); \
+            }",
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: time :: sleep"),
+            "aliased time::sleep call must be rewritten: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_maps_aliased_mutex_via_renamed_use_import() {
+        // `use tokio::sync::Mutex as TMutex;` — the rename binding `TMutex`
+        // must resolve to the same canonical `tokio::sync::Mutex` target as
+        // the unrenamed alias / fully-qualified forms.
+        let out = rewrite_to_string(
+            "fn f() { \
+                use tokio::sync::Mutex as TMutex; \
+                let m: TMutex<u8> = TMutex::new(0); \
+            }",
+        );
+        assert!(
+            out.contains("ModelAsyncMutex"),
+            "renamed tokio mutex alias must be rewritten: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_maps_single_segment_import_of_channel_constructor() {
+        // `use tokio::sync::mpsc::channel;` binds the constructor fn
+        // itself, so the call site is a bare 1-segment `channel(1)`.
+        let out = rewrite_to_string(
+            "fn f() { \
+                use tokio::sync::mpsc::channel; \
+                let (tx, rx) = channel::<u8>(1); \
+            }",
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: mpsc :: channel"),
+            "1-segment channel import call must be rewritten: {out}"
+        );
+        assert!(
+            out.contains("channel :: < u8 >"),
+            "turbofish generics lost on 1-segment alias rewrite: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_maps_bare_select_after_use_tokio_select_import() {
+        // `use tokio::select;` is the evidence that a subsequent bare
+        // `select! { .. }` actually names `tokio::select!`, not an
+        // unrelated user macro of the same name — the exclusion in
+        // `rewrite_does_not_touch_bare_select_macro` only applies without
+        // that evidence.
+        let out = rewrite_to_string(
+            "fn f() { \
+                use tokio::select; \
+                select! { _ = async {} => {} } \
+            }",
+        );
+        assert!(
+            out.contains("laplace_sdk") && out.contains("laplace_select"),
+            "select! after `use tokio::select;` must be rewritten: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_leaves_glob_import_as_conservative_marker() {
+        // `use tokio::sync::*;` cannot be resolved to a single canonical
+        // binding — no alias table entry is recorded, so the pre-existing
+        // conservative marker path stays in effect exactly as it did
+        // before A2-5.
+        let out = rewrite_to_string(
+            "fn f() { \
+                use tokio::sync::*; \
+                let (tx, rx) = mpsc::channel::<u8>(1); \
+            }",
+        );
+        assert!(
+            !out.contains("laplace_sdk :: rt :: mpsc"),
+            "glob-imported channel call must not be rewritten: {out}"
+        );
+        assert!(
+            out.contains("unmodeled") && out.contains("CHANNEL"),
+            "glob-imported channel call must still be conservatively flagged: {out}"
+        );
+    }
+
+    #[test]
+    fn rewrite_maps_aliased_broadcast_channel_to_unmodeled_marker() {
+        // A resolved alias that lands on a still-un-modeled tokio primitive
+        // (`broadcast`, unlike `mpsc`/`oneshot`/`watch`) must classify to
+        // the same `TOKIO_CHANNEL` marker the fully-qualified form gets —
+        // canonicalization must feed `classify_unmodeled` too, not only the
+        // `rewrite_*` functions.
+        let out = rewrite_to_string(
+            "fn f() { \
+                use tokio::sync::broadcast; \
+                let (tx, rx) = broadcast::channel::<u8>(1); \
+            }",
+        );
+        assert!(
+            !out.contains("laplace_sdk :: rt :: broadcast"),
+            "broadcast must not be rewritten as if modeled: {out}"
+        );
+        assert!(
+            out.contains("unmodeled") && out.contains("TOKIO_CHANNEL"),
+            "aliased broadcast call must be flagged TOKIO_CHANNEL: {out}"
+        );
+    }
+
+    #[test]
+    fn rewrite_skips_alias_shadowed_by_local_item_declaration() {
+        // A local item declaration with the same name as the `use` binding
+        // shadows the import within this scope — the conservative choice is
+        // to skip the alias entirely rather than risk an incorrect rewrite.
+        let out = rewrite_to_string(
+            "fn f() { \
+                use tokio::sync::Mutex; \
+                struct Mutex; \
+                let m = Mutex::new(0); \
+            }",
+        );
+        assert!(
+            !out.contains("ModelAsyncMutex") && !out.contains("laplace_sdk :: rt :: Mutex"),
+            "shadowed Mutex alias must not be rewritten: {out}"
+        );
+    }
+
+    #[test]
+    fn rewrite_mod_annotation_applies_module_use_to_every_contained_fn() {
+        let out = rewrite_mod_to_string(
+            "mod target { \
+                use tokio::sync::mpsc; \
+                fn f1() { let (tx, rx) = mpsc::channel::<u8>(1); } \
+                fn f2() { let (tx, rx) = mpsc::channel::<u8>(2); } \
+            }",
+        );
+        assert_eq!(
+            out.matches("laplace_sdk :: rt :: mpsc :: channel").count(),
+            2,
+            "both fns inside the annotated mod must be rewritten via the module-level use: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_mod_annotation_rejects_out_of_line_mod() {
+        let mut item_mod: ItemMod = syn::parse_str("mod target;").expect("valid mod decl");
+        let err = apply_model_rewrite_to_annotated_mod(&mut item_mod)
+            .expect_err("out-of-line mod must be rejected");
+        assert!(
+            err.to_string().contains("out-of-line"),
+            "error must name the out-of-line mod limitation: {err}"
+        );
+    }
+
+    #[test]
+    fn rewrite_nested_inline_mod_scope_accumulates_outer_use_import() {
+        // The inner module's own `use tokio::sync::oneshot;` must combine
+        // with (not replace) the outer module's `use tokio::sync::mpsc;` —
+        // AXM2 A2-5's "inner use accumulates over outer" nested-scope
+        // contract.
+        let out = rewrite_mod_to_string(
+            "mod outer { \
+                use tokio::sync::mpsc; \
+                mod inner { \
+                    use tokio::sync::oneshot; \
+                    fn f() { \
+                        let (tx1, rx1) = mpsc::channel::<u8>(1); \
+                        let (tx2, rx2) = oneshot::channel::<u8>(); \
+                    } \
+                } \
+            }",
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: mpsc :: channel"),
+            "inner fn must see the outer module's mpsc alias: {out}"
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: oneshot :: channel"),
+            "inner fn must see its own module's oneshot alias: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
     }
 }

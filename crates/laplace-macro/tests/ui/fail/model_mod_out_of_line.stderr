@@ -1,0 +1,13 @@
+error[E0658]: non-inline modules in proc macro input are unstable
+ --> tests/ui/fail/model_mod_out_of_line.rs:4:1
+  |
+4 | mod target;
+  | ^^^^^^^^^^^
+  |
+  = note: see issue #54727 <https://github.com/rust-lang/rust/issues/54727> for more information
+
+error: `#[laplace::model]` cannot see the contents of an out-of-line `mod foo;` (a proc-macro only receives the annotated item's own tokens); annotate an inline module (`mod foo { ... }`) or annotate the `fn` directly
+ --> tests/ui/fail/model_mod_out_of_line.rs:4:5
+  |
+4 | mod target;
+  |     ^^^^^^
