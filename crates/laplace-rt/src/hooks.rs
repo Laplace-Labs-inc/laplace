@@ -15,9 +15,10 @@ static LOCK_HOOK: OnceLock<StdMutex<Option<Arc<dyn LockHook>>>> = OnceLock::new(
 static NEXT_LOCK_RESOURCE_ID: AtomicU64 = AtomicU64::new(1);
 static ASYNC_LOCK_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncLockHook>>>> = OnceLock::new();
 static ASYNC_NOTIFY_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncNotifyHook>>>> = OnceLock::new();
-/// Shared across all four async lock-family primitives (Mutex, `RwLock`,
-/// Semaphore, Notify) so resource ids never collide across the family, even
-/// when several are mixed in one model run.
+static ASYNC_CHANNEL_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncChannelHook>>>> = OnceLock::new();
+/// Shared across the whole async model family (Mutex, `RwLock`, Semaphore,
+/// Notify, and the `mpsc`/oneshot/watch channels) so resource ids never
+/// collide across the family, even when several are mixed in one model run.
 static NEXT_ASYNC_LOCK_RESOURCE_ID: AtomicU64 = AtomicU64::new(1);
 static NEXT_ASYNC_LOCK_WAITER_ID: AtomicU64 = AtomicU64::new(1);
 
@@ -102,6 +103,79 @@ pub trait AsyncNotifyHook: Send + Sync {
     /// Reports that a queued-but-unresolved `notified()` future was dropped
     /// before it resolved.
     fn waiter_dropped(&self, resource: u64, waiter: u64);
+}
+
+/// Which channel flavor a model channel resource is.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AsyncChannelKind {
+    MpscBounded { capacity: usize },
+    MpscUnbounded,
+    Oneshot,
+    Watch,
+}
+
+/// Which side of a channel an endpoint event concerns.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AsyncChannelSide {
+    Sender,
+    Receiver,
+}
+
+/// Operation classification for channel op events.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AsyncChannelOp {
+    Send,
+    Recv,
+    Changed,
+}
+
+/// Terminal outcome of a channel op event.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum AsyncChannelOutcome {
+    Ok,
+    Closed,
+    Empty,
+    Full,
+}
+
+/// Engine- or probe-installed surface for model `tokio::sync` channel
+/// (`mpsc`/oneshot/watch) boundaries.
+///
+/// Mirrors [`AsyncLockHook`]/[`AsyncNotifyHook`] but for the channel family:
+/// `channel`/`op`/`endpoint` events replace the lock family's
+/// `resource`/`waiter` acquisition vocabulary, since a channel's boundaries
+/// are sends, receives, and endpoint lifecycle rather than acquire/release.
+pub trait AsyncChannelHook: Send + Sync {
+    /// Reported once per channel, at construction, carrying its flavor.
+    fn channel_created(&self, channel: u64, kind: AsyncChannelKind);
+
+    /// Reports that an awaitable op's first poll found no immediate result
+    /// and queued (mirrors [`AsyncLockHook::requested`]).
+    fn op_requested(&self, channel: u64, op: u64, kind: AsyncChannelOp);
+
+    /// Reports an op's terminal outcome, either immediately (uncontended or
+    /// a synchronous try-op) or by resolving a previously queued op.
+    fn op_resolved(
+        &self,
+        channel: u64,
+        op: u64,
+        kind: AsyncChannelOp,
+        outcome: AsyncChannelOutcome,
+    );
+
+    /// Reports that a queued-but-unresolved awaitable op was dropped
+    /// (cancelled) before it resolved.
+    fn op_dropped(&self, channel: u64, op: u64);
+
+    /// Reports a sender/receiver endpoint handle being cloned (or, for
+    /// `watch`, a receiver being created via `subscribe`).
+    fn endpoint_cloned(&self, channel: u64, side: AsyncChannelSide);
+
+    /// Reports a sender/receiver endpoint handle being dropped.
+    fn endpoint_dropped(&self, channel: u64, side: AsyncChannelSide);
+
+    /// Reports a receiver's `close()` boundary.
+    fn channel_closed(&self, channel: u64);
 }
 
 /// Installs or replaces the process-local spawn hook.
@@ -229,29 +303,60 @@ pub(crate) fn async_notify_hook() -> Option<Arc<dyn AsyncNotifyHook>> {
     })
 }
 
-/// Resets deterministic model async lock-family resource-id and waiter-id
+/// Installs or replaces the process-local async channel hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn install_async_channel_hook(hook: Arc<dyn AsyncChannelHook>) {
+    let slot = ASYNC_CHANNEL_HOOK.get_or_init(|| StdMutex::new(None));
+    *slot.lock().expect("async channel hook lock poisoned") = Some(hook);
+}
+
+/// Clears the process-local async channel hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn clear_async_channel_hook() {
+    if let Some(slot) = ASYNC_CHANNEL_HOOK.get() {
+        *slot.lock().expect("async channel hook lock poisoned") = None;
+    }
+}
+
+pub(crate) fn async_channel_hook() -> Option<Arc<dyn AsyncChannelHook>> {
+    ASYNC_CHANNEL_HOOK.get().and_then(|slot| {
+        slot.lock()
+            .expect("async channel hook lock poisoned")
+            .clone()
+    })
+}
+
+/// Resets deterministic model async model-family resource-id and waiter-id
 /// allocation for controlled re-execution.
 ///
 /// This is separate from hook installation so free-tier code keeps
 /// process-wide distinct resource/waiter ids, while the private engine can
-/// make each reset replay the same resource/waiter shape. Shared by all four
-/// async primitives (Mutex, RwLock, Semaphore, Notify) since they share one
-/// id space.
+/// make each reset replay the same resource/waiter shape. Shared by all
+/// async model-family primitives (Mutex, RwLock, Semaphore, Notify, and the
+/// `mpsc`/oneshot/watch channels) since they share one id space.
 #[doc(hidden)]
 pub fn reset_model_async_ids_for_model() {
     NEXT_ASYNC_LOCK_RESOURCE_ID.store(1, Ordering::SeqCst);
     NEXT_ASYNC_LOCK_WAITER_ID.store(1, Ordering::SeqCst);
 }
 
-/// Allocates the next distinct process-local model async lock-family resource
-/// id.
+/// Allocates the next distinct process-local model async model-family
+/// resource id (also used as a channel id by the `mpsc`/oneshot/watch
+/// channel seams).
 pub(crate) fn next_async_lock_resource_id() -> u64 {
     NEXT_ASYNC_LOCK_RESOURCE_ID.fetch_add(1, Ordering::SeqCst)
 }
 
-/// Allocates the next distinct process-local model async lock-family waiter
+/// Allocates the next distinct process-local model async model-family waiter
 /// id, one per acquisition-future call (not per task — see
-/// [`crate::ModelAsyncLock`]).
+/// [`crate::ModelAsyncLock`]). Also used as a channel op id by the
+/// `mpsc`/oneshot/watch channel seams, one per send/recv/changed call.
 pub(crate) fn next_async_lock_waiter_id() -> u64 {
     NEXT_ASYNC_LOCK_WAITER_ID.fetch_add(1, Ordering::SeqCst)
 }
