@@ -42,11 +42,13 @@ pub(crate) fn apply_model_rewrite(func: &mut ItemFn) {
 ///
 /// Rewrites qualified `std::thread::spawn` → `::laplace_sdk::rt::spawn`,
 /// `std::sync::{Mutex,RwLock}` → `::laplace_sdk::rt::{ModelMutex,ModelRwLock}`,
-/// and `tokio::sync::Mutex` → `::laplace_sdk::rt::ModelAsyncMutex`, and
-/// records any recognized-but-un-modeled primitive (`Condvar`, `atomic`,
-/// `mpsc`, and the un-modeled `tokio::sync` family — `RwLock`, `Semaphore`,
-/// `Notify`, and the channel constructors) so a compile-time blind-spot
-/// warning can be injected.
+/// `tokio::sync::{Mutex,RwLock,Semaphore,Notify}` → their `::laplace_sdk::rt`
+/// model equivalents, and `tokio::sync::{mpsc,oneshot,watch}` constructors
+/// and types → their `::laplace_sdk::rt::{mpsc,oneshot,watch}` model
+/// equivalents, and records any recognized-but-un-modeled primitive
+/// (`Condvar`, `atomic`, `std::sync::mpsc`, `tokio::spawn`, and
+/// `tokio::sync::broadcast`) so a compile-time blind-spot warning can be
+/// injected.
 #[derive(Default)]
 pub(crate) struct ModelRewrite {
     unmodeled: BTreeSet<Unmodeled>,
@@ -111,6 +113,8 @@ impl VisitMut for ModelRewrite {
             path.path = rewritten;
         } else if let Some(rewritten) = rewrite_tokio_sync_constructor_path(&path.path) {
             path.path = rewritten;
+        } else if let Some(rewritten) = rewrite_tokio_sync_channel_constructor_path(&path.path) {
+            path.path = rewritten;
         } else if let Some(primitive) = classify_unmodeled(&path.path) {
             self.unmodeled.insert(primitive);
         }
@@ -122,6 +126,8 @@ impl VisitMut for ModelRewrite {
         if let Some(rewritten) = rewrite_std_sync_type_path(&node.path) {
             node.path = rewritten;
         } else if let Some(rewritten) = rewrite_tokio_sync_type_path(&node.path) {
+            node.path = rewritten;
+        } else if let Some(rewritten) = rewrite_tokio_sync_channel_type_path(&node.path) {
             node.path = rewritten;
         } else if let Some(primitive) = classify_unmodeled(&node.path) {
             self.unmodeled.insert(primitive);
@@ -224,7 +230,9 @@ fn model_path(target: &str, arguments: PathArguments, method: Option<PathSegment
 
 /// The `::laplace_rt` model type name for a `tokio::sync` type, if
 /// supported. `Mutex`/`RwLock`/`Semaphore`/`Notify` are all modeled as of
-/// AXM2 A2-3 slice 2; the `tokio::sync` channel family remains
+/// AXM2 A2-3 slice 2; the `mpsc`/oneshot/watch channel family is modeled as
+/// of AXM2 A2-4 via [`tokio_channel_fn_target_for`]/
+/// [`tokio_channel_type_target_for`]. Only `tokio::sync::broadcast` remains
 /// recognized-but-un-modeled via [`classify_tokio_sync_unmodeled`].
 fn tokio_model_target_for(ident: &Ident) -> Option<&'static str> {
     if ident == "Mutex" {
@@ -291,13 +299,118 @@ fn rewrite_tokio_sync_constructor_path(path: &Path) -> Option<Path> {
     ))
 }
 
+/// The `::laplace_rt` model channel module + name for a
+/// `tokio::sync::{mpsc,oneshot,watch}::{channel,unbounded_channel}`
+/// constructor, if supported.
+fn tokio_channel_fn_target_for(
+    module: &Ident,
+    func: &Ident,
+) -> Option<(&'static str, &'static str)> {
+    match (module.to_string().as_str(), func.to_string().as_str()) {
+        ("mpsc", "channel") => Some(("mpsc", "channel")),
+        ("mpsc", "unbounded_channel") => Some(("mpsc", "unbounded_channel")),
+        ("oneshot", "channel") => Some(("oneshot", "channel")),
+        ("watch", "channel") => Some(("watch", "channel")),
+        _ => None,
+    }
+}
+
+/// The `::laplace_rt` model channel module + type name for a
+/// `tokio::sync::{mpsc,oneshot,watch}::TYPE`, if supported. Channel-family
+/// types outside this set (`error::*`, `Permit`, `OwnedPermit`,
+/// `WeakSender`, ...) are intentionally left unrewritten — see the module's
+/// "loud residual" honesty-contract bullets in `async_mpsc`/`async_oneshot`/
+/// `async_watch`.
+fn tokio_channel_type_target_for(
+    module: &Ident,
+    ty: &Ident,
+) -> Option<(&'static str, &'static str)> {
+    match (module.to_string().as_str(), ty.to_string().as_str()) {
+        ("mpsc", "Sender") => Some(("mpsc", "Sender")),
+        ("mpsc", "Receiver") => Some(("mpsc", "Receiver")),
+        ("mpsc", "UnboundedSender") => Some(("mpsc", "UnboundedSender")),
+        ("mpsc", "UnboundedReceiver") => Some(("mpsc", "UnboundedReceiver")),
+        ("oneshot", "Sender") => Some(("oneshot", "Sender")),
+        ("oneshot", "Receiver") => Some(("oneshot", "Receiver")),
+        ("watch", "Sender") => Some(("watch", "Sender")),
+        ("watch", "Receiver") => Some(("watch", "Receiver")),
+        ("watch", "Ref") => Some(("watch", "Ref")),
+        _ => None,
+    }
+}
+
+/// Rewrites a `tokio::sync::{mpsc,oneshot,watch}::{channel,unbounded_channel}`
+/// *constructor* call path to its `::laplace_rt` model equivalent,
+/// preserving any turbofish generic arguments on the constructor segment.
+fn rewrite_tokio_sync_channel_constructor_path(path: &Path) -> Option<Path> {
+    let segments: Vec<_> = path.segments.iter().collect();
+    let [tokio, sync, module, func] = segments.as_slice() else {
+        return None;
+    };
+    if tokio.ident != "tokio" || sync.ident != "sync" {
+        return None;
+    }
+    if !matches!(tokio.arguments, PathArguments::None)
+        || !matches!(sync.arguments, PathArguments::None)
+        || !matches!(module.arguments, PathArguments::None)
+    {
+        return None;
+    }
+
+    let (target_module, target_fn) = tokio_channel_fn_target_for(&module.ident, &func.ident)?;
+    Some(channel_path(
+        target_module,
+        target_fn,
+        func.arguments.clone(),
+    ))
+}
+
+/// Rewrites a `tokio::sync::{mpsc,oneshot,watch}::TYPE` *type* path to its
+/// `::laplace_rt` model equivalent, preserving generic arguments.
+fn rewrite_tokio_sync_channel_type_path(path: &Path) -> Option<Path> {
+    let segments: Vec<_> = path.segments.iter().collect();
+    let [tokio, sync, module, ty] = segments.as_slice() else {
+        return None;
+    };
+    if tokio.ident != "tokio" || sync.ident != "sync" {
+        return None;
+    }
+    if !matches!(tokio.arguments, PathArguments::None)
+        || !matches!(sync.arguments, PathArguments::None)
+        || !matches!(module.arguments, PathArguments::None)
+    {
+        return None;
+    }
+
+    let (target_module, target_ty) = tokio_channel_type_target_for(&module.ident, &ty.ident)?;
+    Some(channel_path(target_module, target_ty, ty.arguments.clone()))
+}
+
+/// Builds a `::laplace_sdk::rt::{module}::{name}` path, applying `arguments`
+/// (generics/turbofish) to the trailing `name` segment. Mirrors
+/// [`model_path`] but for the two-segment `{module}::{name}` shape used by
+/// the channel family (as opposed to the lock family's single flat name).
+fn channel_path(module: &str, name: &str, arguments: PathArguments) -> Path {
+    let module_ident = Ident::new(module, proc_macro2::Span::call_site());
+    let name_ident = Ident::new(name, proc_macro2::Span::call_site());
+    let mut path: Path = parse_quote!(::laplace_sdk::rt::#module_ident::#name_ident);
+    path.segments
+        .last_mut()
+        .expect("channel path has a segment")
+        .arguments = arguments;
+    path
+}
+
 /// Classifies a recognized-but-un-modeled `tokio::sync::X` primitive by its
 /// first three path segments (`tokio::sync::X`, ignoring any trailing method
 /// segment such as `::new`/`::channel`). `Mutex`/`RwLock`/`Semaphore`/
 /// `Notify` are excluded here — all four are modeled and handled by
-/// [`rewrite_tokio_sync_type_path`] / [`rewrite_tokio_sync_constructor_path`],
-/// which run before this classifier in [`ModelRewrite`]'s visitor methods.
-/// Only the `tokio::sync` channel family remains un-modeled.
+/// [`rewrite_tokio_sync_type_path`] / [`rewrite_tokio_sync_constructor_path`].
+/// `mpsc`/`oneshot`/`watch` are excluded here too — all three are modeled
+/// and handled by [`rewrite_tokio_sync_channel_type_path`] /
+/// [`rewrite_tokio_sync_channel_constructor_path`], which run before this
+/// classifier in [`ModelRewrite`]'s visitor methods. Only
+/// `tokio::sync::broadcast` remains un-modeled.
 fn classify_tokio_sync_unmodeled(path: &Path) -> Option<Unmodeled> {
     let segments: Vec<_> = path.segments.iter().take(3).collect();
     let [tokio, sync, ty] = segments.as_slice() else {
@@ -312,10 +425,7 @@ fn classify_tokio_sync_unmodeled(path: &Path) -> Option<Unmodeled> {
         return None;
     }
 
-    if matches!(
-        ty.ident.to_string().as_str(),
-        "mpsc" | "oneshot" | "watch" | "broadcast"
-    ) {
+    if ty.ident == "broadcast" {
         Some(Unmodeled::TokioChannel)
     } else {
         None
@@ -571,13 +681,117 @@ mod tests {
     }
 
     #[test]
-    fn rewrite_injects_blind_spot_marker_for_unmodeled_tokio_channel() {
-        let out = rewrite_to_string("fn f() { let (tx, rx) = tokio::sync::mpsc::channel(1); }");
+    fn rewrite_maps_qualified_tokio_channel_constructors() {
+        let out = rewrite_to_string(
+            "fn f() { \
+                let (tx1, rx1) = tokio::sync::mpsc::channel::<u8>(1); \
+                let (tx2, rx2) = tokio::sync::mpsc::unbounded_channel::<u8>(); \
+                let (tx3, rx3) = tokio::sync::oneshot::channel::<u8>(); \
+                let (tx4, rx4) = tokio::sync::watch::channel(0u8); \
+            }",
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: mpsc :: channel"),
+            "mpsc::channel rewrite missing: {out}"
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: mpsc :: unbounded_channel"),
+            "mpsc::unbounded_channel rewrite missing: {out}"
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: oneshot :: channel"),
+            "oneshot::channel rewrite missing: {out}"
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: watch :: channel"),
+            "watch::channel rewrite missing: {out}"
+        );
+        // Turbofish generics on the constructor segment must survive the rewrite.
+        assert!(
+            out.contains("channel :: < u8 >"),
+            "turbofish generics lost on constructor rewrite: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_maps_qualified_tokio_channel_types() {
+        let out = rewrite_to_string(
+            "fn f( \
+                a: tokio::sync::mpsc::Sender<u8>, \
+                b: tokio::sync::mpsc::Receiver<u8>, \
+                c: tokio::sync::mpsc::UnboundedSender<u8>, \
+                d: tokio::sync::mpsc::UnboundedReceiver<u8>, \
+                e: tokio::sync::oneshot::Sender<u8>, \
+                f: tokio::sync::oneshot::Receiver<u8>, \
+                g: tokio::sync::watch::Sender<u8>, \
+                h: tokio::sync::watch::Receiver<u8>, \
+            ) { }",
+        );
+        for expected in [
+            "laplace_sdk :: rt :: mpsc :: Sender",
+            "laplace_sdk :: rt :: mpsc :: Receiver",
+            "laplace_sdk :: rt :: mpsc :: UnboundedSender",
+            "laplace_sdk :: rt :: mpsc :: UnboundedReceiver",
+            "laplace_sdk :: rt :: oneshot :: Sender",
+            "laplace_sdk :: rt :: oneshot :: Receiver",
+            "laplace_sdk :: rt :: watch :: Sender",
+            "laplace_sdk :: rt :: watch :: Receiver",
+        ] {
+            assert!(
+                out.contains(expected),
+                "{expected} type rewrite missing: {out}"
+            );
+        }
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_injects_blind_spot_marker_for_unmodeled_tokio_broadcast_channel() {
+        let out =
+            rewrite_to_string("fn f() { let (tx, rx) = tokio::sync::broadcast::channel(1); }");
         assert!(
             out.contains("laplace_sdk")
                 && out.contains("unmodeled")
                 && out.contains("TOKIO_CHANNEL"),
-            "tokio channel blind-spot marker missing: {out}"
+            "tokio broadcast blind-spot marker missing: {out}"
+        );
+        // The modeled mpsc/oneshot/watch family must not also be rewritten
+        // here (broadcast is the only channel primitive left unmodeled).
+        assert!(
+            !out.contains("laplace_sdk :: rt :: mpsc")
+                && !out.contains("laplace_sdk :: rt :: oneshot")
+                && !out.contains("laplace_sdk :: rt :: watch"),
+            "unrelated channel modules must not be rewritten: {out}"
+        );
+    }
+
+    #[test]
+    fn rewrite_does_not_rewrite_aliased_or_unqualified_channel_calls() {
+        // Known limitation (mirrors `is_supported_spawn_path`'s bare-`spawn`
+        // exclusion): only the fully-qualified `tokio::sync::{mpsc,oneshot,
+        // watch}::...` path shape is recognized as a *rewrite* target. An
+        // import alias shortens the call path below the 4-segment match, so
+        // it is never rewritten to a `laplace_sdk::rt::mpsc` call — it still
+        // compiles correctly against real tokio via the `use`, just outside
+        // this seam's verified surface. It still gets conservatively flagged
+        // as un-modeled by the pre-existing generic `mpsc`-segment heuristic
+        // (shared with `std::sync::mpsc`, since the macro cannot tell the
+        // two apart from a bare `mpsc::channel` path alone) — honest
+        // over-flagging beats a silent, unverified pass.
+        let out = rewrite_to_string(
+            "fn f() { \
+                use tokio::sync::mpsc; \
+                let (tx, rx) = mpsc::channel::<u8>(1); \
+            }",
+        );
+        assert!(
+            !out.contains("laplace_sdk :: rt :: mpsc"),
+            "aliased channel call must not be rewritten: {out}"
+        );
+        assert!(
+            out.contains("unmodeled") && out.contains("CHANNEL"),
+            "aliased channel call must still be conservatively flagged: {out}"
         );
     }
 
