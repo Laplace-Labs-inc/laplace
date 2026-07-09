@@ -33,3 +33,32 @@ async fn public_facade_exports_rt_time_and_laplace_select_macro_path() {
     };
     assert!(branch == 1 || branch == 2);
 }
+
+/// AXM2 A2-5 runtime-level proof: the *dominant* crates.io style —
+/// `use tokio::sync::mpsc;` followed by `mpsc::channel(1)`, inside an
+/// inline `mod` annotated with `#[laplace_sdk::model]` instead of a bare
+/// `fn` — actually compiles against and runs through the
+/// `laplace_sdk::rt::mpsc` shadow channel, not real `tokio::sync::mpsc`.
+/// Unlike the macro crate's trybuild pass tests (compile-only), this
+/// executes the round trip end to end.
+#[laplace_sdk::model]
+mod aliased_mpsc_style {
+    // The rewrite replaces every `mpsc::...` call site below with a fully
+    // qualified `::laplace_sdk::rt::mpsc::...` path, so this import is no
+    // longer referenced in the *expanded* code — it is what makes the
+    // alias resolvable in the first place.
+    #[allow(unused_imports)]
+    use tokio::sync::mpsc;
+
+    pub async fn round_trip(value: u8) -> u8 {
+        let (tx, mut rx) = mpsc::channel::<u8>(1);
+        tx.send(value).await.expect("send succeeds");
+        rx.recv().await.expect("recv succeeds")
+    }
+}
+
+#[tokio::test]
+async fn public_facade_rewrites_aliased_tokio_mpsc_inside_annotated_module() {
+    let value = aliased_mpsc_style::round_trip(7).await;
+    assert_eq!(value, 7);
+}

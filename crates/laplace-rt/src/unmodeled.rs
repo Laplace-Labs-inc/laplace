@@ -24,9 +24,11 @@ pub const CONDVAR: () = ();
 #[doc(hidden)]
 pub const ATOMIC: () = ();
 
-/// Marker for an un-modeled `std::sync::mpsc` channel.
+/// Marker for an un-modeled `std::sync::mpsc` channel — or a `tokio::sync`
+/// channel the rewrite could not resolve (a glob import, or a bare call
+/// with no `use` import as evidence).
 #[deprecated(
-    note = "#[laplace::model]: `mpsc` channels are not modeled; blocking send/recv here is a verification blind spot"
+    note = "#[laplace::model]: `mpsc` channels are not modeled; blocking send/recv here is a verification blind spot — if this is `tokio::sync::mpsc`, add `use tokio::sync::mpsc;` (or `use tokio::sync::mpsc::channel;`) inside the annotated fn, or annotate an inline `mod { ... }` instead of the fn, so the alias resolves to the modeled seam"
 )]
 #[doc(hidden)]
 pub const CHANNEL: () = ();
