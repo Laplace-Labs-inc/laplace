@@ -31,10 +31,11 @@ pub const ATOMIC: () = ();
 #[doc(hidden)]
 pub const CHANNEL: () = ();
 
-/// Marker for an un-modeled `tokio::sync` channel (`mpsc`, `oneshot`,
-/// `watch`, or `broadcast`).
+/// Marker for an un-modeled `tokio::sync::broadcast` channel. `mpsc`,
+/// `oneshot`, and `watch` are modeled as of AXM2 A2-4 (see
+/// [`crate`]`::{mpsc,oneshot,watch}`).
 #[deprecated(
-    note = "#[laplace::model]: `tokio::sync` channels are not modeled yet (AXM2 A2-3 residue); waits here are a verification blind spot"
+    note = "#[laplace::model]: `tokio::sync::broadcast` is not modeled yet (AXM2 A2-4 residue); waits here are a verification blind spot"
 )]
 #[doc(hidden)]
 pub const TOKIO_CHANNEL: () = ();

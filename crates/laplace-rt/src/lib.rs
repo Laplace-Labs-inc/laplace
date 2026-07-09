@@ -29,10 +29,13 @@
 //! `tokio::sync::{Mutex,RwLock,Semaphore}` to wrap-real model types, and
 //! [`async_notify`] provides a `tokio::sync::Notify`-compatible model type —
 //! see each module's honesty contract for what is and is not observable
-//! through it. The `tokio::sync` channel family (`mpsc`/`oneshot`/`watch`/
-//! `broadcast`) remains recognized-but-un-modeled and flagged via
-//! [`unmodeled`], same as `std::sync::mpsc`; `tokio::spawn` is also flagged
-//! as un-modeled (the deterministic executor does not yet control it).
+//! through it. AXM2 A2-4 adds the `mpsc`/oneshot/watch channel family:
+//! [`mpsc`], [`oneshot`], and [`watch`] rewrite qualified
+//! `tokio::sync::{mpsc,oneshot,watch}` constructors and types to wrap-real
+//! model channels. Only `tokio::sync::broadcast` remains
+//! recognized-but-un-modeled and flagged via [`unmodeled`], same as
+//! `std::sync::mpsc`; `tokio::spawn` is also flagged as un-modeled (the
+//! deterministic executor does not yet control it).
 //!
 //! ## Module layout
 //!
@@ -44,6 +47,9 @@
 //! - [`async_rwlock`] — [`ModelAsyncRwLock`], the `tokio::sync::RwLock` seam.
 //! - [`async_semaphore`] — [`ModelAsyncSemaphore`], the `tokio::sync::Semaphore` seam.
 //! - [`async_notify`] — [`ModelAsyncNotify`], the `tokio::sync::Notify` seam.
+//! - [`mpsc`] — the `tokio::sync::mpsc` (bounded + unbounded) seam.
+//! - [`oneshot`] — the `tokio::sync::oneshot` seam.
+//! - [`watch`] — the `tokio::sync::watch` seam.
 //! - [`unmodeled`] — compile-time blind-spot markers.
 
 mod async_mutex;
@@ -51,10 +57,13 @@ mod async_notify;
 mod async_rwlock;
 mod async_semaphore;
 mod hooks;
+pub mod mpsc;
 mod mutex;
+pub mod oneshot;
 mod rwlock;
 mod spawn;
 pub mod unmodeled;
+pub mod watch;
 
 pub use async_mutex::{ModelAsyncLock, ModelAsyncMutex, ModelAsyncMutexGuard};
 pub use async_notify::{ModelAsyncNotify, ModelNotified};
@@ -64,9 +73,11 @@ pub use async_rwlock::{
 };
 pub use async_semaphore::{ModelAsyncSemaphore, ModelSemaphoreAcquire, ModelSemaphorePermit};
 pub use hooks::{
-    clear_async_lock_hook, clear_async_notify_hook, clear_lock_hook, clear_spawn_hook,
-    install_async_lock_hook, install_async_notify_hook, install_lock_hook, install_spawn_hook,
+    clear_async_channel_hook, clear_async_lock_hook, clear_async_notify_hook, clear_lock_hook,
+    clear_spawn_hook, install_async_channel_hook, install_async_lock_hook,
+    install_async_notify_hook, install_lock_hook, install_spawn_hook,
     reset_model_async_ids_for_model, reset_model_mutex_ids_for_model, AsyncAcquireKind,
+    AsyncChannelHook, AsyncChannelKind, AsyncChannelOp, AsyncChannelOutcome, AsyncChannelSide,
     AsyncLockHook, AsyncNotifyHook, LockHook, SpawnHook,
 };
 pub use mutex::{ModelMutex, ModelMutexGuard};
