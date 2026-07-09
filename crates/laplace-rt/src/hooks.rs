@@ -5,7 +5,7 @@
 //! model run; with no hook installed the seams in [`crate::spawn`],
 //! [`crate::mutex`], and [`crate::rwlock`] delegate to the standard library.
 
-use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex as StdMutex, OnceLock};
 
 use crate::spawn::JoinToken;
@@ -15,11 +15,18 @@ static LOCK_HOOK: OnceLock<StdMutex<Option<Arc<dyn LockHook>>>> = OnceLock::new(
 static NEXT_LOCK_RESOURCE_ID: AtomicU64 = AtomicU64::new(1);
 static ASYNC_LOCK_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncLockHook>>>> = OnceLock::new();
 static ASYNC_NOTIFY_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncNotifyHook>>>> = OnceLock::new();
+static ASYNC_TIMER_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncTimerHook>>>> = OnceLock::new();
 /// Shared across all four async lock-family primitives (Mutex, `RwLock`,
 /// Semaphore, Notify) so resource ids never collide across the family, even
 /// when several are mixed in one model run.
 static NEXT_ASYNC_LOCK_RESOURCE_ID: AtomicU64 = AtomicU64::new(1);
 static NEXT_ASYNC_LOCK_WAITER_ID: AtomicU64 = AtomicU64::new(1);
+/// Dedicated gate for [`crate::laplace_select`]'s `biased;` polling. Deliberately
+/// its own switch rather than inferred from any hook's presence — a model run
+/// installs the timer/lock hooks *and* flips this flag; a plain user build
+/// (even one that happens to link an engine hook for unrelated reasons) must
+/// not silently lose tokio's stock random polling fairness.
+static DETERMINISTIC_SELECT: AtomicBool = AtomicBool::new(false);
 
 /// Engine-installed surface for creating one controlled model thread.
 pub trait SpawnHook: Send + Sync {
@@ -102,6 +109,18 @@ pub trait AsyncNotifyHook: Send + Sync {
     /// Reports that a queued-but-unresolved `notified()` future was dropped
     /// before it resolved.
     fn waiter_dropped(&self, resource: u64, waiter: u64);
+}
+
+/// Deterministic virtual-clock seam for the model time shadows.
+pub trait AsyncTimerHook: Send + Sync {
+    /// Current virtual time in nanoseconds.
+    fn now_nanos(&self) -> u64;
+    /// Registers interest in waking once virtual time reaches
+    /// `deadline_nanos`. Called on every pending poll; re-registration of
+    /// the same `(timer, deadline_nanos)` must be a cheap no-op.
+    fn register(&self, timer: u64, deadline_nanos: u64);
+    /// A pending timer future was dropped before its deadline.
+    fn timer_dropped(&self, timer: u64);
 }
 
 /// Installs or replaces the process-local spawn hook.
@@ -227,6 +246,45 @@ pub(crate) fn async_notify_hook() -> Option<Arc<dyn AsyncNotifyHook>> {
             .expect("async notify hook lock poisoned")
             .clone()
     })
+}
+
+/// Installs or replaces the process-local async timer hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn install_async_timer_hook(hook: Arc<dyn AsyncTimerHook>) {
+    let slot = ASYNC_TIMER_HOOK.get_or_init(|| StdMutex::new(None));
+    *slot.lock().expect("async timer hook lock poisoned") = Some(hook);
+}
+
+/// Clears the process-local async timer hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn clear_async_timer_hook() {
+    if let Some(slot) = ASYNC_TIMER_HOOK.get() {
+        *slot.lock().expect("async timer hook lock poisoned") = None;
+    }
+}
+
+pub(crate) fn async_timer_hook() -> Option<Arc<dyn AsyncTimerHook>> {
+    ASYNC_TIMER_HOOK
+        .get()
+        .and_then(|slot| slot.lock().expect("async timer hook lock poisoned").clone())
+}
+
+/// Enables/disables deterministic (`biased;`) branch polling for
+/// [`crate::laplace_select`]. Installed by the engine for a model run; the
+/// default (`false`) leaves user builds on tokio's stock random polling.
+pub fn set_deterministic_select(enabled: bool) {
+    DETERMINISTIC_SELECT.store(enabled, Ordering::SeqCst);
+}
+
+/// Whether [`crate::laplace_select`] currently forces `biased;` polling.
+pub fn deterministic_select_enabled() -> bool {
+    DETERMINISTIC_SELECT.load(Ordering::SeqCst)
 }
 
 /// Resets deterministic model async lock-family resource-id and waiter-id

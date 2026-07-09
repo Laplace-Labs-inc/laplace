@@ -34,6 +34,11 @@
 //! [`unmodeled`], same as `std::sync::mpsc`; `tokio::spawn` is also flagged
 //! as un-modeled (the deterministic executor does not yet control it).
 //!
+//! AXM2 A2-4 adds [`time`] — a `tokio::time::{sleep,timeout,interval}`
+//! virtual-clock shadow driven by [`AsyncTimerHook`] — and
+//! [`laplace_select`], a runtime-gated `tokio::select!` drop-in (see the
+//! macro's own doc for the gate).
+//!
 //! ## Module layout
 //!
 //! - [`hooks`] — engine hook traits + install/clear + resource-id allocation.
@@ -44,15 +49,19 @@
 //! - [`async_rwlock`] — [`ModelAsyncRwLock`], the `tokio::sync::RwLock` seam.
 //! - [`async_semaphore`] — [`ModelAsyncSemaphore`], the `tokio::sync::Semaphore` seam.
 //! - [`async_notify`] — [`ModelAsyncNotify`], the `tokio::sync::Notify` seam.
+//! - [`async_time`] — [`time`], the `tokio::time` virtual-clock seam.
+//! - [`select_macro`] — [`laplace_select`], the `tokio::select!` seam.
 //! - [`unmodeled`] — compile-time blind-spot markers.
 
 mod async_mutex;
 mod async_notify;
 mod async_rwlock;
 mod async_semaphore;
+mod async_time;
 mod hooks;
 mod mutex;
 mod rwlock;
+mod select_macro;
 mod spawn;
 pub mod unmodeled;
 
@@ -64,14 +73,21 @@ pub use async_rwlock::{
 };
 pub use async_semaphore::{ModelAsyncSemaphore, ModelSemaphoreAcquire, ModelSemaphorePermit};
 pub use hooks::{
-    clear_async_lock_hook, clear_async_notify_hook, clear_lock_hook, clear_spawn_hook,
-    install_async_lock_hook, install_async_notify_hook, install_lock_hook, install_spawn_hook,
-    reset_model_async_ids_for_model, reset_model_mutex_ids_for_model, AsyncAcquireKind,
-    AsyncLockHook, AsyncNotifyHook, LockHook, SpawnHook,
+    clear_async_lock_hook, clear_async_notify_hook, clear_async_timer_hook, clear_lock_hook,
+    clear_spawn_hook, deterministic_select_enabled, install_async_lock_hook,
+    install_async_notify_hook, install_async_timer_hook, install_lock_hook, install_spawn_hook,
+    reset_model_async_ids_for_model, reset_model_mutex_ids_for_model, set_deterministic_select,
+    AsyncAcquireKind, AsyncLockHook, AsyncNotifyHook, AsyncTimerHook, LockHook, SpawnHook,
 };
 pub use mutex::{ModelMutex, ModelMutexGuard};
 pub use rwlock::{ModelRwLock, ModelRwLockReadGuard, ModelRwLockWriteGuard};
 pub use spawn::{spawn, JoinToken};
+
+/// `tokio::time`-compatible model virtual-clock shadow (`sleep`, `timeout`,
+/// `interval`). See [`async_time`] for the honesty contract.
+pub mod time {
+    pub use crate::async_time::{interval, sleep, timeout, Elapsed, Interval, Sleep, Timeout};
+}
 
 #[cfg(test)]
 mod tests {

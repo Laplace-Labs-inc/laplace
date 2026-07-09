@@ -45,3 +45,13 @@ pub const TOKIO_CHANNEL: () = ();
 )]
 #[doc(hidden)]
 pub const TOKIO_SPAWN: () = ();
+
+/// Marker for an un-modeled `tokio::time` primitive (`Instant`, `sleep_until`,
+/// `interval_at`, `timeout_at`, `pause`/`advance`/`resume`, or a custom
+/// `MissedTickBehavior`). `sleep`/`timeout`/`interval` themselves are modeled
+/// (AXM2 A2-4) — see `laplace_rt::time`.
+#[deprecated(
+    note = "#[laplace::model]: this `tokio::time` primitive is not modeled (AXM2 A2-4 residue); wall-clock/virtual-clock semantics here are a verification blind spot"
+)]
+#[doc(hidden)]
+pub const TOKIO_TIME: () = ();
