@@ -7,7 +7,8 @@ use quote::quote;
 use syn::parse_macro_input;
 use syn::visit_mut::{self, VisitMut};
 use syn::{
-    parse_quote, Expr, ExprCall, Ident, ItemFn, Path, PathArguments, PathSegment, Stmt, TypePath,
+    parse_quote, Expr, ExprCall, Ident, ItemFn, Macro, Path, PathArguments, PathSegment, Stmt,
+    TypePath,
 };
 
 pub fn model_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
@@ -60,6 +61,7 @@ enum Unmodeled {
     Channel,
     TokioChannel,
     TokioSpawn,
+    TokioTime,
 }
 
 impl Unmodeled {
@@ -71,6 +73,7 @@ impl Unmodeled {
             Unmodeled::Channel => "CHANNEL",
             Unmodeled::TokioChannel => "TOKIO_CHANNEL",
             Unmodeled::TokioSpawn => "TOKIO_SPAWN",
+            Unmodeled::TokioTime => "TOKIO_TIME",
         };
         Ident::new(name, proc_macro2::Span::call_site())
     }
@@ -111,6 +114,8 @@ impl VisitMut for ModelRewrite {
             path.path = rewritten;
         } else if let Some(rewritten) = rewrite_tokio_sync_constructor_path(&path.path) {
             path.path = rewritten;
+        } else if let Some(rewritten) = rewrite_tokio_time_fn_path(&path.path) {
+            path.path = rewritten;
         } else if let Some(primitive) = classify_unmodeled(&path.path) {
             self.unmodeled.insert(primitive);
         }
@@ -123,8 +128,30 @@ impl VisitMut for ModelRewrite {
             node.path = rewritten;
         } else if let Some(rewritten) = rewrite_tokio_sync_type_path(&node.path) {
             node.path = rewritten;
+        } else if let Some(rewritten) = rewrite_tokio_time_type_path(&node.path) {
+            node.path = rewritten;
         } else if let Some(primitive) = classify_unmodeled(&node.path) {
             self.unmodeled.insert(primitive);
+        }
+    }
+
+    /// Rewrites a `tokio::select!` invocation's macro path to
+    /// [`laplace_rt::laplace_select`](crate) — the runtime-gated,
+    /// biased-under-a-model-run drop-in (see that macro's own doc).
+    ///
+    /// Only the macro's *path* is visited/rewritten here — `syn`'s default
+    /// `visit_macro_mut` does not descend into the macro's token body (it is
+    /// an opaque `TokenStream`, not a parsed syntax tree), so any
+    /// fully-qualified `tokio::sync::...`/`tokio::time::...` paths written
+    /// *inside* a `select!` branch are not seen or rewritten by this pass.
+    /// Bare unqualified `select!` is intentionally excluded, mirroring the
+    /// bare-`spawn` exclusion above — too high a false-positive risk against
+    /// an unrelated user macro of the same name.
+    fn visit_macro_mut(&mut self, node: &mut Macro) {
+        visit_mut::visit_macro_mut(self, node);
+
+        if is_tokio_select_macro_path(&node.path) {
+            node.path = parse_quote!(::laplace_sdk::rt::laplace_select);
         }
     }
 }
@@ -291,6 +318,139 @@ fn rewrite_tokio_sync_constructor_path(path: &Path) -> Option<Path> {
     ))
 }
 
+/// The `::laplace_rt::time` free function name for a `tokio::time` seam
+/// function, if supported. `sleep`/`timeout`/`interval` are modeled as of
+/// AXM2 A2-4; the rest of `tokio::time` remains recognized-but-un-modeled
+/// via [`classify_tokio_time_unmodeled`].
+fn time_fn_target_for(ident: &Ident) -> Option<&'static str> {
+    if ident == "sleep" {
+        Some("sleep")
+    } else if ident == "timeout" {
+        Some("timeout")
+    } else if ident == "interval" {
+        Some("interval")
+    } else {
+        None
+    }
+}
+
+/// Rewrites a `tokio::time::{sleep,timeout,interval}` *call* path to its
+/// `::laplace_sdk::rt::time` equivalent.
+fn rewrite_tokio_time_fn_path(path: &Path) -> Option<Path> {
+    let segments: Vec<_> = path.segments.iter().collect();
+    let [tokio, time, func] = segments.as_slice() else {
+        return None;
+    };
+    if tokio.ident != "tokio" || time.ident != "time" {
+        return None;
+    }
+    if !matches!(tokio.arguments, PathArguments::None)
+        || !matches!(time.arguments, PathArguments::None)
+        || !matches!(func.arguments, PathArguments::None)
+    {
+        return None;
+    }
+
+    let target = time_fn_target_for(&func.ident)?;
+    let ident = Ident::new(target, proc_macro2::Span::call_site());
+    Some(parse_quote!(::laplace_sdk::rt::time::#ident))
+}
+
+/// The `::laplace_rt::time` model type name for a `tokio::time` type, if
+/// supported.
+fn time_type_target_for(ident: &Ident) -> Option<&'static str> {
+    if ident == "Sleep" {
+        Some("Sleep")
+    } else if ident == "Timeout" {
+        Some("Timeout")
+    } else if ident == "Interval" {
+        Some("Interval")
+    } else {
+        None
+    }
+}
+
+/// Rewrites a `tokio::time::{Sleep,Timeout,Interval}` *type* path to its
+/// `::laplace_sdk::rt::time` equivalent, preserving generic arguments
+/// (`Timeout<F>`'s `F`).
+fn rewrite_tokio_time_type_path(path: &Path) -> Option<Path> {
+    let segments: Vec<_> = path.segments.iter().collect();
+    let [tokio, time, ty] = segments.as_slice() else {
+        return None;
+    };
+    if tokio.ident != "tokio" || time.ident != "time" {
+        return None;
+    }
+    if !matches!(tokio.arguments, PathArguments::None)
+        || !matches!(time.arguments, PathArguments::None)
+    {
+        return None;
+    }
+
+    let target = time_type_target_for(&ty.ident)?;
+    let ident = Ident::new(target, proc_macro2::Span::call_site());
+    let mut rewritten: Path = parse_quote!(::laplace_sdk::rt::time::#ident);
+    rewritten
+        .segments
+        .last_mut()
+        .expect("time model path has a segment")
+        .arguments = ty.arguments.clone();
+    Some(rewritten)
+}
+
+/// Whether `path` is a supported `tokio::select!` macro path, by exact
+/// plain-segment match. Unqualified bare `select!` is intentionally
+/// excluded — see [`ModelRewrite::visit_macro_mut`].
+fn is_tokio_select_macro_path(path: &Path) -> bool {
+    let segments: Vec<_> = path
+        .segments
+        .iter()
+        .map(|segment| (&segment.ident, &segment.arguments))
+        .collect();
+
+    let all_plain = segments
+        .iter()
+        .all(|(_, arguments)| matches!(arguments, PathArguments::None));
+    if !all_plain {
+        return false;
+    }
+
+    matches!(
+        segments.as_slice(),
+        [(tokio, _), (select, _)] if *tokio == "tokio" && *select == "select"
+    )
+}
+
+/// Classifies a recognized-but-un-modeled `tokio::time::X` primitive by its
+/// first three path segments (`tokio::time::X`, ignoring any trailing method
+/// segment such as `::now`). `sleep`/`timeout`/`interval` and their model
+/// types are excluded here — handled by the rewriters above. `Duration` and
+/// the `error` module are excluded too: they are plain value/error types
+/// this seam neither models nor treats as a blind spot.
+fn classify_tokio_time_unmodeled(path: &Path) -> Option<Unmodeled> {
+    let segments: Vec<_> = path.segments.iter().take(3).collect();
+    let [tokio, time, ident] = segments.as_slice() else {
+        return None;
+    };
+    if tokio.ident != "tokio" || time.ident != "time" {
+        return None;
+    }
+    if !matches!(tokio.arguments, PathArguments::None)
+        || !matches!(time.arguments, PathArguments::None)
+    {
+        return None;
+    }
+
+    if matches!(
+        ident.ident.to_string().as_str(),
+        "Instant" | "sleep_until" | "interval_at" | "timeout_at" | "advance" | "pause" | "resume"
+    ) {
+        Some(Unmodeled::TokioTime)
+    } else {
+        None
+    }
+}
+
 /// Classifies a recognized-but-un-modeled `tokio::sync::X` primitive by its
 /// first three path segments (`tokio::sync::X`, ignoring any trailing method
 /// segment such as `::new`/`::channel`). `Mutex`/`RwLock`/`Semaphore`/
@@ -361,6 +521,9 @@ fn is_unmodeled_tokio_spawn_path(path: &Path) -> bool {
 /// handled by the rewriters above.
 fn classify_unmodeled(path: &Path) -> Option<Unmodeled> {
     if let Some(primitive) = classify_tokio_sync_unmodeled(path) {
+        return Some(primitive);
+    }
+    if let Some(primitive) = classify_tokio_time_unmodeled(path) {
         return Some(primitive);
     }
     if is_unmodeled_tokio_spawn_path(path) {
@@ -612,6 +775,106 @@ mod tests {
             out.matches("TOKIO_SPAWN").count(),
             1,
             "expected one marker: {out}"
+        );
+    }
+
+    #[test]
+    fn rewrite_maps_qualified_tokio_time_functions_and_types() {
+        let out = rewrite_to_string(
+            "fn f() { \
+                let s: tokio::time::Sleep = tokio::time::sleep(D); \
+                let t: tokio::time::Timeout<X> = tokio::time::timeout(D, fut); \
+                let i: tokio::time::Interval = tokio::time::interval(D); \
+            }",
+        );
+        assert!(
+            out.contains("laplace_sdk") && out.contains("rt") && out.contains("time"),
+            "time module root missing: {out}"
+        );
+        assert!(out.contains("sleep"), "sleep fn rewrite missing: {out}");
+        assert!(out.contains("timeout"), "timeout fn rewrite missing: {out}");
+        assert!(
+            out.contains("interval"),
+            "interval fn rewrite missing: {out}"
+        );
+        assert!(out.contains("Sleep"), "Sleep type rewrite missing: {out}");
+        assert!(
+            out.contains("Timeout") && out.contains('X'),
+            "Timeout<F> generic must be preserved: {out}"
+        );
+        assert!(
+            out.contains("Interval"),
+            "Interval type rewrite missing: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn classify_does_not_flag_tokio_time_duration_or_error() {
+        // Value/error types are plain uses, not un-modeled primitives.
+        assert_eq!(classify("tokio::time::Duration"), None);
+        assert_eq!(classify("tokio::time::error::Elapsed"), None);
+        // Modeled seam functions/types must not be flagged either.
+        assert_eq!(classify("tokio::time::sleep"), None);
+        assert_eq!(classify("tokio::time::timeout"), None);
+        assert_eq!(classify("tokio::time::interval"), None);
+        assert_eq!(classify("tokio::time::Sleep"), None);
+        assert_eq!(classify("tokio::time::Timeout"), None);
+        assert_eq!(classify("tokio::time::Interval"), None);
+    }
+
+    #[test]
+    fn classify_flags_unmodeled_tokio_time_primitives() {
+        assert_eq!(classify("tokio::time::Instant"), Some(Unmodeled::TokioTime));
+        assert_eq!(
+            classify("tokio::time::Instant::now"),
+            Some(Unmodeled::TokioTime)
+        );
+        assert_eq!(
+            classify("tokio::time::sleep_until"),
+            Some(Unmodeled::TokioTime)
+        );
+        assert_eq!(
+            classify("tokio::time::interval_at"),
+            Some(Unmodeled::TokioTime)
+        );
+        assert_eq!(
+            classify("tokio::time::timeout_at"),
+            Some(Unmodeled::TokioTime)
+        );
+        assert_eq!(classify("tokio::time::pause"), Some(Unmodeled::TokioTime));
+        assert_eq!(classify("tokio::time::resume"), Some(Unmodeled::TokioTime));
+        assert_eq!(classify("tokio::time::advance"), Some(Unmodeled::TokioTime));
+    }
+
+    #[test]
+    fn rewrite_injects_blind_spot_marker_for_unmodeled_tokio_time() {
+        let out = rewrite_to_string("fn f() { let _ = tokio::time::Instant::now(); }");
+        assert!(
+            out.contains("laplace_sdk") && out.contains("unmodeled") && out.contains("TOKIO_TIME"),
+            "tokio time blind-spot marker missing: {out}"
+        );
+    }
+
+    #[test]
+    fn rewrite_maps_qualified_tokio_select_macro_path() {
+        let out = rewrite_to_string("fn f() { tokio::select! { _ = async {} => {} } }");
+        assert!(
+            out.contains("laplace_sdk") && out.contains("laplace_select"),
+            "select! macro path rewrite missing: {out}"
+        );
+        assert!(!out.contains("unmodeled"), "unexpected marker: {out}");
+    }
+
+    #[test]
+    fn rewrite_does_not_touch_bare_select_macro() {
+        // Unqualified bare `select!` is excluded — too high a false-positive
+        // risk against an unrelated user macro of the same name (mirrors the
+        // bare-`spawn` exclusion).
+        let out = rewrite_to_string("fn f() { select! { _ = async {} => {} } }");
+        assert!(
+            !out.contains("laplace_select"),
+            "bare select! must not be rewritten: {out}"
         );
     }
 }
