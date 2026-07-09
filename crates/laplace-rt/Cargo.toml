@@ -10,3 +10,7 @@ description = "Runtime seams for annotated Laplace model code"
 publish = false
 
 [dependencies]
+tokio = { version = "1.42", default-features = false, features = ["sync"] }
+
+[dev-dependencies]
+tokio = { version = "1.42", features = ["sync", "rt", "macros", "time", "test-util"] }

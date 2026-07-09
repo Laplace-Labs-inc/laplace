@@ -24,23 +24,34 @@
 //! annotated source are flagged as un-modeled blind spots via
 //! [`unmodeled`] rather than silently passing.
 //!
+//! AXM2 A2-3 adds the async side of this seam: [`async_mutex`] rewrites
+//! qualified `tokio::sync::Mutex` to a wrap-real [`ModelAsyncMutex`], see
+//! that module's honesty contract for what is and is not observable through
+//! it. `tokio::sync::RwLock`/`Semaphore`/`Notify` and the `tokio::sync`
+//! channel family are recognized-but-un-modeled for now and flagged via
+//! [`unmodeled`], same as their `std::sync`/`mpsc` counterparts.
+//!
 //! ## Module layout
 //!
 //! - [`hooks`] — engine hook traits + install/clear + resource-id allocation.
 //! - [`spawn`] — the model-thread spawn seam.
 //! - [`mutex`] — [`ModelMutex`].
 //! - [`rwlock`] — [`ModelRwLock`].
+//! - [`async_mutex`] — [`ModelAsyncMutex`], the `tokio::sync::Mutex` seam.
 //! - [`unmodeled`] — compile-time blind-spot markers.
 
+mod async_mutex;
 mod hooks;
 mod mutex;
 mod rwlock;
 mod spawn;
 pub mod unmodeled;
 
+pub use async_mutex::{ModelAsyncLock, ModelAsyncMutex, ModelAsyncMutexGuard};
 pub use hooks::{
-    clear_lock_hook, clear_spawn_hook, install_lock_hook, install_spawn_hook,
-    reset_model_mutex_ids_for_model, LockHook, SpawnHook,
+    clear_async_lock_hook, clear_lock_hook, clear_spawn_hook, install_async_lock_hook,
+    install_lock_hook, install_spawn_hook, reset_model_async_mutex_ids_for_model,
+    reset_model_mutex_ids_for_model, AsyncLockHook, LockHook, SpawnHook,
 };
 pub use mutex::{ModelMutex, ModelMutexGuard};
 pub use rwlock::{ModelRwLock, ModelRwLockReadGuard, ModelRwLockWriteGuard};
