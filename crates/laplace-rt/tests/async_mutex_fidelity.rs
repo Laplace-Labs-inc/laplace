@@ -425,3 +425,18 @@ async fn s6_event_stream_matches_expected_sequence() {
 
     clear_async_lock_hook();
 }
+
+/// Send-parity: rewritten user code must keep compiling wherever the raw
+/// tokio equivalent compiled. `tokio::spawn` requires `Send` futures, so the
+/// `lock()` future and guard must be `Send` exactly like tokio's own.
+#[test]
+fn s7_send_parity_with_raw_tokio() {
+    fn require_send<T: Send>() {}
+    // Column A (raw tokio) — these hold by tokio's design.
+    require_send::<tokio::sync::Mutex<u64>>();
+    require_send::<tokio::sync::MutexGuard<'static, u64>>();
+    // Column B (shadow) — must match.
+    require_send::<ModelAsyncMutex<u64>>();
+    require_send::<laplace_rt::ModelAsyncLock<'static, u64>>();
+    require_send::<laplace_rt::ModelAsyncMutexGuard<'static, u64>>();
+}

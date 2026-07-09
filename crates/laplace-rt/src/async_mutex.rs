@@ -55,7 +55,7 @@ impl<T> ModelAsyncMutex<T> {
     }
 }
 
-impl<T: ?Sized> ModelAsyncMutex<T> {
+impl<T: ?Sized + Send> ModelAsyncMutex<T> {
     /// Acquires the mutex, returning a future that resolves to a guard.
     ///
     /// The signature mirrors `tokio::sync::Mutex::lock`, allowing annotated
@@ -64,6 +64,11 @@ impl<T: ?Sized> ModelAsyncMutex<T> {
     /// finds contention, an `acquired` boundary is reported when the guard
     /// is produced (immediately or by resolving a queued wait), and a
     /// `released` boundary is reported when the returned guard is dropped.
+    ///
+    /// `T: Send` is required so [`ModelAsyncLock`] stays `Send` like tokio's
+    /// own `lock()` future — rewritten source spawned via `tokio::spawn`
+    /// must keep compiling wherever the raw tokio equivalent compiled
+    /// (Send-parity, asserted by the fidelity gate).
     pub fn lock(&self) -> ModelAsyncLock<'_, T> {
         ModelAsyncLock {
             resource: self.resource,
@@ -73,7 +78,9 @@ impl<T: ?Sized> ModelAsyncMutex<T> {
             acquired: false,
         }
     }
+}
 
+impl<T: ?Sized> ModelAsyncMutex<T> {
     /// Attempts to acquire the mutex without waiting.
     ///
     /// Mirrors `tokio::sync::Mutex::try_lock`. A successful acquisition
@@ -116,7 +123,7 @@ impl<T: ?Sized> ModelAsyncMutex<T> {
 pub struct ModelAsyncLock<'a, T: ?Sized> {
     resource: u64,
     waiter: u64,
-    inner: Pin<Box<dyn Future<Output = tokio::sync::MutexGuard<'a, T>> + 'a>>,
+    inner: Pin<Box<dyn Future<Output = tokio::sync::MutexGuard<'a, T>> + Send + 'a>>,
     requested_emitted: bool,
     acquired: bool,
 }
