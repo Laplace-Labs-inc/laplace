@@ -269,7 +269,7 @@ pub struct ProbeSessionConfig {
 impl Default for ProbeSessionConfig {
     fn default() -> Self {
         let max_depth = load_axiom_max_depth()
-            .or_else(|| crate::config::load_toml_max_depth())
+            .or_else(|| warn_toml_depth_override(crate::config::load_toml_max_depth()))
             .unwrap_or(500);
         Self {
             max_depth,
@@ -277,6 +277,17 @@ impl Default for ProbeSessionConfig {
             output_dir: ".".to_string(),
         }
     }
+}
+
+fn warn_toml_depth_override(depth: Option<usize>) -> Option<usize> {
+    depth.inspect(|depth| {
+        tracing::warn!(
+            "axiom exploration depth set to {depth} by a discovered laplace.toml \
+             ([axiom] max_depth); this silently overrides the built-in default. \
+             Set the depth via your Laplace license (~/.laplace/config.json) or \
+             remove the laplace.toml entry to make verification depth explicit."
+        );
+    })
 }
 
 /// Public reference verifier verdict.
@@ -409,6 +420,46 @@ fn find_lock_order_cycle(events: &[ProbeEvent]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::{
+        atomic::{AtomicUsize, Ordering},
+        Arc,
+    };
+
+    struct EventCounter(Arc<AtomicUsize>);
+
+    impl tracing::Subscriber for EventCounter {
+        fn enabled(&self, _metadata: &tracing::Metadata<'_>) -> bool {
+            true
+        }
+
+        fn new_span(&self, _span: &tracing::span::Attributes<'_>) -> tracing::span::Id {
+            tracing::span::Id::from_u64(1)
+        }
+
+        fn record(&self, _span: &tracing::span::Id, _values: &tracing::span::Record<'_>) {}
+
+        fn record_follows_from(&self, _span: &tracing::span::Id, _follows: &tracing::span::Id) {}
+
+        fn event(&self, _event: &tracing::Event<'_>) {
+            self.0.fetch_add(1, Ordering::SeqCst);
+        }
+
+        fn enter(&self, _span: &tracing::span::Id) {}
+
+        fn exit(&self, _span: &tracing::span::Id) {}
+    }
+
+    #[test]
+    fn toml_depth_override_warns_and_preserves_value() {
+        let events = Arc::new(AtomicUsize::new(0));
+        let result = tracing::subscriber::with_default(EventCounter(Arc::clone(&events)), || {
+            warn_toml_depth_override(Some(20))
+        });
+
+        assert_eq!(result, Some(20));
+        assert_eq!(events.load(Ordering::SeqCst), 1);
+        assert_eq!(warn_toml_depth_override(None), None);
+    }
 
     #[test]
     fn set_and_get_thread_id() {

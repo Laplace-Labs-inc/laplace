@@ -129,8 +129,8 @@ pub fn laplace_tracked(attr: TokenStream, item: TokenStream) -> TokenStream {
 
 /// Deprecated alias for `#[laplace_tracked]`.
 ///
-/// Like `#[laplace_tracked]`, transforms `#[track]` fields into TrackedMutex,
-/// TrackedRwLock, and other tracked primitives.
+/// Like `#[laplace_tracked]`, transforms `#[track]` fields into `TrackedMutex`,
+/// `TrackedRwLock`, and other tracked primitives.
 /// When cloud Probe observation is enabled, events are sent to probe-edge via
 /// `GLOBAL_PROBE_CLIENT`.
 ///
