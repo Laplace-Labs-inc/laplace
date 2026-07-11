@@ -10,6 +10,10 @@
 //! tier-2 `laplace axiom verify --capture` gate as the authoritative bug
 //! reproduction path. `laplace_sdk::check!` is a reserved invariant hook name;
 //! this macro does not implement it yet.
+//!
+//! `#[laplace_sdk::verify(tasks)]` captures one native execution of a
+//! pre-registered `TaskSet` composition. A deadlocking composition also hangs in
+//! this tier; modeled task verdicts belong to the later async engine surface.
 
 use proc_macro::TokenStream;
 use quote::quote;
@@ -18,7 +22,7 @@ use syn::punctuated::Punctuated;
 use syn::{Expr, ItemFn, Lit, Meta, Token};
 
 const VALID_VERIFY_KEYS: &str =
-    "scenario, threads, name, expected, determinism, write_ard, output_dir, buffer, max_depth";
+    "scenario, tasks, threads, name, expected, determinism, write_ard, output_dir, buffer, max_depth";
 
 const VALID_DETERMINISM_LABELS: &[&str] = &[
     "fully_deterministic",
@@ -35,6 +39,7 @@ const VALID_DETERMINISM_LABELS: &[&str] = &[
 pub(crate) struct VerifyArgs {
     pub(crate) threads: Option<usize>,
     pub(crate) scenario: bool,
+    pub(crate) tasks: bool,
     pub(crate) name: Option<String>,
     pub(crate) expected: Option<String>,
     pub(crate) determinism: String,
@@ -48,6 +53,7 @@ impl Parse for VerifyArgs {
     fn parse(input: ParseStream) -> Result<Self> {
         let mut threads = None;
         let mut scenario = false;
+        let mut tasks = false;
         let mut name = None;
         let mut expected = None;
         let mut determinism = None;
@@ -61,6 +67,10 @@ impl Parse for VerifyArgs {
             if let Meta::Path(path) = &meta {
                 if path.is_ident("scenario") {
                     scenario = true;
+                    continue;
+                }
+                if path.is_ident("tasks") {
+                    tasks = true;
                     continue;
                 }
             }
@@ -197,17 +207,24 @@ impl Parse for VerifyArgs {
             }
         }
 
-        if threads.is_some() && scenario {
-            return Err(input.error("verify: `threads` and `scenario` are mutually exclusive"));
+        let mode_count =
+            usize::from(threads.is_some()) + usize::from(scenario) + usize::from(tasks);
+        if mode_count > 1 {
+            return Err(
+                input.error("verify: `threads`, `scenario`, and `tasks` are mutually exclusive")
+            );
         }
 
-        if threads.is_none() && !scenario {
-            return Err(input.error("verify: either `threads = N` or `scenario` is required"));
+        if mode_count == 0 {
+            return Err(
+                input.error("verify: either `threads = N`, `scenario`, or `tasks` is required")
+            );
         }
 
         Ok(VerifyArgs {
             threads,
             scenario,
+            tasks,
             name,
             expected,
             determinism: determinism.unwrap_or_else(|| "fully_deterministic".to_string()),
@@ -289,6 +306,8 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
     let expected_declared = args.expected.is_some();
     let expected = args.expected.as_deref().unwrap_or("clean").to_string();
     let scenario = args.scenario;
+    let tasks = args.tasks;
+    let is_async = func.sig.asyncness.is_some();
     let determinism = &args.determinism;
     let write_ard = args.write_ard;
     let output_dir = &args.output_dir;
@@ -297,6 +316,49 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
 
     let test_fn_name =
         syn::Ident::new(&format!("__laplace_verify_{func_ident}"), func_ident.span());
+
+    if tasks {
+        let task_signature_msg =
+            "unsupported #[laplace_sdk::verify(tasks)] function signature; tasks mode requires exactly one typed &mut TaskSet argument";
+        if is_async {
+            return syn::Error::new_spanned(
+                &func.sig,
+                "composition fn must not be async; spawn async tasks via TaskSet::spawn",
+            )
+            .to_compile_error()
+            .into();
+        }
+
+        let mut task_inputs = func.sig.inputs.iter();
+        let Some(task_input) = task_inputs.next() else {
+            return syn::Error::new_spanned(&func.sig, task_signature_msg)
+                .to_compile_error()
+                .into();
+        };
+        if task_inputs.next().is_some() {
+            return syn::Error::new_spanned(&func.sig.inputs, task_signature_msg)
+                .to_compile_error()
+                .into();
+        }
+
+        match task_input {
+            syn::FnArg::Receiver(receiver) => {
+                return syn::Error::new_spanned(receiver, task_signature_msg)
+                    .to_compile_error()
+                    .into();
+            }
+            syn::FnArg::Typed(pat_type)
+                if matches!(
+                    &*pat_type.ty,
+                    syn::Type::Reference(type_ref) if type_ref.mutability.is_some()
+                ) => {}
+            syn::FnArg::Typed(pat_type) => {
+                return syn::Error::new_spanned(&pat_type.ty, task_signature_msg)
+                    .to_compile_error()
+                    .into();
+            }
+        }
+    }
 
     // 첫 번째 파라미터 검사: &T, Arc<T>, 또는 없음
     enum StateSignature {
@@ -357,8 +419,6 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
             }
         }
     };
-
-    let is_async = func.sig.asyncness.is_some();
 
     let max_depth_config = if let Some(md) = max_depth {
         quote! {
@@ -422,6 +482,41 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
     };
 
     let _ = buffer; // legacy `buffer` arg is a no-op under the unbounded session sink
+
+    if tasks {
+        let expanded = quote! {
+            #func
+
+            #[cfg(test)]
+            #[test]
+            #[allow(non_snake_case)]
+            fn #test_fn_name() {
+                use ::laplace_sdk::__macro_support::{
+                    install_probe_lock_hook,
+                    install_probe_task_hook,
+                    run_task_set_native,
+                    set_probe_thread_id,
+                    CaptureSession,
+                    ProbeEvent,
+                    ProbeSessionConfig,
+                    run_verification_from,
+                };
+
+                let __laplace_session = CaptureSession::begin();
+                install_probe_lock_hook();
+                install_probe_task_hook();
+                set_probe_thread_id(0);
+                let mut __laplace_tasks = ::laplace_sdk::rt::TaskSet::new();
+                #func_ident(&mut __laplace_tasks);
+                run_task_set_native(__laplace_tasks);
+                let events: Vec<ProbeEvent> = __laplace_session.finish();
+
+                #verification_tail
+            }
+        };
+
+        return TokenStream::from(expanded);
+    }
 
     if scenario {
         if !matches!(&state_signature, StateSignature::None) {
@@ -671,9 +766,34 @@ mod tests {
     }
 
     #[test]
+    fn tasks_flag_is_accepted_without_value() {
+        let args = parse_args(r#"tasks, expected = "clean""#);
+
+        assert!(args.tasks);
+        assert!(!args.scenario);
+        assert_eq!(args.threads, None);
+    }
+
+    #[test]
     fn threads_and_scenario_are_mutually_exclusive() {
         let err = syn::parse_str::<VerifyArgs>("threads = 2, scenario")
             .expect_err("scenario and threads must be rejected together");
+
+        assert!(err.to_string().contains("mutually exclusive"));
+    }
+
+    #[test]
+    fn tasks_and_threads_are_mutually_exclusive() {
+        let err = syn::parse_str::<VerifyArgs>("tasks, threads = 2")
+            .expect_err("tasks and threads must be rejected together");
+
+        assert!(err.to_string().contains("mutually exclusive"));
+    }
+
+    #[test]
+    fn tasks_and_scenario_are_mutually_exclusive() {
+        let err = syn::parse_str::<VerifyArgs>("tasks, scenario")
+            .expect_err("tasks and scenario must be rejected together");
 
         assert!(err.to_string().contains("mutually exclusive"));
     }
@@ -685,6 +805,6 @@ mod tests {
 
         assert!(err
             .to_string()
-            .contains("either `threads = N` or `scenario` is required"));
+            .contains("either `threads = N`, `scenario`, or `tasks` is required"));
     }
 }

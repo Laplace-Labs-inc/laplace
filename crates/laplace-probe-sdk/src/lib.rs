@@ -23,6 +23,7 @@ pub mod event;
 pub mod license;
 pub mod model_lock;
 pub mod session;
+pub mod task;
 pub mod tracked;
 pub mod tracked_atomic;
 #[cfg(feature = "parking_lot_tracking")]
@@ -42,6 +43,7 @@ pub use session::{
     set_probe_sender, set_probe_thread_id, CaptureSession, ProbeSessionConfig, ReferenceVerdict,
     VerifyResult,
 };
+pub use task::{install_probe_task_hook, run_task_set_native, ProbeTaskHook};
 pub use tracked::{TrackedGuard, TrackedMutex};
 pub use tracked_atomic::{
     TrackedAtomicBool, TrackedAtomicU32, TrackedAtomicU64, TrackedAtomicUsize,
@@ -70,6 +72,7 @@ pub use session::init_cloud_probe;
 #[doc(hidden)]
 pub mod __macro_support {
     pub use crate::ProbeEvent;
+    pub use crate::{install_probe_task_hook, run_task_set_native};
     pub use crate::{
         set_probe_sender, set_probe_thread_id, CaptureSession, ProbeSessionConfig, TrackedMutex,
         TrackedRwLock,

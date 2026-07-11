@@ -1,0 +1,5 @@
+error: composition fn must not be async; spawn async tasks via TaskSet::spawn
+ --> tests/ui/fail/verify_tasks_async.rs:4:1
+  |
+4 | async fn async_composition(_tasks: &mut laplace_rt::TaskSet) {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

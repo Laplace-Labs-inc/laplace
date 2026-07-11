@@ -48,9 +48,10 @@ pub use laplace_macro::laplace_probe;
 
 /// Improved DPOR verification harness attribute.
 ///
-/// Supports replica mode with `threads = N` and native one-shot scenario mode
-/// with `scenario`. In scenario mode, a real `expected = "bug"` deadlock body
-/// can hang during capture; use `laplace axiom verify --capture` as the
+/// Supports replica mode with `threads = N`, native one-shot scenario mode
+/// with `scenario`, and pre-registered async task composition with `tasks`.
+/// In scenario and tasks modes, a real `expected = "bug"` deadlock body can
+/// hang during capture; use `laplace axiom verify --capture` as the
 /// authoritative tier-2 bug reproduction path. `laplace_sdk::check!` is a
 /// reserved invariant hook name and is not implemented yet.
 pub use laplace_macro::laplace_verify as verify;
@@ -191,6 +192,8 @@ pub mod __macro_support {
         TrackedAtomicUsize, TrackedMutex, TrackedRwLock, TrackedSemaphore, TrackedStdMutex,
         TrackedStdRwLock,
     };
-    pub use laplace_probe_sdk::install_probe_lock_hook;
+    pub use laplace_probe_sdk::{
+        install_probe_lock_hook, install_probe_task_hook, run_task_set_native,
+    };
     pub use tokio;
 }

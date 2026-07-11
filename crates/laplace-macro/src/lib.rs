@@ -174,6 +174,8 @@ pub fn laplace_probe(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// - `async fn <name>(state: Arc<T>)` — replica mode state Arc (backward compatible)
 /// - `async fn <name>()` / `fn <name>()` — no shared state
 /// - `#[laplace::verify(scenario)] fn <name>()` — one native scenario execution
+/// - `#[laplace::verify(tasks)] fn <name>(tasks: &mut laplace_sdk::rt::TaskSet)`
+///   — one native pre-registered task execution
 ///
 /// Where T must implement `Default`.
 ///
@@ -181,6 +183,8 @@ pub fn laplace_probe(attr: TokenStream, item: TokenStream) -> TokenStream {
 ///
 /// - `threads`: Replica mode with this many concurrent workers (≤ 8)
 /// - `scenario`: Scenario mode; no state parameter, body owns all worker setup
+/// - `tasks`: Task composition mode; the function registers async tasks in a
+///   mutable `TaskSet` before native execution
 /// - `expected` (default: "clean"): Expected verdict: "clean" or "bug"
 /// - `write_ard` (default: false): Write ARD output
 /// - `output_dir` (default: "."): Output directory path

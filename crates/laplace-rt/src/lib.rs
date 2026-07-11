@@ -9,8 +9,9 @@
 //! these surfaces delegate to the standard library.
 //!
 //! P-1 only supports `FnOnce() -> ()` closures. Non-unit spawn returns,
-//! `std::thread::Builder`, scoped threads, async task spawning, and unqualified
-//! bare `spawn(...)` calls are outside this runtime surface.
+//! `std::thread::Builder`, scoped threads, and unqualified bare `spawn(...)`
+//! calls are outside this runtime surface. The separate `TaskSet` surface
+//! provides pre-registered native async task composition.
 //!
 //! P-3 rewrites qualified `std::sync::Mutex` and `std::sync::RwLock` paths and
 //! supports `try_lock`/`try_read`/`try_write` (a non-blocking acquisition that
@@ -71,6 +72,7 @@ pub mod oneshot;
 mod rwlock;
 mod select_macro;
 mod spawn;
+mod task_set;
 pub mod unmodeled;
 pub mod watch;
 
@@ -83,16 +85,18 @@ pub use async_rwlock::{
 pub use async_semaphore::{ModelAsyncSemaphore, ModelSemaphoreAcquire, ModelSemaphorePermit};
 pub use hooks::{
     clear_async_channel_hook, clear_async_lock_hook, clear_async_notify_hook,
-    clear_async_timer_hook, clear_lock_hook, clear_spawn_hook, deterministic_select_enabled,
-    install_async_channel_hook, install_async_lock_hook, install_async_notify_hook,
-    install_async_timer_hook, install_lock_hook, install_spawn_hook,
-    reset_model_async_ids_for_model, reset_model_mutex_ids_for_model, set_deterministic_select,
-    AsyncAcquireKind, AsyncChannelHook, AsyncChannelKind, AsyncChannelOp, AsyncChannelOutcome,
-    AsyncChannelSide, AsyncLockHook, AsyncNotifyHook, AsyncTimerHook, LockHook, SpawnHook,
+    clear_async_timer_hook, clear_lock_hook, clear_spawn_hook, clear_task_observer_hook,
+    deterministic_select_enabled, install_async_channel_hook, install_async_lock_hook,
+    install_async_notify_hook, install_async_timer_hook, install_lock_hook, install_spawn_hook,
+    install_task_observer_hook, reset_model_async_ids_for_model, reset_model_mutex_ids_for_model,
+    set_deterministic_select, AsyncAcquireKind, AsyncChannelHook, AsyncChannelKind, AsyncChannelOp,
+    AsyncChannelOutcome, AsyncChannelSide, AsyncLockHook, AsyncNotifyHook, AsyncTimerHook,
+    LockHook, SpawnHook, TaskObserverHook, TaskPollOutcome,
 };
 pub use mutex::{ModelMutex, ModelMutexGuard};
 pub use rwlock::{ModelRwLock, ModelRwLockReadGuard, ModelRwLockWriteGuard};
 pub use spawn::{spawn, JoinToken};
+pub use task_set::{TaskHandle, TaskSet};
 
 /// `tokio::time`-compatible model virtual-clock shadow (`sleep`, `timeout`,
 /// `interval`). See [`async_time`] for the honesty contract.

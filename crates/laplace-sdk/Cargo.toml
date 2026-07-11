@@ -23,6 +23,7 @@ laplace-dpor      = { path = "../laplace-dpor", version = "0.1.0-alpha-1", optio
 tokio             = { workspace = true }
 
 [dev-dependencies]
+serde_json = { workspace = true }
 trybuild = "1.0"
 
 [package.metadata.docs.rs]

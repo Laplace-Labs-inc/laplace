@@ -12,6 +12,7 @@ use crate::spawn::JoinToken;
 
 static SPAWN_HOOK: OnceLock<StdMutex<Option<Arc<dyn SpawnHook>>>> = OnceLock::new();
 static LOCK_HOOK: OnceLock<StdMutex<Option<Arc<dyn LockHook>>>> = OnceLock::new();
+static TASK_OBSERVER_HOOK: OnceLock<StdMutex<Option<Arc<dyn TaskObserverHook>>>> = OnceLock::new();
 static NEXT_LOCK_RESOURCE_ID: AtomicU64 = AtomicU64::new(1);
 static ASYNC_LOCK_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncLockHook>>>> = OnceLock::new();
 static ASYNC_NOTIFY_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncNotifyHook>>>> = OnceLock::new();
@@ -43,6 +44,32 @@ pub trait LockHook: Send + Sync {
 
     /// Reports a model mutex release boundary.
     fn release(&self, resource: u64);
+}
+
+/// Outcome reported after one observed model-task poll.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskPollOutcome {
+    /// The task future remains pending.
+    Pending,
+    /// The task future returned `Poll::Ready`.
+    Ready,
+    /// The task future panicked during its poll.
+    Panicked,
+}
+
+/// Engine- or probe-installed surface for model-task lifecycle observation.
+pub trait TaskObserverHook: Send + Sync {
+    /// Reports a task registered in a `TaskSet`.
+    fn task_registered(&self, task: u64);
+
+    /// Reports entry into one task-future poll.
+    fn poll_started(&self, task: u64, attempt: u64);
+
+    /// Reports the outcome of one task-future poll.
+    fn poll_completed(&self, task: u64, attempt: u64, outcome: TaskPollOutcome);
+
+    /// Reports that a task reached a terminal state.
+    fn task_completed(&self, task: u64);
 }
 
 /// Acquisition mode for an async lock-family boundary.
@@ -250,6 +277,35 @@ pub(crate) fn lock_hook() -> Option<Arc<dyn LockHook>> {
     LOCK_HOOK
         .get()
         .and_then(|slot| slot.lock().expect("lock hook lock poisoned").clone())
+}
+
+/// Installs or replaces the process-local model-task observer hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn install_task_observer_hook(hook: Arc<dyn TaskObserverHook>) {
+    let slot = TASK_OBSERVER_HOOK.get_or_init(|| StdMutex::new(None));
+    *slot.lock().expect("task observer hook lock poisoned") = Some(hook);
+}
+
+/// Clears the process-local model-task observer hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn clear_task_observer_hook() {
+    if let Some(slot) = TASK_OBSERVER_HOOK.get() {
+        *slot.lock().expect("task observer hook lock poisoned") = None;
+    }
+}
+
+pub(crate) fn task_observer_hook() -> Option<Arc<dyn TaskObserverHook>> {
+    TASK_OBSERVER_HOOK.get().and_then(|slot| {
+        slot.lock()
+            .expect("task observer hook lock poisoned")
+            .clone()
+    })
 }
 
 /// Resets deterministic model mutex id allocation for controlled re-execution.

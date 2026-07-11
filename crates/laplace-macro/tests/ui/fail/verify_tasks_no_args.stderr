@@ -1,0 +1,5 @@
+error: unsupported #[laplace_sdk::verify(tasks)] function signature; tasks mode requires exactly one typed &mut TaskSet argument
+ --> tests/ui/fail/verify_tasks_no_args.rs:4:1
+  |
+4 | fn composition_without_argument() {}
+  | ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

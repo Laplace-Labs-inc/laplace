@@ -1,0 +1,5 @@
+error: unsupported #[laplace_sdk::verify(tasks)] function signature; tasks mode requires exactly one typed &mut TaskSet argument
+ --> tests/ui/fail/verify_tasks_receiver.rs:7:34
+  |
+7 |     fn composition_with_receiver(&mut self) {}
+  |                                  ^^^^^^^^^
