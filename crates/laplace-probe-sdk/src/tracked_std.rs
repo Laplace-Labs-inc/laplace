@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
-//! `TrackedStdMutex<T>` — `std::sync::Mutex` 래퍼로 lock/unlock 시 `ProbeEvent`를 자동 전송.
+//! `TrackedStdMutex<T>` — `std::sync::Mutex` wrapper that automatically emits
+//! `ProbeEvent` on lock/unlock.
 //!
-//! [GHOST CONSTRAINT]: `resource_name`은 동일 자원에 대해 항상 동일한 &'static str.
+//! [GHOST CONSTRAINT]: `resource_name` must always be the same &'static str for
+//! a given resource.
 //! Downstream adapters use the name as the stable synchronization resource key.
 //!
-//! [GHOST CONSTRAINT]: `lock()`은 동기 블로킹 호출이다.
-//! tokio async 컨텍스트 내에서 호출하면 tokio 스레드를 블로킹한다.
-//! 테스트 목적으로는 short critical section에 한해 허용.
+//! [GHOST CONSTRAINT]: `lock()` is a synchronous blocking call.
+//! Calling it in a tokio async context blocks a tokio thread.
+//! It is allowed for short critical sections in tests.
 
 use std::ops::{Deref, DerefMut};
 use std::sync::{Mutex, MutexGuard};
@@ -22,9 +24,10 @@ macro_rules! emit_probe_event {
     }};
 }
 
-/// `std::sync::Mutex<T>` 래퍼 — lock/unlock 시 `ProbeEvent`를 자동 전송한다.
+/// `std::sync::Mutex<T>` wrapper that automatically emits `ProbeEvent` on
+/// lock/unlock.
 ///
-/// BYOC Phase 2에서 `std::sync::Mutex` 기반 라이브러리 검증에 사용.
+/// Used to verify `std::sync::Mutex`-based libraries during BYOC Phase 2.
 ///
 /// ```ignore
 /// // before
@@ -40,7 +43,7 @@ pub struct TrackedStdMutex<T> {
 }
 
 impl<T> TrackedStdMutex<T> {
-    /// 이름과 초기값으로 `TrackedStdMutex`를 생성한다.
+    /// Creates a `TrackedStdMutex` with a name and initial value.
     pub fn new(value: T, resource_name: &'static str) -> Self {
         Self {
             inner: Mutex::new(value),
@@ -48,10 +51,12 @@ impl<T> TrackedStdMutex<T> {
         }
     }
 
-    /// Lock을 동기적으로 획득한다. 획득 후 `ProbeEvent::LockAcquired`를 전송한다.
+    /// Acquires the lock synchronously and sends `ProbeEvent::LockAcquired`
+    /// after acquisition.
     ///
-    /// [GHOST CONSTRAINT]: 호출 전 OS 스레드에 `set_probe_sender()` +
-    /// `set_probe_thread_id()` 가 설정되어 있어야 한다. 미설정 시 no-op (이벤트 전송 안 함).
+    /// [GHOST CONSTRAINT]: before calling, set `set_probe_sender()` and
+    /// `set_probe_thread_id()` on the OS thread. If unset, this is a no-op (no
+    /// event is sent).
     ///
     /// # Panics
     ///
@@ -76,7 +81,7 @@ impl<T> TrackedStdMutex<T> {
     }
 }
 
-/// RAII 가드 — Drop 시 `ProbeEvent::LockReleased`를 자동 전송한다.
+/// RAII guard that automatically sends `ProbeEvent::LockReleased` on drop.
 #[cfg_attr(not(laplace_private_verification), allow(dead_code))]
 pub struct TrackedStdGuard<'a, T> {
     inner: MutexGuard<'a, T>,

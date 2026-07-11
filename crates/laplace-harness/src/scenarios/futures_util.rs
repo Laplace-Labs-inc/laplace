@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
 //! futures-util async mutex harnesses.
 //!
-//! R0 = futures::lock::Mutex 외부 잠금 상태(IS_LOCKED 비트)
-//! R1 = 내부 waiter slab(`StdMutex<Slab<Waiter>>`) 접근
+//! R0 = futures::lock::Mutex external lock state (IS_LOCKED bit)
+//! R1 = access to the internal waiter slab (`StdMutex<Slab<Waiter>>`)
 //!
-//! 공개 이슈(RUSTSEC-2020-0059/0062, issue #2133)를 제외하고,
-//! cancel + waiter 순서로 인한 starvation 경로를 모델링한다.
+//! Excluding the public issues (RUSTSEC-2020-0059/0062, issue #2133), this
+//! models the starvation path caused by cancel and waiter ordering.
 
 use laplace_dpor::Operation;
 use laplace_interfaces::domain::resource::types::{ResourceId, ThreadId};
@@ -18,7 +18,7 @@ use laplace_macro::axiom_harness;
     name = "futures_mutex_starvation_3thread",
     threads = 3,
     resources = 2,
-    desc = "stale waiter starvation - unlock이 취소된 waiter를 깨워 다음 waiter를 스킵",
+    desc = "stale waiter starvation - unlock wakes a cancelled waiter and skips the next waiter",
     expected = "bug"
 )]
 pub fn futures_mutex_starvation(thread: ThreadId, pc: usize) -> Option<(Operation, ResourceId)> {
@@ -48,7 +48,7 @@ pub fn futures_mutex_starvation(thread: ThreadId, pc: usize) -> Option<(Operatio
     name = "futures_mutex_basic_contention",
     threads = 2,
     resources = 2,
-    desc = "기본 2-thread 기준선 - 각 스레드가 서로 다른 자원 요청/해제 (clean)",
+    desc = "basic 2-thread baseline - each thread requests/releases a different resource (clean)",
     expected = "clean"
 )]
 pub fn futures_mutex_basic_contention(

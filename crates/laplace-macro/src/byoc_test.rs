@@ -234,7 +234,7 @@ pub(crate) fn laplace_byoc_test_impl(attr: TokenStream, item: TokenStream) -> To
 
             if __byoc_events.is_empty() {
                 eprintln!(
-                    "[laplace_byoc_test] WARNING: 0 events for '{}'. TrackedMutex/RwLock이 사용되고 있는지 확인하라.",
+                    "[laplace_byoc_test] WARNING: 0 events for '{}'. Check that TrackedMutex/RwLock are being used.",
                     #target_name
                 );
             }

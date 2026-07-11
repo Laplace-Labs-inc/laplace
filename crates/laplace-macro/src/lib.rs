@@ -127,12 +127,14 @@ pub fn laplace_tracked(attr: TokenStream, item: TokenStream) -> TokenStream {
         .into()
 }
 
-/// `#[laplace_tracked]`의 deprecated alias.
+/// Deprecated alias for `#[laplace_tracked]`.
 ///
-/// `#[laplace_tracked]`와 동일하게 `#[track]` 필드를 TrackedMutex/TrackedRwLock 등으로 변환한다.
-/// 클라우드 Probe 관측 활성 시 이벤트가 `GLOBAL_PROBE_CLIENT`를 통해 probe-edge로 전송된다.
+/// Like `#[laplace_tracked]`, transforms `#[track]` fields into TrackedMutex,
+/// TrackedRwLock, and other tracked primitives.
+/// When cloud Probe observation is enabled, events are sent to probe-edge via
+/// `GLOBAL_PROBE_CLIENT`.
 ///
-/// # 예시
+/// # Example
 ///
 /// ```rust,ignore
 /// #[laplace_probe]
@@ -217,9 +219,10 @@ pub fn model(attr: TokenStream, item: TokenStream) -> TokenStream {
     model::model_impl(attr, item)
 }
 
-/// BYOC(Bring-Your-Own-Code) 테스트 보일러플레이트 제거용 attribute.
+/// Attribute for removing BYOC (Bring-Your-Own-Code) test boilerplate.
 ///
-/// 원본 테스트 함수 본문을 래핑해 probe 채널/검증 테일을 자동 주입한다.
+/// Wraps the original test function body and injects the probe channel and
+/// verification tail.
 #[proc_macro_attribute]
 pub fn laplace_byoc_test(attr: TokenStream, item: TokenStream) -> TokenStream {
     byoc_test::laplace_byoc_test_impl(attr, item)

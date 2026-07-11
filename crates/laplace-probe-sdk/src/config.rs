@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: Apache-2.0
-//! laplace.toml 자동 탐색 + 파싱.
+//! Automatic discovery and parsing of laplace.toml.
 //!
-//! `cargo test` 컨텍스트에서 프로젝트 루트의 `laplace.toml`을 찾아
-//! `[axiom]` 섹션 설정을 로드한다.
+//! In a `cargo test` context, finds `laplace.toml` in the project root and
+//! loads the `[axiom]` section.
 //!
-//! [GHOST CONSTRAINT]: 파일 미발견/파싱 실패 시 panic 금지, None 반환.
-//! [GHOST CONSTRAINT]: 이 모듈은 `laplace-interfaces`에 의존하지 않는다.
-//! 경량 파싱 구조체를 자체 정의하여 동일 TOML 필드명으로 호환.
+//! [GHOST CONSTRAINT]: never panic when the file is missing or parsing fails;
+//! return `None`.
+//! [GHOST CONSTRAINT]: this module does not depend on `laplace-interfaces`.
+//! It defines lightweight parsing structs that remain compatible with the same
+//! TOML field names.
 
 use serde::Deserialize;
 use std::path::{Path, PathBuf};
@@ -33,33 +35,33 @@ struct TomlAxiom {
 
 // ── 공개 API ──────────────────────────────────────────────────────────────────
 
-/// laplace.toml에서 읽은 Axiom 설정.
+/// Axiom configuration loaded from laplace.toml.
 #[derive(Debug, Clone)]
 pub struct ProjectConfig {
-    /// DPOR 탐색 깊이 상한.
+    /// Maximum DPOR exploration depth.
     pub max_depth: Option<usize>,
-    /// 최대 동시 스레드 수.
+    /// Maximum number of concurrent threads.
     pub max_threads: Option<usize>,
-    /// 기아 탐지 한계.
+    /// Starvation detection limit.
     pub max_starvation_limit: Option<usize>,
-    /// 위험 점수 상한.
+    /// Upper bound on the danger score.
     pub max_danger: Option<usize>,
-    /// Axiom Oracle RNG 시드.
+    /// Axiom Oracle RNG seed.
     pub default_seed: Option<u64>,
 }
 
-/// laplace.toml을 자동 탐색하여 로드한다.
+/// Automatically locates and loads laplace.toml.
 ///
-/// 탐색 순서:
+/// Search order:
 /// 1. `$CARGO_MANIFEST_DIR/laplace.toml`
 /// 2. `$CARGO_MANIFEST_DIR/../laplace.toml` (workspace root)
 /// 3. `$CARGO_MANIFEST_DIR/../../laplace.toml` (nested crate)
 /// 4. `./laplace.toml` (CWD fallback)
 ///
-/// # 반환
+/// # Returns
 ///
-/// 파일 발견 + 파싱 성공 → `Some(ProjectConfig)`
-/// 파일 미발견 또는 파싱 실패 → `None` (warn 로그)
+/// File found and parsed successfully → `Some(ProjectConfig)`
+/// File missing or parsing failed → `None` (warn log)
 pub fn load_project_config() -> Option<ProjectConfig> {
     let path = find_laplace_toml()?;
     let content = std::fs::read_to_string(&path).ok()?;
@@ -80,9 +82,9 @@ pub fn load_project_config() -> Option<ProjectConfig> {
     })
 }
 
-/// laplace.toml에서 `[axiom] max_depth`를 읽는 편의 함수.
+/// Convenience function that reads `[axiom] max_depth` from laplace.toml.
 ///
-/// `load_project_config()`의 단축 경로.
+/// Shorthand for `load_project_config()`.
 pub fn load_toml_max_depth() -> Option<usize> {
     load_project_config().and_then(|c| c.max_depth)
 }

@@ -415,7 +415,7 @@ pub struct AxiomConfig {
     pub max_depth: u32,
     /// Maximum steps a thread may wait before DPOR flags a liveness violation.
     pub max_starvation_limit: u32,
-    /// Upper bound on the heuristic danger score used by A*-Ki prioritisation.
+    /// Upper bound on the heuristic danger score used for prioritisation.
     pub max_danger: u32,
     /// Master RNG seed for the Axiom Oracle; embedded in `.ard` headers for
     /// deterministic replay.

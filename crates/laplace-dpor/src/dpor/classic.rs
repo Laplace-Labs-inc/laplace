@@ -143,23 +143,23 @@ impl fmt::Debug for TinyBitSet {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Operation {
     // === 기존 (배타적 락 계열) ===
-    /// 배타적 락 획득 (Mutex::lock, RwLock::write)
+    /// Exclusive lock acquisition (Mutex::lock, RwLock::write)
     Request,
-    /// 락 해제 (MutexGuard::drop, RwLockWriteGuard::drop)
+    /// Lock release (MutexGuard::drop, RwLockWriteGuard::drop)
     Release,
 
     // === 신규 (공유 접근 계열) ===
-    /// 공유 락 획득 (RwLock::read)
+    /// Shared lock acquisition (RwLock::read)
     SharedRequest,
-    /// 공유 락 해제 (RwLockReadGuard::drop)
+    /// Shared lock release (RwLockReadGuard::drop)
     SharedRelease,
 
     // === 신규 (메모리 계열 — Atomic + Channel) ===
-    /// 공유 읽기 (atomic load, channel recv)
+    /// Shared read (atomic load, channel recv)
     Read,
-    /// 배타 쓰기 (atomic store, channel send)
+    /// Exclusive write (atomic store, channel send)
     Write,
-    /// 읽기-수정-쓰기 (CAS, fetch_add, fetch_sub)
+    /// Read-modify-write (CAS, fetch_add, fetch_sub)
     ReadWrite,
 }
 

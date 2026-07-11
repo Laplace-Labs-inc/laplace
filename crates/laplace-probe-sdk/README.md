@@ -1,16 +1,16 @@
 # laplace-probe-sdk
 
-Laplace BYOC (Bring Your Own Code) 검증 시스템의 사용자 SDK.
+User SDK for the Laplace BYOC (Bring Your Own Code) verification system.
 
-기존 코드에 `TrackedMutex` / `TrackedStdMutex`를 적용하면,
-Ki-DPOR가 모든 실행 인터리빙을 탐색하여 **잠금 순서 역전(AB-BA)** 교착을 탐지한다.
-실제 교착이 발생하지 않아도 탐지 가능하다.
+Applying `TrackedMutex` / `TrackedStdMutex` to existing code lets Classic DPOR
+explore all execution interleavings to detect **lock-order inversion (AB-BA)**
+deadlocks. It can detect them even when an actual deadlock does not occur.
 
 ---
 
-## 빠른 시작 (3단계)
+## Quick start (3 steps)
 
-### 1단계: 의존성 추가
+### 1. Add dependencies
 
 `Cargo.toml`:
 ```toml
@@ -18,9 +18,9 @@ Ki-DPOR가 모든 실행 인터리빙을 탐색하여 **잠금 순서 역전(AB-
 laplace-probe-sdk = { path = "path/to/laplace-probe-sdk", features = ["verification"] }
 ```
 
-### 2단계: Mutex 교체
+### 2. Replace Mutex
 
-`tokio::sync::Mutex` 기반 코드:
+`tokio::sync::Mutex`-based code:
 ```rust
 // Before
 use tokio::sync::Mutex;
@@ -29,10 +29,10 @@ struct SharedState { data: Mutex<Vec<i64>> }
 // After
 use laplace_probe_sdk::TrackedMutex;
 struct SharedState { data: TrackedMutex<Vec<i64>> }
-//                         ^ 이름만 바꾼다. API는 동일하다.
+//                         ^ Rename only; the API is unchanged.
 ```
 
-`std::sync::Mutex` 기반 코드:
+`std::sync::Mutex`-based code:
 ```rust
 // Before
 use std::sync::Mutex;
@@ -41,7 +41,7 @@ use std::sync::Mutex;
 use laplace_probe_sdk::TrackedStdMutex;
 ```
 
-### 3단계: 테스트 작성
+### 3. Write a test
 
 ```rust
 use laplace_probe_sdk::{
@@ -92,29 +92,29 @@ fn verify_my_concurrent_code() {
 
 ---
 
-## API 참조
+## API reference
 
 ### TrackedMutex\<T\> (async)
 
-`tokio::sync::Mutex<T>` 래퍼.
+`tokio::sync::Mutex<T>` wrapper.
 
 ```rust
 use laplace_probe_sdk::TrackedMutex;
 
-let mtx = TrackedMutex::new(value, "resource_name"); // &'static str 필수
-let guard = mtx.lock().await;                         // 획득 시 LockAcquired 전송
-// guard drop 시 LockReleased 자동 전송
+let mtx = TrackedMutex::new(value, "resource_name"); // &'static str required
+let guard = mtx.lock().await;                         // sends LockAcquired on acquisition
+// sends LockReleased automatically when the guard is dropped
 ```
 
 ### TrackedStdMutex\<T\> (sync)
 
-`std::sync::Mutex<T>` 래퍼.
+`std::sync::Mutex<T>` wrapper.
 
 ```rust
 use laplace_probe_sdk::TrackedStdMutex;
 
 let mtx = TrackedStdMutex::new(value, "resource_name");
-let guard = mtx.lock();  // 동기, 블로킹
+let guard = mtx.lock();  // synchronous, blocking
 ```
 
 ### run_verification_from
@@ -130,15 +130,15 @@ pub fn run_verification_from(
 ### VerifyResult
 
 ```rust
-result.assert_clean();  // CLEAN이 아니면 panic
-result.assert_bug();    // BUG DETECTED가 아니면 panic
+result.assert_clean();  // panics if the result is not CLEAN
+result.assert_bug();    // panics if the result is not BUG DETECTED
 ```
 
 ---
 
-## 외부 라이브러리 패치
+## Patching external libraries
 
-`[patch.crates-io]`를 사용하여 라이브러리 내부 Mutex를 TrackedMutex로 교체할 수 있다.
+Use `[patch.crates-io]` to replace a library's internal Mutex with TrackedMutex.
 
 `Cargo.toml` (workspace root):
 ```toml
@@ -146,42 +146,44 @@ result.assert_bug();    // BUG DETECTED가 아니면 panic
 some-library = { path = "vendor/some-library-patched" }
 ```
 
-`vendor/some-library-patched/src/lib.rs` 상단에 추가:
+Add this to the top of `vendor/some-library-patched/src/lib.rs`:
 ```rust
 #[cfg(feature = "laplace")]
 mod mutex_wrapper {
     use laplace_probe_sdk::TrackedMutex;
-    // ... TrackedMutex를 std Mutex처럼 사용하는 래퍼
+    // ... wrapper that uses TrackedMutex like std Mutex
 }
 ```
 
-상세 예시: `examples/mobc-real/`, `examples/deadpool-hunt/` 참조.
+See `examples/mobc-real/` and `examples/deadpool-hunt/` for detailed examples.
 
 ---
 
-## 계측 범위
+## Instrumentation coverage
 
-| 동기화 primitive | 지원 |
+| Synchronization primitive | Support |
 |------------------|------|
 | `tokio::sync::Mutex` | ✅ TrackedMutex |
 | `std::sync::Mutex` | ✅ TrackedStdMutex |
-| `tokio::sync::RwLock` | 향후 |
-| `tokio::sync::Semaphore` | 향후 |
+| `tokio::sync::RwLock` | Planned |
+| `tokio::sync::Semaphore` | Planned |
 
-**중요**: 계측하지 않은 코드 경로는 관측되지 않는다.
-라이브러리가 패치된 Mutex 타입을 실제로 사용하는 경로에서만 이벤트가 수집된다.
+**Important**: uninstrumented code paths are not observed.
+Events are collected only on paths where the library actually uses the patched
+Mutex type.
 
 ---
 
-## 실행 방법
+## Running
 
 ```bash
-# 단일 테스트 (--test-threads=1 필수 — thread-local 격리)
+# Single test (--test-threads=1 required for thread-local isolation)
 cargo test -p my-crate my_test_name -- --test-threads=1 --nocapture
 
-# 전체 테스트
+# All tests
 ./scripts/laplace-test.sh my-crate
 ```
 
-**`--test-threads=1`은 필수**다. thread-local 채널(`PROBE_SENDER`, `PROBE_THREAD_ID`)이
-테스트 간 격리되어야 이벤트가 혼합되지 않는다.
+**`--test-threads=1` is required.** The thread-local channels
+(`PROBE_SENDER`, `PROBE_THREAD_ID`) must be isolated between tests so events do
+not mix.

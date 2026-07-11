@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-//! `TrackedStdRwLock<T>` — `std::sync::RwLock` 래퍼 (동기 버전).
+//! `TrackedStdRwLock<T>` — `std::sync::RwLock` wrapper (synchronous version).
 //!
-//! read() → RwLockReadAcquired, write() → RwLockWriteAcquired 이벤트 전송.
-//! Guard drop 시 각각 RwLockReadReleased / RwLockWriteReleased 이벤트 전송.
+//! `read()` emits `RwLockReadAcquired`, and `write()` emits
+//! `RwLockWriteAcquired`.
+//! Guard drop emits `RwLockReadReleased` or `RwLockWriteReleased` respectively.
 
 use crate::session::current_thread_id;
 use crate::session::emit;
@@ -16,19 +17,20 @@ use crate::ProbeEvent;
 use std::ops::{Deref, DerefMut};
 use std::sync::RwLock;
 
-/// `std::sync::RwLock<T>` 래퍼로, 읽기/쓰기 락 이벤트를 자동으로 추적한다 (동기).
+/// `std::sync::RwLock<T>` wrapper that automatically tracks read/write lock
+/// events (synchronous).
 pub struct TrackedStdRwLock<T> {
     inner: RwLock<T>,
     resource_name: &'static str,
 }
 
 impl<T> TrackedStdRwLock<T> {
-    /// 새로운 TrackedStdRwLock을 생성한다.
+    /// Creates a new `TrackedStdRwLock`.
     ///
     /// # Arguments
     ///
-    /// * `value` — 보호할 값
-    /// * `resource_name` — 엔진 추적용 리소스 이름 (&'static str)
+    /// * `value` — value to protect
+    /// * `resource_name` — resource name for engine tracking (&'static str)
     pub fn new(value: T, resource_name: &'static str) -> Self {
         Self {
             inner: RwLock::new(value),
@@ -36,7 +38,7 @@ impl<T> TrackedStdRwLock<T> {
         }
     }
 
-    /// 공유 (읽기) 락을 획득한다. 여러 스레드가 동시에 보유할 수 있다.
+    /// Acquires a shared (read) lock. Multiple threads may hold it concurrently.
     pub fn read(&self) -> TrackedStdRwLockReadGuard<'_, T> {
         let thread_id = current_thread_id();
         // SAFETY: Poison handling — lock() may panic on poisoned RwLock, but this
@@ -54,7 +56,7 @@ impl<T> TrackedStdRwLock<T> {
         }
     }
 
-    /// 배타적 (쓰기) 락을 획득한다. 한 번에 하나의 스레드만 보유할 수 있다.
+    /// Acquires an exclusive (write) lock. Only one thread may hold it at a time.
     pub fn write(&self) -> TrackedStdRwLockWriteGuard<'_, T> {
         let thread_id = current_thread_id();
         // SAFETY: Poison handling — lock() may panic on poisoned RwLock, but this
@@ -73,9 +75,9 @@ impl<T> TrackedStdRwLock<T> {
     }
 }
 
-/// TrackedStdRwLock의 읽기 가드.
+/// Read guard for `TrackedStdRwLock`.
 ///
-/// [GHOST CONSTRAINT]: DerefMut 없음 (읽기 전용).
+/// [GHOST CONSTRAINT]: no `DerefMut` (read-only).
 #[cfg_attr(not(laplace_private_verification), allow(dead_code))]
 pub struct TrackedStdRwLockReadGuard<'a, T> {
     inner: std::sync::RwLockReadGuard<'a, T>,
@@ -100,7 +102,7 @@ impl<T> Drop for TrackedStdRwLockReadGuard<'_, T> {
     }
 }
 
-/// TrackedStdRwLock의 쓰기 가드.
+/// Write guard for `TrackedStdRwLock`.
 #[cfg_attr(not(laplace_private_verification), allow(dead_code))]
 pub struct TrackedStdRwLockWriteGuard<'a, T> {
     inner: std::sync::RwLockWriteGuard<'a, T>,

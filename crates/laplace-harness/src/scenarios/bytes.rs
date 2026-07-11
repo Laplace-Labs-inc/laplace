@@ -11,7 +11,7 @@ use laplace_macro::axiom_harness;
     name = "bytes_is_unique_toctou",
     threads = 2,
     resources = 2,
-    desc = "is_unique TOCTOU: clone이 to_mut 사이에 끼어드는 인터리빙 탐색",
+    desc = "is_unique TOCTOU: explore interleavings with clone between is_unique and to_mut",
     expected = "clean"
 )]
 pub fn bytes_is_unique_toctou(thread: ThreadId, pc: usize) -> Option<(Operation, ResourceId)> {
@@ -31,7 +31,7 @@ pub fn bytes_is_unique_toctou(thread: ThreadId, pc: usize) -> Option<(Operation,
     name = "bytes_three_thread_refcount",
     threads = 3,
     resources = 2,
-    desc = "3-thread clone/to_mut/drop 인터리빙 탐색",
+    desc = "3-thread clone/to_mut/drop interleaving exploration",
     expected = "clean"
 )]
 pub fn bytes_three_thread_refcount(thread: ThreadId, pc: usize) -> Option<(Operation, ResourceId)> {

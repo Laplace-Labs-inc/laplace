@@ -148,7 +148,7 @@ enum ErrorCode {
   /// Kernel isolate pool error.
   ERROR_CODE_ISOLATE_POOL_ERROR = 6001;
 
-  /// Scheduler error (DPOR, Ki-DPOR, etc.).
+  /// Scheduler error (DPOR, etc.).
   ERROR_CODE_SCHEDULER_ERROR = 6002;
 }
 

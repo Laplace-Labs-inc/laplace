@@ -2,11 +2,12 @@
 #![deny(clippy::all, clippy::pedantic)]
 #![allow(unexpected_cfgs)]
 
-//! Laplace SDK — 결정론적 동시성 검증을 위한 단일 진입점.
+//! Laplace SDK — the single entry point for deterministic concurrency verification.
 //!
-//! 사용자는 `Cargo.toml`에 1줄만 추가하면 전체 Laplace 검증 생태계를 사용할 수 있다.
+//! Users can access the full Laplace verification ecosystem by adding one line
+//! to `Cargo.toml`.
 //!
-//! # 빠른 시작
+//! # Quick start
 //!
 //! ```toml
 //! [dev-dependencies]
@@ -39,9 +40,10 @@ pub mod prelude;
 /// Transforms `#[track]` fields from standard sync primitives to Tracked* equivalents.
 pub use laplace_macro::laplace_tracked;
 
-/// 프로덕션 관측용 구조체 매크로 (cloud Probe 전송 활성 버전).
+/// Struct macro for production observation (cloud Probe transmission enabled).
 ///
-/// `#[laplace_tracked]`와 동일한 타입 변환 + 클라우드 관측 활성 시 이벤트 전달.
+/// Performs the same type substitutions as `#[laplace_tracked]` and forwards
+/// events when cloud observation is enabled.
 pub use laplace_macro::laplace_probe;
 
 /// Improved DPOR verification harness attribute.
@@ -169,9 +171,9 @@ pub use laplace_probe_sdk::load_project_config;
 
 #[cfg(feature = "cloud")]
 pub use laplace_probe_sdk::client::ProbeClientConfig;
-/// 클라우드 Probe 관측 초기화.
+/// Initializes cloud Probe observation.
 ///
-/// `probe agent start`와 동일한 효과를 programmatic하게 수행한다.
+/// Programmatically performs the same action as `probe agent start`.
 #[cfg(feature = "cloud")]
 pub use laplace_probe_sdk::init_cloud_probe;
 

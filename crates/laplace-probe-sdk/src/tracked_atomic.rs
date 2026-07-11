@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-//! TrackedAtomic* — `std::sync::atomic` 래퍼들.
+//! TrackedAtomic* — `std::sync::atomic` wrappers.
 //!
-//! load → AtomicLoad, store → AtomicStore, CAS/fetch_* → AtomicRmw 이벤트 전송.
+//! `load` emits `AtomicLoad`, `store` emits `AtomicStore`, and CAS/fetch_* emit
+//! `AtomicRmw` events.
 //!
-//! [GHOST CONSTRAINT]: Phase 1에서는 Ordering 파라미터를 받되
-//! 내부적으로 SeqCst를 강제한다. SimulatedMemory 브리지는 Phase 2.
+//! [GHOST CONSTRAINT]: Phase 1 accepts an Ordering parameter but internally
+//! enforces SeqCst. The SimulatedMemory bridge is planned for Phase 2.
 
 use crate::session::{current_thread_id, emit};
 

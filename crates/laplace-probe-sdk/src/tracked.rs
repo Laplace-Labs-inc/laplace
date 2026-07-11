@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-//! `TrackedMutex<T>` — `Mutex` 래퍼로 lock/unlock 시 `ProbeEvent`를 자동 전송.
+//! `TrackedMutex<T>` — `Mutex` wrapper that automatically emits `ProbeEvent` on
+//! lock/unlock.
 //!
-//! [GHOST CONSTRAINT]: `resource_name`은 동일 자원에 대해 항상 동일한 &'static str.
+//! [GHOST CONSTRAINT]: `resource_name` must always be the same &'static str for
+//! a given resource.
 //! Downstream adapters use the name as the stable synchronization resource key.
 
 use std::ops::{Deref, DerefMut};
@@ -18,9 +20,10 @@ macro_rules! emit_probe_event {
     }};
 }
 
-/// `tokio::sync::Mutex<T>` 래퍼 — lock/unlock 시 `ProbeEvent`를 자동 전송한다.
+/// `tokio::sync::Mutex<T>` wrapper that automatically emits `ProbeEvent` on
+/// lock/unlock.
 ///
-/// BYOC Phase 1에서 사용자가 `Mutex<T>` 대신 선언하는 유일한 타입 교체.
+/// During BYOC Phase 1, this is the only type users replace `Mutex<T>` with.
 ///
 /// ```ignore
 /// // before
@@ -36,7 +39,7 @@ pub struct TrackedMutex<T> {
 }
 
 impl<T> TrackedMutex<T> {
-    /// 이름과 초기값으로 `TrackedMutex`를 생성한다.
+    /// Creates a `TrackedMutex` with a name and initial value.
     pub fn new(value: T, resource_name: &'static str) -> Self {
         Self {
             inner: Mutex::new(value),
@@ -49,10 +52,12 @@ impl<T> TrackedMutex<T> {
         Self::new(value, resource_name)
     }
 
-    /// Lock을 비동기로 획득한다. 획득 후 `ProbeEvent::LockAcquired`를 전송한다.
+    /// Acquires the lock asynchronously and sends `ProbeEvent::LockAcquired`
+    /// after acquisition.
     ///
-    /// [GHOST CONSTRAINT]: `lock()` 호출 전 OS 스레드에 `set_probe_sender()` +
-    /// `set_probe_thread_id()` 가 설정되어 있어야 한다. 미설정 시 no-op (이벤트 전송 안 함).
+    /// [GHOST CONSTRAINT]: before calling `lock()`, set `set_probe_sender()` and
+    /// `set_probe_thread_id()` on the OS thread. If unset, this is a no-op (no
+    /// event is sent).
     pub async fn lock(&self) -> TrackedGuard<'_, T> {
         let thread_id = current_thread_id();
         let guard = self.inner.lock().await;
@@ -71,7 +76,7 @@ impl<T> TrackedMutex<T> {
     }
 }
 
-/// RAII 가드 — Drop 시 `ProbeEvent::LockReleased`를 자동 전송한다.
+/// RAII guard that automatically sends `ProbeEvent::LockReleased` on drop.
 #[cfg_attr(not(laplace_private_verification), allow(dead_code))]
 pub struct TrackedGuard<'a, T> {
     inner: MutexGuard<'a, T>,

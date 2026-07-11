@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
-//! 라이선스 로더 — ~/.laplace/config.json에서 JWT payload를 읽어
-//! `max_depth` 상한을 결정한다.
+//! License loader — reads the JWT payload from `~/.laplace/config.json` to
+//! determine the `max_depth` limit.
 //!
-//! [GHOST CONSTRAINT]: JWT 서명 검증 없이 payload만 디코딩한다 (서버 위임 방식).
-//! exp 만료 체크는 생략한다 — 개발자 로컬 cargo test 전용.
+//! [GHOST CONSTRAINT]: decodes only the payload without verifying the JWT
+//! signature (delegated to the server).
+//! The `exp` expiry check is omitted; this is for local developer cargo tests only.
 
 use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine as _};
 use serde::Deserialize;
@@ -30,9 +31,9 @@ fn config_path() -> Option<PathBuf> {
     dirs::home_dir().map(|h| h.join(".laplace").join("config.json"))
 }
 
-/// ~/.laplace/config.json에서 `axiom_max_depth`를 읽는다.
+/// Reads `axiom_max_depth` from `~/.laplace/config.json`.
 ///
-/// 파일이 없거나 파싱 실패 시 `None`을 반환한다. 호출자는 기본값을 사용한다.
+/// Returns `None` when the file is missing or parsing fails; callers use a default.
 #[must_use]
 pub fn load_axiom_max_depth() -> Option<usize> {
     let path = config_path()?;

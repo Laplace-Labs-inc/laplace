@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 //! parking_lot external lock-ordering harnesses.
 //!
-//! 공개 이슈(#212, #489, #518)와 겹치지 않는 Condvar 교차 경로 + ABBA 경로를
-//! 모델링해 DPOR로 검증한다.
+//! Models Condvar cross-path and ABBA paths that do not overlap with the public
+//! issues (#212, #489, #518), then verifies them with DPOR.
 
 use laplace_dpor::Operation;
 use laplace_interfaces::domain::resource::types::{ResourceId, ThreadId};
@@ -12,7 +12,7 @@ use laplace_macro::axiom_harness;
     name = "parking_lot_condvar_rwlock_cross",
     threads = 2,
     resources = 2,
-    desc = "Condvar wait + RwLock write cross-path - 미공개 lock-ordering 경로",
+    desc = "Condvar wait + RwLock write cross-path - unpublished lock-ordering path",
     expected = "bug"
 )]
 pub fn condvar_rwlock_op_provider(thread: ThreadId, pc: usize) -> Option<(Operation, ResourceId)> {
@@ -35,7 +35,7 @@ pub fn condvar_rwlock_op_provider(thread: ThreadId, pc: usize) -> Option<(Operat
     name = "parking_lot_rwlock_abba",
     threads = 2,
     resources = 2,
-    desc = "두 RwLock AB-BA - #212/#489와 다른 read/write 조합 탐색",
+    desc = "two RwLock AB-BA - explore a read/write combination different from #212/#489",
     expected = "bug"
 )]
 pub fn rwlock_abba_op_provider(thread: ThreadId, pc: usize) -> Option<(Operation, ResourceId)> {

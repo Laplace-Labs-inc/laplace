@@ -11,7 +11,7 @@ use laplace_macro::axiom_harness;
     name = "mio_consistent_io_pool_ordering",
     threads = 2,
     resources = 2,
-    desc = "io→pool 일관 순서 검증 - 실제 mio 코드와 동일, CLEAN 기대",
+    desc = "io→pool consistent ordering check - matches actual mio code, expects CLEAN",
     expected = "clean"
 )]
 pub fn mio_consistent_io_pool_ordering(
@@ -31,7 +31,7 @@ pub fn mio_consistent_io_pool_ordering(
     name = "mio_hypothetical_reversed_ordering",
     threads = 2,
     resources = 2,
-    desc = "역순 io/pool 가상 시나리오 - AB-BA 교착, 실제 mio는 이를 피함",
+    desc = "reversed io/pool hypothetical scenario - AB-BA deadlock avoided by actual mio",
     expected = "bug"
 )]
 pub fn mio_hypothetical_reversed_ordering(
@@ -55,7 +55,7 @@ pub fn mio_hypothetical_reversed_ordering(
     name = "mio_connecting_io_toctou",
     threads = 2,
     resources = 2,
-    desc = "connecting AtomicBool + io Mutex TOCTOU 탐색",
+    desc = "connecting AtomicBool + io Mutex TOCTOU exploration",
     expected = "clean"
 )]
 pub fn mio_connecting_io_toctou(thread: ThreadId, pc: usize) -> Option<(Operation, ResourceId)> {

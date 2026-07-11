@@ -74,19 +74,24 @@ impl Parse for AxiomTargetArgs {
     }
 }
 
-/// 함수에 `#[axiom_target(threads = N)]`을 붙이면 legacy DPOR 테스트를 자동 생성한다.
+/// Applying `#[axiom_target(threads = N)]` to a function automatically
+/// generates a legacy DPOR test.
 ///
-/// # 요구사항
+/// # Requirements
 ///
-/// - 함수 시그니처: `async fn <name>(state: Arc<T>)` — 첫 번째 인자가 `Arc<T>` 형태여야 한다.
-/// - `Arc<T>` 의 `T`가 `Default`를 구현해야 한다 — 생성 코드가 `T::default()`로 초기화한다.
-/// - 사용자 크레이트 `[dev-dependencies]`에 `laplace-probe-sdk`, `laplace-macro` 추가 필요.
+/// - Function signature: `async fn <name>(state: Arc<T>)` — the first argument
+///   must have the form `Arc<T>`.
+/// - `T` in `Arc<T>` must implement `Default` — generated code initializes it
+///   with `T::default()`.
+/// - Add `laplace-probe-sdk` and `laplace-macro` to the user crate's
+///   `[dev-dependencies]`.
 ///
-/// # 생성 테스트 함수 이름
+/// # Generated test function name
 ///
-/// `__laplace_axiom_<original_fn_name>` — `cargo test __laplace_axiom_<name>`으로 실행.
+/// `__laplace_axiom_<original_fn_name>` — run it with
+/// `cargo test __laplace_axiom_<name>`.
 ///
-/// # 예시
+/// # Example
 ///
 /// ```ignore
 /// #[axiom_target(threads = 3)]
@@ -94,7 +99,7 @@ impl Parse for AxiomTargetArgs {
 ///     let mut g = state.counter.lock().await;
 ///     *g += 1;
 /// }
-/// // 자동 생성: #[test] fn __laplace_axiom_verify_counter() { ... }
+/// // Generated automatically: #[test] fn __laplace_axiom_verify_counter() { ... }
 /// ```
 pub(crate) fn axiom_target_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
     use syn::parse_macro_input;

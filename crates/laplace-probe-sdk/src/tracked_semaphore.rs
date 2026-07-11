@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
-//! `TrackedSemaphore` — `tokio::sync::Semaphore` 래퍼.
+//! `TrackedSemaphore` — `tokio::sync::Semaphore` wrapper.
 //!
-//! acquire → SemaphoreAcquired, Permit drop → SemaphoreReleased 이벤트 전송.
+//! `acquire` emits `SemaphoreAcquired`, and permit drop emits
+//! `SemaphoreReleased`.
 
 use crate::session::current_thread_id;
 use crate::session::emit;
@@ -15,19 +16,19 @@ use crate::ProbeEvent;
 use std::sync::Arc;
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
-/// `tokio::sync::Semaphore` 래퍼로, 세마포어 획득/해제 이벤트를 자동으로 추적한다.
+/// `tokio::sync::Semaphore` wrapper that automatically tracks acquire/release events.
 pub struct TrackedSemaphore {
     inner: Arc<Semaphore>,
     resource_name: &'static str,
 }
 
 impl TrackedSemaphore {
-    /// 새로운 TrackedSemaphore를 생성한다.
+    /// Creates a new `TrackedSemaphore`.
     ///
     /// # Arguments
     ///
-    /// * `permits` — 초기 permit 개수
-    /// * `resource_name` — 엔진 추적용 리소스 이름 (&'static str)
+    /// * `permits` — initial permit count
+    /// * `resource_name` — resource name for engine tracking (&'static str)
     pub fn new(permits: usize, resource_name: &'static str) -> Self {
         Self {
             inner: Arc::new(Semaphore::new(permits)),
@@ -35,11 +36,11 @@ impl TrackedSemaphore {
         }
     }
 
-    /// Semaphore permit을 획득한다.
+    /// Acquires a semaphore permit.
     ///
     /// # Panics
     ///
-    /// Semaphore가 closed된 경우 panic한다.
+    /// Panics if the semaphore is closed.
     pub async fn acquire(&self) -> TrackedSemaphorePermit {
         let thread_id = current_thread_id();
         // SAFETY: We expect the semaphore to be open; if it's closed, panicking
@@ -62,13 +63,13 @@ impl TrackedSemaphore {
         }
     }
 
-    /// 현재 available permits 개수를 반환한다.
+    /// Returns the current number of available permits.
     pub fn available_permits(&self) -> usize {
         self.inner.available_permits()
     }
 }
 
-/// TrackedSemaphore에서 획득한 permit.
+/// A permit acquired from `TrackedSemaphore`.
 #[cfg_attr(not(laplace_private_verification), allow(dead_code))]
 pub struct TrackedSemaphorePermit {
     _permit: OwnedSemaphorePermit,

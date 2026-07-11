@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Apache-2.0
-//! `#[laplace::verify]` — improved DPOR verification harness.
+//! `#[laplace_sdk::verify]` — improved DPOR verification harness.
 //!
-//! The `#[laplace::verify(threads = N)]` attribute is an enhanced version of
+//! The `#[laplace_sdk::verify(threads = N)]` attribute is an enhanced version of
 //! `#[axiom_target]` that supports `&T` references (in addition to `Arc<T>`),
 //! includes zero-event warnings, and is more configurable.
 //!
-//! `#[laplace::verify(scenario)]` captures one native scenario execution. A
+//! `#[laplace_sdk::verify(scenario)]` captures one native scenario execution. A
 //! real `expected = "bug"` AB-BA body can deadlock during capture; use the
 //! tier-2 `laplace axiom verify --capture` gate as the authoritative bug
 //! reproduction path. `laplace_sdk::check!` is a reserved invariant hook name;
@@ -30,7 +30,7 @@ const VALID_DETERMINISM_LABELS: &[&str] = &[
     "declared",
 ];
 
-/// Parsed arguments from `#[laplace::verify(...)]`.
+/// Parsed arguments from `#[laplace_sdk::verify(...)]`.
 #[derive(Debug)]
 pub(crate) struct VerifyArgs {
     pub(crate) threads: Option<usize>,
@@ -219,30 +219,32 @@ impl Parse for VerifyArgs {
     }
 }
 
-/// 함수에 `#[laplace::verify(threads = N)]` 또는
-/// `#[laplace::verify(scenario)]`를 붙이면 검증 테스트를 자동 생성한다.
+/// Applying `#[laplace_sdk::verify(threads = N)]` or
+/// `#[laplace_sdk::verify(scenario)]` to a function automatically generates a
+/// verification test.
 ///
-/// # 지원 시그니처
+/// # Supported signatures
 ///
-/// - `async fn test(state: &T)` — 공유 상태 참조 (권장)
-/// - `async fn test(state: Arc<T>)` — 공유 상태 Arc (하위 호환)
-/// - `async fn test()` — 상태 없이 각 스레드가 독립적으로 실행
-/// - `fn test()` / `async fn test()` with `scenario` — 본문 1회가 전체 시나리오
+/// - `async fn test(state: &T)` — shared state reference (recommended)
+/// - `async fn test(state: Arc<T>)` — shared state Arc (backward compatible)
+/// - `async fn test()` — each thread runs independently without shared state
+/// - `fn test()` / `async fn test()` with `scenario` — the body is the single
+///   scenario execution
 ///
-/// # 파라미터
+/// # Parameters
 ///
-/// - `threads`: replica 모드 동시 스레드 수 (≤ 8)
-/// - `scenario`: 상태 인자 없는 native 1회 실행 캡처
-/// - `expected` (기본: "clean"): "clean" 또는 "bug"
-/// - `write_ard` (기본: false): ARD 출력 여부
-/// - `output_dir` (기본: "."): 출력 디렉토리
-/// - `buffer` (기본: 8192): 이벤트 채널 버퍼 크기
-/// - `max_depth` (기본: None): DPOR 최대 깊이
+/// - `threads`: concurrent thread count in replica mode (≤ 8)
+/// - `scenario`: one native execution capture without a state argument
+/// - `expected` (default: "clean"): "clean" or "bug"
+/// - `write_ard` (default: false): whether to write ARD output
+/// - `output_dir` (default: "."): output directory
+/// - `buffer` (default: 8192): event channel buffer size
+/// - `max_depth` (default: None): maximum DPOR exploration depth
 ///
-/// # 예시
+/// # Example
 ///
 /// ```rust,ignore
-/// #[laplace::verify(threads = 2, expected = "clean")]
+/// #[laplace_sdk::verify(threads = 2, expected = "clean")]
 /// async fn test_cache(state: &AppState) {
 ///     let mut cache = state.cache.lock().await;
 ///     cache.insert("key".into(), "value".into());

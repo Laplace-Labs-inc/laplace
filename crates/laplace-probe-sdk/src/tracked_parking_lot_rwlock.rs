@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-//! `TrackedParkingLotRwLock<T>` — `parking_lot::RwLock` 래퍼.
+//! `TrackedParkingLotRwLock<T>` — `parking_lot::RwLock` wrapper.
 //!
-//! `TrackedStdRwLock`과 동일한 이벤트를 방출하되,
-//! `parking_lot::RwLock`을 사용하여 read 재진입을 지원한다.
-//! DashMap 등 `parking_lot` 기반 크레이트 패치에 사용.
+//! Emits the same events as `TrackedStdRwLock`, while using
+//! `parking_lot::RwLock` to support read reentrancy.
+//! Used to patch `parking_lot`-based crates such as DashMap.
 
 use crate::session::current_thread_id;
 use crate::session::emit;
@@ -17,19 +17,19 @@ use crate::ProbeEvent;
 use parking_lot::{RwLock, RwLockReadGuard, RwLockWriteGuard};
 use std::ops::{Deref, DerefMut};
 
-/// `parking_lot::RwLock<T>` 래퍼. read 재진입 지원 + 엔진 이벤트 방출.
+/// `parking_lot::RwLock<T>` wrapper with read reentrancy and engine event emission.
 pub struct TrackedParkingLotRwLock<T> {
     inner: RwLock<T>,
     resource_name: &'static str,
 }
 
 impl<T> TrackedParkingLotRwLock<T> {
-    /// 새로운 TrackedParkingLotRwLock을 생성한다.
+    /// Creates a new `TrackedParkingLotRwLock`.
     ///
     /// # Arguments
     ///
-    /// * `value` — 보호할 값
-    /// * `resource_name` — 엔진 추적용 리소스 이름 (&'static str)
+    /// * `value` — value to protect
+    /// * `resource_name` — resource name for engine tracking (&'static str)
     pub fn new(value: T, resource_name: &'static str) -> Self {
         Self {
             inner: RwLock::new(value),
@@ -37,7 +37,7 @@ impl<T> TrackedParkingLotRwLock<T> {
         }
     }
 
-    /// 공유 (읽기) 락을 획득한다. read 재진입 지원.
+    /// Acquires a shared (read) lock with read reentrancy support.
     pub fn read(&self) -> TrackedParkingLotRwLockReadGuard<'_, T> {
         let thread_id = current_thread_id();
         let guard = self.inner.read();
@@ -52,7 +52,7 @@ impl<T> TrackedParkingLotRwLock<T> {
         }
     }
 
-    /// 배타적 (쓰기) 락을 획득한다.
+    /// Acquires an exclusive (write) lock.
     pub fn write(&self) -> TrackedParkingLotRwLockWriteGuard<'_, T> {
         let thread_id = current_thread_id();
         let guard = self.inner.write();
@@ -75,7 +75,7 @@ impl<T> TrackedParkingLotRwLock<T> {
         self.inner.data_ptr()
     }
 
-    /// Non-blocking read 시도.
+    /// Attempts a non-blocking read.
     pub fn try_read(&self) -> Option<TrackedParkingLotRwLockReadGuard<'_, T>> {
         let thread_id = current_thread_id();
         self.inner.try_read().map(|guard| {
@@ -91,7 +91,7 @@ impl<T> TrackedParkingLotRwLock<T> {
         })
     }
 
-    /// Non-blocking write 시도.
+    /// Attempts a non-blocking write.
     pub fn try_write(&self) -> Option<TrackedParkingLotRwLockWriteGuard<'_, T>> {
         let thread_id = current_thread_id();
         self.inner.try_write().map(|guard| {
@@ -108,9 +108,9 @@ impl<T> TrackedParkingLotRwLock<T> {
     }
 }
 
-/// TrackedParkingLotRwLock의 읽기 가드.
+/// Read guard for `TrackedParkingLotRwLock`.
 ///
-/// [GHOST CONSTRAINT]: DerefMut 없음 (읽기 전용).
+/// [GHOST CONSTRAINT]: no `DerefMut` (read-only).
 #[cfg_attr(not(laplace_private_verification), allow(dead_code))]
 pub struct TrackedParkingLotRwLockReadGuard<'a, T> {
     inner: RwLockReadGuard<'a, T>,
@@ -135,7 +135,7 @@ impl<T> Drop for TrackedParkingLotRwLockReadGuard<'_, T> {
     }
 }
 
-/// TrackedParkingLotRwLock의 쓰기 가드.
+/// Write guard for `TrackedParkingLotRwLock`.
 #[cfg_attr(not(laplace_private_verification), allow(dead_code))]
 pub struct TrackedParkingLotRwLockWriteGuard<'a, T> {
     inner: RwLockWriteGuard<'a, T>,

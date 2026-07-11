@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
-//! laplace-probe-client — probe-edge WebSocket 클라이언트.
+//! laplace-probe-client — probe-edge WebSocket client.
 //!
-//! [Ghost Constraint]: emit()은 절대 block 금지. try_send() 실패 시 조용히 드롭.
+//! [Ghost Constraint]: emit() must never block. Silently drop on try_send() failure.
 
 use std::time::Duration;
 
@@ -15,16 +15,16 @@ pub use laplace_probe_common::RawProbeEvent;
 
 // ── Config ────────────────────────────────────────────────────────────────────
 
-/// probe-edge 연결 설정.
+/// Probe-edge connection settings.
 #[derive(Debug, Clone)]
 pub struct ProbeClientConfig {
     /// WebSocket URL (e.g. "ws://localhost:8443/ws")
     pub edge_url: String,
-    /// JWT (현재 probe-edge는 미검증 — 향후 인증 확장용)
+    /// JWT (probe-edge does not currently validate it — for future authentication extensions)
     pub jwt: String,
-    /// 배치 flush 최대 이벤트 수. Default: 32
+    /// Maximum events per batch flush. Default: 32.
     pub max_batch_size: usize,
-    /// 배치 flush 간격 (ms). Default: 100
+    /// Batch flush interval in milliseconds. Default: 100.
     pub flush_interval_ms: u64,
 }
 
@@ -42,20 +42,21 @@ impl Default for ProbeClientConfig {
 
 // ── ProbeClient ───────────────────────────────────────────────────────────────
 
-/// 비동기 WebSocket 클라이언트 핸들.
+/// Asynchronous WebSocket client handle.
 ///
-/// `connect()` 가 백그라운드 태스크를 spawn하고 이 핸들을 반환한다.
-/// Clone은 채널 복사이므로 O(1).
+/// `connect()` spawns a background task and returns this handle.
+/// Cloning copies the channel and is O(1).
 #[derive(Clone)]
 pub struct ProbeClient {
     tx: mpsc::Sender<RawProbeEvent>,
 }
 
 impl ProbeClient {
-    /// probe-edge에 WebSocket 연결을 맺고 백그라운드 전송 태스크를 spawn한다.
+    /// Connects to probe-edge over WebSocket and spawns a background sender task.
     ///
-    /// 호출 시점에 연결이 즉시 맺어지지 않아도 ok — 큐에 먼저 쌓고 연결 후 전송.
-    /// [Ghost Constraint]: tokio 런타임 내에서만 호출 가능.
+    /// The connection need not be established immediately — events are queued
+    /// first and sent after connecting. [Ghost Constraint]: callable only inside
+    /// a tokio runtime.
     pub async fn connect(config: ProbeClientConfig) -> Result<Self> {
         let (tx, rx) = mpsc::channel::<RawProbeEvent>(4096);
         let config_clone = config.clone();
@@ -69,9 +70,10 @@ impl ProbeClient {
         Ok(Self { tx })
     }
 
-    /// RawProbeEvent를 큐에 넣는다. 논블로킹.
+    /// Queues a `RawProbeEvent` without blocking.
     ///
-    /// [Ghost Constraint]: 큐가 꽉 차면 조용히 드롭 — 관측자 효과 방지.
+    /// [Ghost Constraint]: silently drops events when the queue is full to avoid
+    /// observer effects.
     #[inline]
     pub fn emit(&self, event: RawProbeEvent) {
         let _ = self.tx.try_send(event);

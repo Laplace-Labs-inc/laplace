@@ -2,15 +2,15 @@
 #![allow(clippy::all, clippy::pedantic)]
 #![allow(unexpected_cfgs)]
 
-//! Laplace Probe SDK — BYOC Phase 1 매크로 시스템 지원 크레이트.
+//! Laplace Probe SDK — support crate for the BYOC Phase 1 macro system.
 //!
-//! # 사용자 공개 API
+//! # Public API
 //!
 //! ```ignore
 //! use laplace_probe_sdk::{TrackedMutex, ProbeSessionConfig};
 //! ```
 //!
-//! # 내부 API (생성 코드 전용)
+//! # Internal API (generated-code only)
 //!
 //! ```ignore
 //! use laplace_probe_sdk::{set_probe_sender, set_probe_thread_id};
