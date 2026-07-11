@@ -3,6 +3,65 @@
 
 use serde::{Deserialize, Serialize};
 
+/// 런타임 async lock 획득 어휘의 probe 측 미러다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AsyncAcquireKind {
+    /// Mutex 획득.
+    Mutex,
+    /// 공유 async RwLock 획득.
+    RwRead,
+    /// 배타 async RwLock 획득.
+    RwWrite,
+    /// 지정한 permit 수의 semaphore 획득.
+    SemaphorePermits(u32),
+}
+
+/// 런타임 async channel 종류 어휘의 probe 측 미러다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AsyncChannelKind {
+    /// 설정된 capacity를 가진 bounded mpsc channel.
+    MpscBounded { capacity: usize },
+    /// Unbounded mpsc channel.
+    MpscUnbounded,
+    /// Oneshot channel.
+    Oneshot,
+    /// Watch channel.
+    Watch,
+}
+
+/// 런타임 async channel endpoint 어휘의 probe 측 미러다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AsyncChannelSide {
+    /// 송신 endpoint.
+    Sender,
+    /// 수신 endpoint.
+    Receiver,
+}
+
+/// 런타임 async channel operation 어휘의 probe 측 미러다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AsyncChannelOp {
+    /// 송신 operation.
+    Send,
+    /// 수신 operation.
+    Recv,
+    /// Watch 변경 operation.
+    Changed,
+}
+
+/// 런타임 async channel 결과 어휘의 probe 측 미러다.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+pub enum AsyncChannelOutcome {
+    /// Operation이 성공적으로 완료됨.
+    Ok,
+    /// Channel이 닫힘.
+    Closed,
+    /// Non-blocking receive에서 값이 없음.
+    Empty,
+    /// Non-blocking send에서 capacity가 없음.
+    Full,
+}
+
 /// Runtime event collected by the public instrumentation SDK.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ProbeEvent {
@@ -93,6 +152,108 @@ pub enum ProbeEvent {
     NotifyWakeCoalesced { notify_id: u64 },
     /// [v2] A waiter returned from wait after a wake edge.
     NotifyWaiterCompleted { notify_id: u64, task_id: u64 },
+    /// [v2] Async lock family 획득이 요청됨.
+    AsyncLockRequested {
+        thread_id: u64,
+        resource: u64,
+        waiter: u64,
+        kind: AsyncAcquireKind,
+    },
+    /// [v2] Async lock family 획득이 해결됨.
+    AsyncLockAcquired {
+        thread_id: u64,
+        resource: u64,
+        waiter: u64,
+        kind: AsyncAcquireKind,
+    },
+    /// [v2] Async lock family guard 또는 permit이 해제됨.
+    AsyncLockReleased {
+        thread_id: u64,
+        resource: u64,
+        waiter: u64,
+        kind: AsyncAcquireKind,
+    },
+    /// [v2] Async lock family waiter가 해결 전에 drop됨.
+    AsyncLockWaiterDropped {
+        thread_id: u64,
+        resource: u64,
+        waiter: u64,
+    },
+    /// [v2] Async semaphore resource가 처음 관측됨.
+    AsyncSemaphoreCreated {
+        thread_id: u64,
+        resource: u64,
+        permits: usize,
+    },
+    /// [v2] Async semaphore capacity가 증가됨.
+    AsyncPermitsAdded {
+        thread_id: u64,
+        resource: u64,
+        n: usize,
+    },
+    /// [v2] Async Notify waiter가 요청됨.
+    AsyncNotifyWaitRequested {
+        thread_id: u64,
+        resource: u64,
+        waiter: u64,
+    },
+    /// [v2] Async Notify waiter가 해결됨.
+    AsyncNotifyWaitResolved {
+        thread_id: u64,
+        resource: u64,
+        waiter: u64,
+    },
+    /// [v2] Async Notify `notify_one` 경계가 발생함.
+    AsyncNotifyOne { thread_id: u64, resource: u64 },
+    /// [v2] Async Notify `notify_waiters` 경계가 발생함.
+    AsyncNotifyWaiters { thread_id: u64, resource: u64 },
+    /// [v2] Async Notify waiter가 해결 전에 drop됨.
+    AsyncNotifyWaiterDropped {
+        thread_id: u64,
+        resource: u64,
+        waiter: u64,
+    },
+    /// [v2] Async channel이 생성됨.
+    AsyncChannelCreated {
+        thread_id: u64,
+        channel: u64,
+        kind: AsyncChannelKind,
+    },
+    /// [v2] Async channel operation이 요청됨.
+    AsyncChannelOpRequested {
+        thread_id: u64,
+        channel: u64,
+        op: u64,
+        op_kind: AsyncChannelOp,
+    },
+    /// [v2] Async channel operation이 결과와 함께 해결됨.
+    AsyncChannelOpResolved {
+        thread_id: u64,
+        channel: u64,
+        op: u64,
+        op_kind: AsyncChannelOp,
+        outcome: AsyncChannelOutcome,
+    },
+    /// [v2] Async channel operation이 해결 전에 drop됨.
+    AsyncChannelOpDropped {
+        thread_id: u64,
+        channel: u64,
+        op: u64,
+    },
+    /// [v2] Async channel endpoint가 clone됨.
+    AsyncChannelEndpointCloned {
+        thread_id: u64,
+        channel: u64,
+        side: AsyncChannelSide,
+    },
+    /// [v2] Async channel endpoint가 drop됨.
+    AsyncChannelEndpointDropped {
+        thread_id: u64,
+        channel: u64,
+        side: AsyncChannelSide,
+    },
+    /// [v2] Async channel receiver가 닫힘.
+    AsyncChannelClosed { thread_id: u64, channel: u64 },
 }
 
 impl ProbeEvent {
@@ -129,7 +290,27 @@ impl ProbeEvent {
             | Self::NotifyWakeEdge { .. }
             | Self::NotifyLatestWaker { .. }
             | Self::NotifyWakeCoalesced { .. }
-            | Self::NotifyWaiterCompleted { .. } => None,
+            | Self::NotifyWaiterCompleted { .. }
+            // [v2] 런타임 async hook은 숫자 identity를 가지며 engine 측
+            // Notify 어휘와 의도적으로 분리한다.
+            | Self::AsyncLockRequested { .. }
+            | Self::AsyncLockAcquired { .. }
+            | Self::AsyncLockReleased { .. }
+            | Self::AsyncLockWaiterDropped { .. }
+            | Self::AsyncSemaphoreCreated { .. }
+            | Self::AsyncPermitsAdded { .. }
+            | Self::AsyncNotifyWaitRequested { .. }
+            | Self::AsyncNotifyWaitResolved { .. }
+            | Self::AsyncNotifyOne { .. }
+            | Self::AsyncNotifyWaiters { .. }
+            | Self::AsyncNotifyWaiterDropped { .. }
+            | Self::AsyncChannelCreated { .. }
+            | Self::AsyncChannelOpRequested { .. }
+            | Self::AsyncChannelOpResolved { .. }
+            | Self::AsyncChannelOpDropped { .. }
+            | Self::AsyncChannelEndpointCloned { .. }
+            | Self::AsyncChannelEndpointDropped { .. }
+            | Self::AsyncChannelClosed { .. } => None,
         }
     }
 }

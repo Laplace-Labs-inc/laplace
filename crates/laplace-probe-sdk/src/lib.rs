@@ -16,6 +16,7 @@
 //! use laplace_probe_sdk::{set_probe_sender, set_probe_thread_id};
 //! ```
 
+pub mod async_hooks;
 #[cfg(feature = "cloud")]
 pub mod client;
 pub mod config;
@@ -35,8 +36,14 @@ pub mod tracked_std_rwlock;
 
 // ── 공개 재내보내기 ────────────────────────────────────────────────────────────
 
+pub use async_hooks::{
+    install_probe_async_hooks, ProbeAsyncChannelHook, ProbeAsyncLockHook, ProbeAsyncNotifyHook,
+};
 pub use config::{load_project_config, load_toml_max_depth, ProjectConfig};
-pub use event::ProbeEvent;
+pub use event::{
+    AsyncAcquireKind, AsyncChannelKind, AsyncChannelOp, AsyncChannelOutcome, AsyncChannelSide,
+    ProbeEvent,
+};
 pub use model_lock::{install_probe_lock_hook, ProbeLockHook};
 pub use session::{
     clear_probe_sender, current_thread_id, dump_events_if_configured, emit, run_verification_from,
@@ -72,7 +79,7 @@ pub use session::init_cloud_probe;
 #[doc(hidden)]
 pub mod __macro_support {
     pub use crate::ProbeEvent;
-    pub use crate::{install_probe_task_hook, run_task_set_native};
+    pub use crate::{install_probe_async_hooks, install_probe_task_hook, run_task_set_native};
     pub use crate::{
         set_probe_sender, set_probe_thread_id, CaptureSession, ProbeSessionConfig, TrackedMutex,
         TrackedRwLock,

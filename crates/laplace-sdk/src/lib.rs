@@ -139,7 +139,10 @@ pub use laplace_probe_sdk::set_probe_thread_id;
 pub use laplace_probe_sdk::ProbeSessionConfig;
 
 /// Enumeration of all probe event types.
-pub use laplace_probe_sdk::ProbeEvent;
+pub use laplace_probe_sdk::{
+    AsyncAcquireKind, AsyncChannelKind, AsyncChannelOp, AsyncChannelOutcome, AsyncChannelSide,
+    ProbeEvent,
+};
 
 /// Dump captured events to `$LAPLACE_VERIFY_EVENTS_DIR` for the private CLI.
 pub use laplace_probe_sdk::dump_events_if_configured;
@@ -193,7 +196,8 @@ pub mod __macro_support {
         TrackedStdRwLock,
     };
     pub use laplace_probe_sdk::{
-        install_probe_lock_hook, install_probe_task_hook, run_task_set_native,
+        install_probe_async_hooks, install_probe_lock_hook, install_probe_task_hook,
+        run_task_set_native,
     };
     pub use tokio;
 }

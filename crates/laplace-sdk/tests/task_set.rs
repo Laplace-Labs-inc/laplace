@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
+use std::future::poll_fn;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};
+use std::task::Poll;
 
 #[laplace_sdk::verify(tasks, name = "task_set_e2e", expected = "clean")]
 fn task_set_e2e(tasks: &mut laplace_sdk::rt::TaskSet) {
@@ -119,6 +121,286 @@ fn task_set_native_run_emits_and_dumps_task_events() {
     assert!(dumped
         .iter()
         .any(|event| matches!(event, laplace_sdk::ProbeEvent::TaskPolled { .. })));
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+fn yield_once() -> impl std::future::Future<Output = ()> {
+    let mut yielded = false;
+    poll_fn(move |cx| {
+        if yielded {
+            Poll::Ready(())
+        } else {
+            yielded = true;
+            cx.waker().wake_by_ref();
+            Poll::Pending
+        }
+    })
+}
+
+fn capture_async_task_events(
+    build: impl FnOnce(&mut laplace_sdk::rt::TaskSet),
+) -> Vec<laplace_sdk::ProbeEvent> {
+    let session = laplace_sdk::CaptureSession::begin();
+    laplace_probe_sdk::install_probe_task_hook();
+    laplace_probe_sdk::install_probe_async_hooks();
+    laplace_sdk::set_probe_thread_id(0);
+
+    let mut tasks = laplace_sdk::rt::TaskSet::new();
+    build(&mut tasks);
+    laplace_probe_sdk::run_task_set_native(tasks);
+    let events = session.finish();
+
+    laplace_sdk::rt::clear_async_channel_hook();
+    laplace_sdk::rt::clear_async_lock_hook();
+    laplace_sdk::rt::clear_async_notify_hook();
+    laplace_sdk::rt::clear_task_observer_hook();
+    events
+}
+
+#[test]
+fn async_lock_capture_keeps_task_thread_ownership() {
+    let _serial = serial();
+    let lock = Arc::new(laplace_sdk::rt::ModelAsyncMutex::new(0_u8));
+    let first_lock = Arc::clone(&lock);
+    let second_lock = Arc::clone(&lock);
+
+    let events = capture_async_task_events(move |tasks| {
+        tasks.spawn(async move {
+            let _guard = first_lock.lock().await;
+            yield_once().await;
+        });
+        tasks.spawn(async move {
+            let _guard = second_lock.lock().await;
+        });
+    });
+
+    let acquired: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            laplace_sdk::ProbeEvent::AsyncLockAcquired { thread_id, .. } => Some(*thread_id),
+            _ => None,
+        })
+        .collect();
+    let released: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            laplace_sdk::ProbeEvent::AsyncLockReleased { thread_id, .. } => Some(*thread_id),
+            _ => None,
+        })
+        .collect();
+
+    assert_eq!(acquired.len(), 2);
+    assert_eq!(released.len(), 2);
+    assert!(acquired.contains(&0));
+    assert!(acquired.contains(&1));
+    assert!(released.contains(&0));
+    assert!(released.contains(&1));
+}
+
+#[test]
+fn async_channel_capture_reports_kind_and_successful_operations() {
+    let _serial = serial();
+    let events = capture_async_task_events(|tasks| {
+        let (sender, mut receiver) = laplace_sdk::rt::mpsc::channel::<u8>(1);
+        tasks.spawn(async move {
+            sender.send(7).await.expect("send succeeds");
+        });
+        tasks.spawn(async move {
+            assert_eq!(receiver.recv().await, Some(7));
+        });
+    });
+
+    assert!(events.iter().any(|event| matches!(
+        event,
+        laplace_sdk::ProbeEvent::AsyncChannelCreated {
+            thread_id: 0,
+            kind: laplace_sdk::AsyncChannelKind::MpscBounded { capacity: 1 },
+            ..
+        }
+    )));
+    assert!(events.iter().any(|event| matches!(
+        event,
+        laplace_sdk::ProbeEvent::AsyncChannelOpResolved {
+            op_kind: laplace_sdk::AsyncChannelOp::Send,
+            outcome: laplace_sdk::AsyncChannelOutcome::Ok,
+            ..
+        }
+    )));
+    assert!(events.iter().any(|event| matches!(
+        event,
+        laplace_sdk::ProbeEvent::AsyncChannelOpResolved {
+            op_kind: laplace_sdk::AsyncChannelOp::Recv,
+            outcome: laplace_sdk::AsyncChannelOutcome::Ok,
+            ..
+        }
+    )));
+}
+
+#[test]
+fn async_notify_capture_reports_one_and_wait_resolution() {
+    let _serial = serial();
+    let notify = Arc::new(laplace_sdk::rt::ModelAsyncNotify::new());
+    let waiter_notify = Arc::clone(&notify);
+    let notifier_notify = Arc::clone(&notify);
+
+    let events = capture_async_task_events(move |tasks| {
+        tasks.spawn(async move {
+            waiter_notify.notified().await;
+        });
+        tasks.spawn(async move {
+            notifier_notify.notify_one();
+        });
+    });
+
+    assert!(events
+        .iter()
+        .any(|event| matches!(event, laplace_sdk::ProbeEvent::AsyncNotifyOne { .. })));
+    assert!(events.iter().any(|event| matches!(
+        event,
+        laplace_sdk::ProbeEvent::AsyncNotifyWaitResolved { .. }
+    )));
+}
+
+#[test]
+fn async_event_envelope_round_trips_all_new_variants_and_legacy_events() {
+    let _serial = serial();
+    let events = vec![
+        laplace_sdk::ProbeEvent::AsyncLockRequested {
+            thread_id: 0,
+            resource: 1,
+            waiter: 2,
+            kind: laplace_sdk::AsyncAcquireKind::Mutex,
+        },
+        laplace_sdk::ProbeEvent::AsyncLockAcquired {
+            thread_id: 1,
+            resource: 1,
+            waiter: 2,
+            kind: laplace_sdk::AsyncAcquireKind::RwRead,
+        },
+        laplace_sdk::ProbeEvent::AsyncLockReleased {
+            thread_id: 1,
+            resource: 1,
+            waiter: 2,
+            kind: laplace_sdk::AsyncAcquireKind::RwWrite,
+        },
+        laplace_sdk::ProbeEvent::AsyncLockWaiterDropped {
+            thread_id: 1,
+            resource: 1,
+            waiter: 3,
+        },
+        laplace_sdk::ProbeEvent::AsyncSemaphoreCreated {
+            thread_id: 0,
+            resource: 4,
+            permits: 3,
+        },
+        laplace_sdk::ProbeEvent::AsyncPermitsAdded {
+            thread_id: 0,
+            resource: 4,
+            n: 2,
+        },
+        laplace_sdk::ProbeEvent::AsyncNotifyWaitRequested {
+            thread_id: 0,
+            resource: 5,
+            waiter: 6,
+        },
+        laplace_sdk::ProbeEvent::AsyncNotifyWaitResolved {
+            thread_id: 1,
+            resource: 5,
+            waiter: 6,
+        },
+        laplace_sdk::ProbeEvent::AsyncNotifyOne {
+            thread_id: 1,
+            resource: 5,
+        },
+        laplace_sdk::ProbeEvent::AsyncNotifyWaiters {
+            thread_id: 1,
+            resource: 5,
+        },
+        laplace_sdk::ProbeEvent::AsyncNotifyWaiterDropped {
+            thread_id: 0,
+            resource: 5,
+            waiter: 7,
+        },
+        laplace_sdk::ProbeEvent::AsyncChannelCreated {
+            thread_id: 0,
+            channel: 8,
+            kind: laplace_sdk::AsyncChannelKind::MpscBounded { capacity: 1 },
+        },
+        laplace_sdk::ProbeEvent::AsyncChannelOpRequested {
+            thread_id: 0,
+            channel: 8,
+            op: 9,
+            op_kind: laplace_sdk::AsyncChannelOp::Send,
+        },
+        laplace_sdk::ProbeEvent::AsyncChannelOpResolved {
+            thread_id: 1,
+            channel: 8,
+            op: 9,
+            op_kind: laplace_sdk::AsyncChannelOp::Recv,
+            outcome: laplace_sdk::AsyncChannelOutcome::Ok,
+        },
+        laplace_sdk::ProbeEvent::AsyncChannelOpDropped {
+            thread_id: 0,
+            channel: 8,
+            op: 10,
+        },
+        laplace_sdk::ProbeEvent::AsyncChannelEndpointCloned {
+            thread_id: 0,
+            channel: 8,
+            side: laplace_sdk::AsyncChannelSide::Sender,
+        },
+        laplace_sdk::ProbeEvent::AsyncChannelEndpointDropped {
+            thread_id: 1,
+            channel: 8,
+            side: laplace_sdk::AsyncChannelSide::Receiver,
+        },
+        laplace_sdk::ProbeEvent::AsyncChannelClosed {
+            thread_id: 1,
+            channel: 8,
+        },
+    ];
+
+    let dir = std::env::temp_dir().join(format!(
+        "laplace-d8-2-events-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("system clock")
+            .as_nanos()
+    ));
+    std::env::set_var("LAPLACE_VERIFY_EVENTS_DIR", &dir);
+    laplace_sdk::dump_events_if_configured(
+        "d8_2_async_event_schema",
+        "clean",
+        "fully_deterministic",
+        &events,
+    );
+    std::env::remove_var("LAPLACE_VERIFY_EVENTS_DIR");
+
+    let envelope: serde_json::Value = serde_json::from_str(
+        &std::fs::read_to_string(dir.join("d8_2_async_event_schema.json"))
+            .expect("async event envelope written"),
+    )
+    .expect("valid async event envelope");
+    assert_eq!(envelope["schema_version"], "2");
+    let round_tripped: Vec<laplace_sdk::ProbeEvent> =
+        serde_json::from_value(envelope["events"].clone()).expect("events round-trip");
+    assert_eq!(
+        serde_json::to_value(&round_tripped).expect("serialize round-trip"),
+        serde_json::to_value(&events).expect("serialize source")
+    );
+
+    let legacy: serde_json::Value = serde_json::from_str(
+        r#"{"target":"legacy","expected":"clean","events":[{"LockAcquired":{"thread_id":0,"resource":"legacy"}}]}"#,
+    )
+    .expect("legacy envelope parses");
+    let legacy_events: Vec<laplace_sdk::ProbeEvent> =
+        serde_json::from_value(legacy["events"].clone()).expect("legacy events parse");
+    assert!(matches!(
+        legacy_events.as_slice(),
+        [laplace_sdk::ProbeEvent::LockAcquired { .. }]
+    ));
 
     let _ = std::fs::remove_dir_all(&dir);
 }

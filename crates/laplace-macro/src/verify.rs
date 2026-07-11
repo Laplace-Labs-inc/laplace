@@ -493,6 +493,7 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
             fn #test_fn_name() {
                 use ::laplace_sdk::__macro_support::{
                     install_probe_lock_hook,
+                    install_probe_async_hooks,
                     install_probe_task_hook,
                     run_task_set_native,
                     set_probe_thread_id,
@@ -505,6 +506,7 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
                 let __laplace_session = CaptureSession::begin();
                 install_probe_lock_hook();
                 install_probe_task_hook();
+                install_probe_async_hooks();
                 set_probe_thread_id(0);
                 let mut __laplace_tasks = ::laplace_sdk::rt::TaskSet::new();
                 #func_ident(&mut __laplace_tasks);
