@@ -1,0 +1,24 @@
+[package]
+name = "pingora-pool-patched"
+version = "0.8.1"
+authors = ["Yuchen Wu <yuchen@cloudflare.com>"]
+license = "Apache-2.0"
+edition = "2021"
+repository = "https://github.com/cloudflare/pingora"
+categories = ["network-programming"]
+keywords = ["async", "pooling", "pingora"]
+description = "A Laplace-local pingora-pool 0.8.1 hunt snapshot."
+publish = false
+
+[lib]
+name = "pingora_pool_patched"
+path = "src/lib.rs"
+
+[dependencies]
+crossbeam-queue = "0.3"
+laplace-rt = { path = "../../crates/laplace-rt" }
+log = "0.4"
+lru = "0.16.3"
+parking_lot = "0.12"
+thread_local = "1.0"
+tokio = { version = "1", features = ["sync", "io-util", "macros", "rt"] }

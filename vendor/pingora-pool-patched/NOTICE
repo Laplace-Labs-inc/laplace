@@ -1,0 +1,11 @@
+This directory contains a local Laplace hunt snapshot of pingora-pool 0.8.1,
+originally distributed by Cloudflare, Inc. under the Apache License, Version 2.0.
+
+The original Cloudflare copyright and Apache-2.0 license headers are preserved in
+the vendored Rust sources. Laplace changes are limited to aliasing Tokio's
+oneshot/watch/Notify and pingora-timeout seams to laplace-rt wrap-real hooks for
+deterministic async exploration; the idle_poll I/O path is retained but excluded
+from the model scope.
+
+Source archive: crates.io pingora-pool/0.8.1
+Archive SHA-256: feb1237893b15a9cf6b371bee8d7e2e1c10742e4be6eb00ed38cfe87fd1363f8

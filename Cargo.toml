@@ -10,6 +10,7 @@ members = [
     "crates/laplace-harness",
     "crates/laplace-sdk",
     "examples/bb8-hunt",
+    "examples/pingora-hunt",
     "examples/byoc-demo",
     "examples/crossbeam-hunt",
     "examples/deadpool-hunt",

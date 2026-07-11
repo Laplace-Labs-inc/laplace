@@ -1,0 +1,9 @@
+[package]
+name = "pingora-hunt"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+laplace-sdk = { path = "../../crates/laplace-sdk" }
+pingora-pool-patched = { path = "../../vendor/pingora-pool-patched" }
