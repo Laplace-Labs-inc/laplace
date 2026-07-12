@@ -19,6 +19,14 @@ impl laplace_rt::TaskObserverHook for ProbeTaskHook {
         });
     }
 
+    fn dynamic_task_spawned(&self, task: u64) {
+        emit(ProbeEvent::TaskSpawned {
+            task_id: task,
+            parent_task_id: None,
+            source_location: None,
+        });
+    }
+
     fn poll_started(&self, task: u64, attempt: u64) {
         set_probe_thread_id(task);
         emit(ProbeEvent::TaskPolled {

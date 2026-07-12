@@ -17,6 +17,11 @@ static ASYNC_SPAWN_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncSpawnHook>>>> = O
 static LOCK_HOOK: OnceLock<StdMutex<Option<Arc<dyn LockHook>>>> = OnceLock::new();
 static TASK_OBSERVER_HOOK: OnceLock<StdMutex<Option<Arc<dyn TaskObserverHook>>>> = OnceLock::new();
 static NEXT_LOCK_RESOURCE_ID: AtomicU64 = AtomicU64::new(1);
+/// Native dynamic task ids live above the pre-registered `TaskSet` namespace
+/// (`0..8`). The high-bit reservation makes a capture-side spawn marker
+/// distinguishable without changing the existing `ProbeEvent` vocabulary.
+const NATIVE_DYNAMIC_TASK_ID_BASE: u64 = 1 << 63;
+static NEXT_NATIVE_DYNAMIC_TASK_ID: AtomicU64 = AtomicU64::new(NATIVE_DYNAMIC_TASK_ID_BASE);
 static ASYNC_LOCK_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncLockHook>>>> = OnceLock::new();
 static ASYNC_NOTIFY_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncNotifyHook>>>> = OnceLock::new();
 static ASYNC_CHANNEL_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncChannelHook>>>> = OnceLock::new();
@@ -70,6 +75,12 @@ pub enum TaskPollOutcome {
 pub trait TaskObserverHook: Send + Sync {
     /// Reports a task registered in a `TaskSet`.
     fn task_registered(&self, task: u64);
+
+    /// Reports a native fire-and-forget task immediately before it is handed
+    /// to Tokio. The default preserves source compatibility for observer
+    /// implementations that only consume pre-registered `TaskSet` callbacks;
+    /// the probe observer overrides it to emit a `TaskSpawned` marker.
+    fn dynamic_task_spawned(&self, _task: u64) {}
 
     /// Reports entry into one task-future poll.
     fn poll_started(&self, task: u64, attempt: u64);
@@ -342,6 +353,14 @@ pub(crate) fn task_observer_hook() -> Option<Arc<dyn TaskObserverHook>> {
             .expect("task observer hook lock poisoned")
             .clone()
     })
+}
+
+pub(crate) fn next_native_dynamic_task_id() -> u64 {
+    NEXT_NATIVE_DYNAMIC_TASK_ID
+        .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |current| {
+            current.checked_add(1)
+        })
+        .expect("laplace: native dynamic task id namespace exhausted")
 }
 
 /// Resets deterministic model mutex id allocation for controlled re-execution.

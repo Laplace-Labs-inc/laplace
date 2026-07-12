@@ -10,7 +10,7 @@
 use std::future::Future;
 use std::thread::JoinHandle;
 
-use crate::hooks::{async_spawn_hook, spawn_hook};
+use crate::hooks::{async_spawn_hook, next_native_dynamic_task_id, spawn_hook, task_observer_hook};
 
 enum JoinMode {
     Std(JoinHandle<()>),
@@ -86,6 +86,9 @@ where
             let _ = future.await;
         }));
     } else {
+        if let Some(hook) = task_observer_hook() {
+            hook.dynamic_task_spawned(next_native_dynamic_task_id());
+        }
         drop(tokio::spawn(future));
     }
 }

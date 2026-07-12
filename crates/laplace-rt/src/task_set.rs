@@ -178,7 +178,8 @@ impl Future for ObservedTask {
 mod tests {
     use super::*;
     use crate::{
-        clear_task_observer_hook, install_task_observer_hook, TaskObserverHook, TaskPollOutcome,
+        clear_async_spawn_hook, clear_task_observer_hook, install_task_observer_hook,
+        TaskObserverHook, TaskPollOutcome,
     };
     use std::future::Future;
     use std::pin::Pin;
@@ -223,6 +224,7 @@ mod tests {
     #[derive(Clone, Debug, PartialEq, Eq)]
     enum Event {
         Registered(u64),
+        Dynamic(u64),
         Started(u64, u64),
         Completed(u64, u64, TaskPollOutcome),
         Finished(u64),
@@ -250,6 +252,13 @@ mod tests {
                 .lock()
                 .expect("task hook events lock")
                 .push(Event::Registered(task));
+        }
+
+        fn dynamic_task_spawned(&self, task: u64) {
+            self.events
+                .lock()
+                .expect("task hook events lock")
+                .push(Event::Dynamic(task));
         }
 
         fn poll_started(&self, task: u64, attempt: u64) {
@@ -296,6 +305,30 @@ mod tests {
                 Event::Completed(0, 0, TaskPollOutcome::Ready),
                 Event::Finished(0),
             ]
+        );
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn native_spawn_reports_a_reserved_dynamic_task_id() {
+        let _serial = serial();
+        clear_async_spawn_hook();
+        let hook = Arc::new(RecordingTaskHook::new());
+        install_task_observer_hook(hook.clone());
+
+        crate::spawn::spawn_task(async {});
+
+        clear_task_observer_hook();
+        let events = hook.events();
+        let dynamic = events
+            .into_iter()
+            .find_map(|event| match event {
+                Event::Dynamic(task) => Some(task),
+                _ => None,
+            })
+            .expect("native spawn must report its dynamic task");
+        assert!(
+            dynamic >= (1_u64 << 63),
+            "dynamic task id must use the reserved namespace: {dynamic}"
         );
     }
 

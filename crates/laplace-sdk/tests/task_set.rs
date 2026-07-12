@@ -199,6 +199,33 @@ fn async_lock_capture_keeps_task_thread_ownership() {
 }
 
 #[test]
+fn native_fire_and_forget_spawn_emits_dynamic_task_marker() {
+    let _serial = serial();
+    let events = capture_async_task_events(|tasks| {
+        tasks.spawn(async {
+            laplace_sdk::rt::spawn_task(async {});
+        });
+    });
+
+    let dynamic_ids: Vec<_> = events
+        .iter()
+        .filter_map(|event| match event {
+            laplace_sdk::ProbeEvent::TaskSpawned {
+                task_id,
+                parent_task_id: None,
+                source_location: None,
+            } if *task_id >= (1_u64 << 63) => Some(*task_id),
+            _ => None,
+        })
+        .collect();
+    assert_eq!(
+        dynamic_ids.len(),
+        1,
+        "native dynamic spawn marker missing: {events:?}"
+    );
+}
+
+#[test]
 fn async_channel_capture_reports_kind_and_successful_operations() {
     let _serial = serial();
     let events = capture_async_task_events(|tasks| {

@@ -64,7 +64,21 @@ pub fn model_impl(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// [`apply_model_rewrite_with_base_aliases`] for the `mod`-annotated path
 /// that threads an enclosing scope's alias table in.
 pub(crate) fn apply_model_rewrite(func: &mut ItemFn) {
-    apply_model_rewrite_with_base_aliases(func, &BTreeMap::new());
+    apply_model_rewrite_with_options(func, ModelRewriteOptions::default());
+}
+
+/// Options for the shared model rewrite. `tasks` is intentionally opt-in:
+/// only the pre-registered `TaskSet` composition surface can route discarded
+/// Tokio fire-and-forget spawns through `spawn_task` without hiding a
+/// `JoinHandle` from the other verify/model modes.
+#[derive(Clone, Copy, Default)]
+pub(crate) struct ModelRewriteOptions {
+    pub(crate) tasks: bool,
+}
+
+/// Applies the shared model rewrite with an explicit mode boundary.
+pub(crate) fn apply_model_rewrite_with_options(func: &mut ItemFn, options: ModelRewriteOptions) {
+    apply_model_rewrite_with_base_aliases(func, &BTreeMap::new(), options);
 }
 
 /// [`apply_model_rewrite`], but merging `base_aliases` (the alias table
@@ -75,10 +89,12 @@ pub(crate) fn apply_model_rewrite(func: &mut ItemFn) {
 fn apply_model_rewrite_with_base_aliases(
     func: &mut ItemFn,
     base_aliases: &BTreeMap<String, Vec<Ident>>,
+    options: ModelRewriteOptions,
 ) {
     let aliases = merge_aliases(base_aliases, &scan_use_aliases_stmts(&func.block.stmts));
     let mut rewrite = ModelRewrite {
         aliases,
+        options,
         ..ModelRewrite::default()
     };
     rewrite.visit_item_fn_mut(func);
@@ -104,7 +120,7 @@ fn apply_model_rewrite_to_annotated_mod(item_mod: &mut ItemMod) -> syn::Result<(
              module (`mod foo { ... }`) or annotate the `fn` directly",
         ));
     };
-    apply_model_rewrite_to_items(items, &BTreeMap::new());
+    apply_model_rewrite_to_items(items, &BTreeMap::new(), ModelRewriteOptions::default());
     Ok(())
 }
 
@@ -118,14 +134,18 @@ fn apply_model_rewrite_to_annotated_mod(item_mod: &mut ItemMod) -> syn::Result<(
 /// A nested out-of-line `mod foo;` is left untouched — same visibility
 /// limit as the top-level annotated-item case, but not rejected here (only
 /// the item `#[laplace::model]` is directly attached to must be inline).
-fn apply_model_rewrite_to_items(items: &mut [Item], base_aliases: &BTreeMap<String, Vec<Ident>>) {
+fn apply_model_rewrite_to_items(
+    items: &mut [Item],
+    base_aliases: &BTreeMap<String, Vec<Ident>>,
+    options: ModelRewriteOptions,
+) {
     let scope_aliases = merge_aliases(base_aliases, &scan_use_aliases_items(items));
     for item in items.iter_mut() {
         match item {
-            Item::Fn(func) => apply_model_rewrite_with_base_aliases(func, &scope_aliases),
+            Item::Fn(func) => apply_model_rewrite_with_base_aliases(func, &scope_aliases, options),
             Item::Mod(inner_mod) => {
                 if let Some((_, inner_items)) = &mut inner_mod.content {
-                    apply_model_rewrite_to_items(inner_items, &scope_aliases);
+                    apply_model_rewrite_to_items(inner_items, &scope_aliases, options);
                 }
             }
             _ => {}
@@ -155,6 +175,7 @@ fn apply_model_rewrite_to_items(items: &mut [Item], base_aliases: &BTreeMap<Stri
 pub(crate) struct ModelRewrite {
     unmodeled: BTreeSet<Unmodeled>,
     aliases: BTreeMap<String, Vec<Ident>>,
+    options: ModelRewriteOptions,
 }
 
 impl ModelRewrite {
@@ -249,6 +270,22 @@ impl ModelRewrite {
 }
 
 impl VisitMut for ModelRewrite {
+    fn visit_stmt_mut(&mut self, node: &mut Stmt) {
+        if self.options.tasks {
+            match node {
+                Stmt::Expr(expr, Some(_)) => self.rewrite_discarded_spawn(expr),
+                Stmt::Local(local) if matches!(&local.pat, syn::Pat::Wild(_)) => {
+                    if let Some(init) = local.init.as_mut() {
+                        self.rewrite_discarded_spawn(&mut init.expr);
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        visit_mut::visit_stmt_mut(self, node);
+    }
+
     fn visit_expr_call_mut(&mut self, node: &mut ExprCall) {
         visit_mut::visit_expr_call_mut(self, node);
 
@@ -321,6 +358,27 @@ impl VisitMut for ModelRewrite {
 
         if is_tokio_select_macro_path(effective) {
             node.path = parse_quote!(::laplace_sdk::rt::laplace_select);
+        }
+    }
+}
+
+impl ModelRewrite {
+    /// Rewrites only a direct `tokio::spawn` expression whose result is
+    /// discarded by the surrounding statement. A binding, await, or method
+    /// chain is deliberately left for the unmodeled marker path because its
+    /// `JoinHandle` semantics belong to S4.
+    fn rewrite_discarded_spawn(&mut self, expr: &mut Expr) {
+        let Expr::Call(call) = expr else {
+            return;
+        };
+        let Expr::Path(path) = call.func.as_mut() else {
+            return;
+        };
+
+        let canonical = self.canonicalize(&path.path);
+        let effective = canonical.as_ref().unwrap_or(&path.path);
+        if is_tokio_spawn_path(effective) {
+            path.path = parse_quote!(::laplace_sdk::rt::spawn_task);
         }
     }
 }
@@ -755,11 +813,11 @@ fn classify_tokio_sync_unmodeled(path: &Path) -> Option<Unmodeled> {
     }
 }
 
-/// Whether `path` is a supported `tokio::spawn`/`tokio::task::spawn*` call,
-/// by exact plain-segment match. Unqualified bare `spawn(...)` is
-/// intentionally excluded — too high a false-positive risk against an
-/// unrelated user function of the same name.
-fn is_unmodeled_tokio_spawn_path(path: &Path) -> bool {
+/// Whether `path` is a `tokio::spawn`/`tokio::task::spawn` call, by exact
+/// plain-segment match. Unqualified bare `spawn(...)` is intentionally
+/// excluded — too high a false-positive risk against an unrelated user
+/// function of the same name.
+fn is_tokio_spawn_path(path: &Path) -> bool {
     let segments: Vec<_> = path
         .segments
         .iter()
@@ -781,10 +839,33 @@ fn is_unmodeled_tokio_spawn_path(path: &Path) -> bool {
         [(tokio, _), (task, _), (method, _)]
             if *tokio == "tokio"
                 && *task == "task"
-                && matches!(
-                    method.to_string().as_str(),
-                    "spawn" | "spawn_blocking" | "spawn_local"
-                )
+                && *method == "spawn"
+    )
+}
+
+/// Whether `path` is a recognized Tokio spawn variant that remains
+/// unmodeled in every mode. `spawn_blocking` and `spawn_local` have distinct
+/// runtime semantics and must not be routed through the fire-and-forget seam.
+fn is_unmodeled_tokio_spawn_path(path: &Path) -> bool {
+    let segments: Vec<_> = path
+        .segments
+        .iter()
+        .map(|segment| (&segment.ident, &segment.arguments))
+        .collect();
+
+    let all_plain = segments
+        .iter()
+        .all(|(_, arguments)| matches!(arguments, PathArguments::None));
+    if !all_plain {
+        return false;
+    }
+
+    matches!(
+        segments.as_slice(),
+        [(tokio, _), (task, _), (method, _)]
+            if *tokio == "tokio"
+                && *task == "task"
+                && matches!(method.to_string().as_str(), "spawn_blocking" | "spawn_local")
     )
 }
 
@@ -799,7 +880,7 @@ fn classify_unmodeled(path: &Path) -> Option<Unmodeled> {
     if let Some(primitive) = classify_tokio_time_unmodeled(path) {
         return Some(primitive);
     }
-    if is_unmodeled_tokio_spawn_path(path) {
+    if is_tokio_spawn_path(path) || is_unmodeled_tokio_spawn_path(path) {
         return Some(Unmodeled::TokioSpawn);
     }
 
@@ -1009,6 +1090,12 @@ mod tests {
     fn rewrite_to_string(func: &str) -> String {
         let mut func: ItemFn = syn::parse_str(func).expect("valid fn");
         apply_model_rewrite(&mut func);
+        func.into_token_stream().to_string()
+    }
+
+    fn rewrite_to_string_with_tasks(func: &str, tasks: bool) -> String {
+        let mut func: ItemFn = syn::parse_str(func).expect("valid fn");
+        apply_model_rewrite_with_options(&mut func, ModelRewriteOptions { tasks });
         func.into_token_stream().to_string()
     }
 
@@ -1318,6 +1405,100 @@ mod tests {
             out.matches("TOKIO_SPAWN").count(),
             1,
             "expected one marker: {out}"
+        );
+    }
+
+    #[test]
+    fn tasks_rewrite_discarded_tokio_spawn_calls_to_spawn_task() {
+        let out = rewrite_to_string_with_tasks(
+            "fn f() { tokio::spawn(async {}); let _ = tokio::task::spawn(async {}); }",
+            true,
+        );
+        assert_eq!(
+            out.matches("laplace_sdk :: rt :: spawn_task").count(),
+            2,
+            "discarded tasks-mode spawns must use spawn_task: {out}"
+        );
+        assert!(
+            !out.contains("TOKIO_SPAWN"),
+            "unexpected spawn marker: {out}"
+        );
+    }
+
+    #[test]
+    fn tasks_keep_join_handle_tokio_spawn_uses_unmodeled_marker() {
+        let out = rewrite_to_string_with_tasks(
+            "fn f() { let handle = tokio::spawn(async {}); let _ = tokio::spawn(async {}).await; }",
+            true,
+        );
+        assert!(
+            out.contains("TOKIO_SPAWN"),
+            "JoinHandle-using spawns must retain the blind-spot marker: {out}"
+        );
+        assert!(
+            !out.contains("laplace_sdk :: rt :: spawn_task"),
+            "JoinHandle-using spawns must not be rewritten: {out}"
+        );
+    }
+
+    #[test]
+    fn non_tasks_modes_keep_tokio_spawn_marker() {
+        let out = rewrite_to_string_with_tasks("fn f() { tokio::spawn(async {}); }", false);
+        assert!(
+            out.contains("TOKIO_SPAWN"),
+            "non-tasks modes must retain the tokio spawn marker: {out}"
+        );
+        assert!(
+            !out.contains("laplace_sdk :: rt :: spawn_task"),
+            "non-tasks modes must not rewrite tokio spawn: {out}"
+        );
+    }
+
+    #[test]
+    fn tasks_keep_spawn_blocking_and_spawn_local_markers() {
+        let out = rewrite_to_string_with_tasks(
+            "fn f() { tokio::task::spawn_blocking(|| {}); let _ = tokio::task::spawn_local(async {}); }",
+            true,
+        );
+        assert!(
+            out.contains("TOKIO_SPAWN"),
+            "blocking/local spawns must retain the blind-spot marker: {out}"
+        );
+        assert!(
+            !out.contains("laplace_sdk :: rt :: spawn_task"),
+            "blocking/local spawns must not use the fire-and-forget seam: {out}"
+        );
+    }
+
+    #[test]
+    fn tasks_rewrite_reaches_spawns_inside_nested_async_blocks() {
+        let out = rewrite_to_string_with_tasks(
+            "fn f(tasks: &mut TaskSet) { tasks.spawn(async { tokio::spawn(async {}); }); }",
+            true,
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: spawn_task"),
+            "the composition-body nesting (`tasks.spawn(async {{ .. }})`) must reach the rewrite: {out}"
+        );
+        assert!(
+            !out.contains("TOKIO_SPAWN"),
+            "unexpected spawn marker: {out}"
+        );
+    }
+
+    #[test]
+    fn tasks_rewrite_tokio_task_spawn_alias_in_discarded_statement() {
+        let out = rewrite_to_string_with_tasks(
+            "fn f() { use tokio::task; let _ = task::spawn(async {}); }",
+            true,
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: spawn_task"),
+            "tokio::task alias must reach the tasks-only rewrite: {out}"
+        );
+        assert!(
+            !out.contains("TOKIO_SPAWN"),
+            "unexpected spawn marker: {out}"
         );
     }
 

@@ -294,7 +294,10 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
     // `[patch.crates-io]` redirection that swaps the real concurrency crates for
     // their Laplace shims is a compile-time Cargo setting and CANNOT be injected
     // by a proc-macro; it is emitted by onboarding (`laplace init`).
-    crate::model::apply_model_rewrite(&mut func);
+    crate::model::apply_model_rewrite_with_options(
+        &mut func,
+        crate::model::ModelRewriteOptions { tasks: args.tasks },
+    );
 
     let func_ident = &func.sig.ident;
     let target_name_expr = if let Some(name) = args.name {
