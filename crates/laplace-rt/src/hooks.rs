@@ -10,7 +10,7 @@ use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex as StdMutex, OnceLock};
 
-use crate::spawn::JoinToken;
+use crate::spawn::{JoinToken, TaskControl};
 
 static SPAWN_HOOK: OnceLock<StdMutex<Option<Arc<dyn SpawnHook>>>> = OnceLock::new();
 static ASYNC_SPAWN_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncSpawnHook>>>> = OnceLock::new();
@@ -48,7 +48,10 @@ pub trait SpawnHook: Send + Sync {
 /// Engine-installed surface for creating one controlled async task.
 pub trait AsyncSpawnHook: Send + Sync {
     /// Creates one model async task under engine control.
-    fn spawn_task(&self, future: Pin<Box<dyn Future<Output = ()> + Send + 'static>>);
+    fn spawn_task(
+        &self,
+        future: Pin<Box<dyn Future<Output = ()> + Send + 'static>>,
+    ) -> Box<dyn TaskControl>;
 }
 
 /// Engine- or probe-installed surface for model mutex boundaries.

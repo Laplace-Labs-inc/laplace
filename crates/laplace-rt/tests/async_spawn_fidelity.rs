@@ -6,11 +6,14 @@
 //! `tokio::spawn`과 `laplace_rt::spawn_task`의 native/model fidelity gate.
 //!
 //! native 열은 current-thread Tokio에서 실행하고, model 열은 public
-//! `AsyncSpawnHook`으로 fire-and-forget future를 수집한 뒤 수동 executor로
-//! 실행한다. 단순 passthrough 동작은 같은 assertion을 두 API에 적용하고,
+//! `AsyncSpawnHook`으로 model future와 control을 수집한 뒤 수동 executor로
+//! 실행한다. 단순 passthrough 동작과 join/abort shadow는 같은 assertion을
+//! 두 API에 적용하고,
 //! 모델 열에서는 가능한 poll 선택을 전부 열거해 관측 순서의 집합을 비교한다.
 
-use laplace_rt::{clear_async_spawn_hook, install_async_spawn_hook, AsyncSpawnHook};
+use laplace_rt::{
+    clear_async_spawn_hook, install_async_spawn_hook, AsyncSpawnHook, TaskControl, TaskControlState,
+};
 use std::collections::BTreeSet;
 use std::future::Future;
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -157,6 +160,20 @@ async fn s3_spawned_panic_does_not_panic_the_parent() {
 
 type CapturedFuture = Pin<Box<dyn Future<Output = ()> + Send + 'static>>;
 
+struct CapturedControl;
+
+impl TaskControl for CapturedControl {
+    fn poll(&self, _cx: &mut Context<'_>) -> Poll<TaskControlState> {
+        Poll::Pending
+    }
+
+    fn abort(&self) {}
+
+    fn is_finished(&self) -> bool {
+        false
+    }
+}
+
 #[derive(Default)]
 struct CapturingSpawnHook {
     futures: StdMutex<Vec<CapturedFuture>>,
@@ -169,11 +186,12 @@ impl CapturingSpawnHook {
 }
 
 impl AsyncSpawnHook for CapturingSpawnHook {
-    fn spawn_task(&self, future: CapturedFuture) {
+    fn spawn_task(&self, future: CapturedFuture) -> Box<dyn TaskControl> {
         self.futures
             .lock()
             .expect("captured futures lock")
             .push(future);
+        Box::new(CapturedControl)
     }
 }
 
@@ -281,4 +299,119 @@ async fn s4_multiple_spawn_order_is_native_observation_in_model_full_exploration
     // MAX_ASYNC_THREADS=8과 동적 task-id(1<<63) 같은 속성은 엔진/캡처
     // 계층의 계약이므로 이 runtime-only fidelity 열에서는 비교하지 않는다.
     clear_async_spawn_hook();
+}
+
+#[tokio::test(flavor = "current_thread", start_paused = true)]
+async fn j1_join_await_passes_the_child_output_through_both_native_surfaces() {
+    let _serial = serial();
+    clear_async_spawn_hook();
+
+    let tokio_value = tokio::spawn(async { 7_u8 })
+        .await
+        .expect("tokio child must join");
+    let shadow_value = laplace_rt::spawn_task(async { 7_u8 })
+        .await
+        .expect("shadow child must join");
+
+    assert_eq!(tokio_value, shadow_value);
+}
+
+#[tokio::test(flavor = "current_thread", start_paused = true)]
+async fn j2_abort_resolves_as_cancelled_for_tokio_and_shadow() {
+    let _serial = serial();
+    clear_async_spawn_hook();
+
+    let tokio_handle = tokio::spawn(std::future::pending::<()>());
+    tokio_handle.abort();
+    assert!(tokio_handle.await.is_err());
+
+    let shadow = laplace_rt::spawn_task(std::future::pending::<()>());
+    shadow.abort();
+    assert!(shadow
+        .await
+        .expect_err("shadow task must cancel")
+        .is_cancelled());
+}
+
+#[tokio::test(flavor = "current_thread", start_paused = true)]
+async fn j3_abort_after_completion_is_a_no_op() {
+    let _serial = serial();
+    clear_async_spawn_hook();
+
+    let tokio_handle = tokio::spawn(async { 11_u8 });
+    tokio::task::yield_now().await;
+    assert!(tokio_handle.is_finished());
+    tokio_handle.abort();
+    assert_eq!(tokio_handle.await.expect("completed tokio child"), 11);
+
+    let shadow = laplace_rt::spawn_task(async { 11_u8 });
+    tokio::task::yield_now().await;
+    assert!(shadow.is_finished());
+    shadow.abort();
+    assert_eq!(shadow.await.expect("completed shadow child"), 11);
+}
+
+#[tokio::test(flavor = "current_thread", start_paused = true)]
+async fn j4_abort_before_first_poll_does_not_poll_either_child() {
+    let _serial = serial();
+    clear_async_spawn_hook();
+
+    let tokio_polls = Arc::new(AtomicBool::new(false));
+    let tokio_polls_for_child = Arc::clone(&tokio_polls);
+    let tokio_handle = tokio::spawn(async move {
+        tokio_polls_for_child.store(true, Ordering::SeqCst);
+    });
+    tokio_handle.abort();
+    assert!(tokio_handle.await.is_err());
+    assert!(!tokio_polls.load(Ordering::SeqCst));
+
+    let shadow_polls = Arc::new(AtomicBool::new(false));
+    let shadow_polls_for_child = Arc::clone(&shadow_polls);
+    let shadow = laplace_rt::spawn_task(async move {
+        shadow_polls_for_child.store(true, Ordering::SeqCst);
+    });
+    shadow.abort();
+    assert!(shadow
+        .await
+        .expect_err("shadow child must cancel")
+        .is_cancelled());
+    assert!(!shadow_polls.load(Ordering::SeqCst));
+}
+
+#[tokio::test(flavor = "current_thread", start_paused = true)]
+async fn j6_native_child_panic_is_exposed_as_panic_join_error() {
+    let _serial = serial();
+    clear_async_spawn_hook();
+
+    let tokio_error = tokio::spawn(async { panic!("native fidelity panic") })
+        .await
+        .expect_err("tokio panic must be a JoinError");
+    assert!(tokio_error.is_panic());
+
+    let shadow_error = laplace_rt::spawn_task(async { panic!("shadow fidelity panic") })
+        .await
+        .expect_err("shadow panic must be a TaskJoinError");
+    assert!(shadow_error.is_panic());
+}
+
+#[tokio::test(flavor = "current_thread", start_paused = true)]
+async fn j7_dropping_either_handle_detaches_the_child() {
+    let _serial = serial();
+    clear_async_spawn_hook();
+
+    let tokio_done = Arc::new(AtomicBool::new(false));
+    let tokio_done_for_child = Arc::clone(&tokio_done);
+    drop(tokio::spawn(async move {
+        tokio_done_for_child.store(true, Ordering::SeqCst);
+    }));
+    tokio::task::yield_now().await;
+    assert!(tokio_done.load(Ordering::SeqCst));
+
+    let shadow_done = Arc::new(AtomicBool::new(false));
+    let shadow_done_for_child = Arc::clone(&shadow_done);
+    drop(laplace_rt::spawn_task(async move {
+        shadow_done_for_child.store(true, Ordering::SeqCst);
+    }));
+    tokio::task::yield_now().await;
+    assert!(shadow_done.load(Ordering::SeqCst));
 }

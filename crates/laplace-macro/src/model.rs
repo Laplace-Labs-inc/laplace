@@ -68,9 +68,8 @@ pub(crate) fn apply_model_rewrite(func: &mut ItemFn) {
 }
 
 /// Options for the shared model rewrite. `tasks` is intentionally opt-in:
-/// only the pre-registered `TaskSet` composition surface can route discarded
-/// Tokio fire-and-forget spawns through `spawn_task` without hiding a
-/// `JoinHandle` from the other verify/model modes.
+/// only the `TaskSet` composition surface can route Tokio spawns through the
+/// `TaskHandle` shadow; other verify/model modes retain their honest marker.
 #[derive(Clone, Copy, Default)]
 pub(crate) struct ModelRewriteOptions {
     pub(crate) tasks: bool,
@@ -300,7 +299,9 @@ impl VisitMut for ModelRewrite {
         let canonical = self.canonicalize(&path.path);
         let effective = canonical.as_ref().unwrap_or(&path.path);
 
-        if is_supported_spawn_path(effective) {
+        if self.options.tasks && is_tokio_spawn_path(effective) {
+            path.path = parse_quote!(::laplace_sdk::rt::spawn_task);
+        } else if is_supported_spawn_path(effective) {
             path.path = parse_quote!(::laplace_sdk::rt::spawn);
         } else if let Some(rewritten) = rewrite_std_sync_constructor_path(effective) {
             path.path = rewritten;
@@ -363,10 +364,9 @@ impl VisitMut for ModelRewrite {
 }
 
 impl ModelRewrite {
-    /// Rewrites only a direct `tokio::spawn` expression whose result is
-    /// discarded by the surrounding statement. A binding, await, or method
-    /// chain is deliberately left for the unmodeled marker path because its
-    /// `JoinHandle` semantics belong to S4.
+    /// Rewrites a direct `tokio::spawn` expression. In tasks mode the returned
+    /// value is the `laplace_rt::TaskHandle` shadow, so bindings, awaits, and
+    /// `abort()` calls remain visible to the modelled program.
     fn rewrite_discarded_spawn(&mut self, expr: &mut Expr) {
         let Expr::Call(call) = expr else {
             return;
@@ -1426,18 +1426,18 @@ mod tests {
     }
 
     #[test]
-    fn tasks_keep_join_handle_tokio_spawn_uses_unmodeled_marker() {
+    fn tasks_rewrite_join_handle_tokio_spawn_to_task_handle_shadow() {
         let out = rewrite_to_string_with_tasks(
-            "fn f() { let handle = tokio::spawn(async {}); let _ = tokio::spawn(async {}).await; }",
+            "fn f() { let handle = tokio::spawn(async {}); let _ = tokio::spawn(async {}).await; handle.abort(); }",
             true,
         );
         assert!(
-            out.contains("TOKIO_SPAWN"),
-            "JoinHandle-using spawns must retain the blind-spot marker: {out}"
+            out.matches("laplace_sdk :: rt :: spawn_task").count() == 2,
+            "JoinHandle-using spawns must use the TaskHandle shadow: {out}"
         );
         assert!(
-            !out.contains("laplace_sdk :: rt :: spawn_task"),
-            "JoinHandle-using spawns must not be rewritten: {out}"
+            !out.contains("TOKIO_SPAWN"),
+            "JoinHandle-using spawns must not retain the blind-spot marker: {out}"
         );
     }
 
@@ -1495,6 +1495,26 @@ mod tests {
         assert!(
             out.contains("laplace_sdk :: rt :: spawn_task"),
             "tokio::task alias must reach the tasks-only rewrite: {out}"
+        );
+        assert!(
+            !out.contains("TOKIO_SPAWN"),
+            "unexpected spawn marker: {out}"
+        );
+    }
+
+    #[test]
+    fn tasks_rewrite_tokio_task_spawn_alias_when_joined_and_aborted() {
+        let out = rewrite_to_string_with_tasks(
+            "fn f() { use tokio::task; let handle = task::spawn(async {}); handle.abort(); let _ = handle.await.unwrap(); }",
+            true,
+        );
+        assert!(
+            out.contains("laplace_sdk :: rt :: spawn_task"),
+            "tokio::task alias must preserve the TaskHandle shadow: {out}"
+        );
+        assert!(
+            out.contains("abort") && out.contains("await") && out.contains("unwrap"),
+            "handle operations must remain visible after rewrite: {out}"
         );
         assert!(
             !out.contains("TOKIO_SPAWN"),

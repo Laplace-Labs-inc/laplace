@@ -8,6 +8,9 @@
 //! implementations respectively.
 
 use std::future::Future;
+use std::pin::Pin;
+use std::sync::{Arc, Mutex};
+use std::task::{Context, Poll};
 use std::thread::JoinHandle;
 
 use crate::hooks::{async_spawn_hook, next_native_dynamic_task_id, spawn_hook, task_observer_hook};
@@ -72,23 +75,186 @@ where
     JoinToken::from_std(std::thread::spawn(f))
 }
 
-/// Spawns a fire-and-forget async task.
+/// Terminal state reported by an engine-owned task control.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TaskControlState {
+    /// The task future completed normally.
+    Finished,
+    /// The task was cancelled by [`TaskHandle::abort`].
+    Cancelled,
+    /// The task future panicked during model execution.
+    Panicked,
+}
+
+/// Engine-side control surface for one [`TaskHandle`].
+pub trait TaskControl: Send + Sync {
+    /// Polls the modelled task's completion state.
+    fn poll(&self, cx: &mut Context<'_>) -> Poll<TaskControlState>;
+
+    /// Requests cancellation. The engine may defer applying the request until
+    /// the current task poll has returned.
+    fn abort(&self);
+
+    /// Returns whether the task reached a terminal state.
+    fn is_finished(&self) -> bool;
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum TaskJoinErrorKind {
+    Cancelled,
+    Panic,
+}
+
+/// Error returned when a [`TaskHandle`] does not complete normally.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TaskJoinError {
+    kind: TaskJoinErrorKind,
+}
+
+impl TaskJoinError {
+    fn cancelled() -> Self {
+        Self {
+            kind: TaskJoinErrorKind::Cancelled,
+        }
+    }
+
+    fn panic() -> Self {
+        Self {
+            kind: TaskJoinErrorKind::Panic,
+        }
+    }
+
+    /// Returns whether the task was cancelled before normal completion.
+    #[must_use]
+    pub const fn is_cancelled(self) -> bool {
+        matches!(self.kind, TaskJoinErrorKind::Cancelled)
+    }
+
+    /// Returns whether the task panicked during execution.
+    #[must_use]
+    pub const fn is_panic(self) -> bool {
+        matches!(self.kind, TaskJoinErrorKind::Panic)
+    }
+}
+
+impl std::fmt::Display for TaskJoinError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(if self.is_cancelled() {
+            "task was cancelled"
+        } else {
+            "task panicked"
+        })
+    }
+}
+
+impl std::error::Error for TaskJoinError {}
+
+enum TaskHandleMode<T> {
+    Native(tokio::task::JoinHandle<T>),
+    Engine {
+        control: Box<dyn TaskControl>,
+        output: Arc<Mutex<Option<T>>>,
+    },
+}
+
+/// Tokio-compatible shadow of an async task join handle.
+pub struct TaskHandle<T> {
+    mode: TaskHandleMode<T>,
+}
+
+impl<T> TaskHandle<T> {
+    fn native(handle: tokio::task::JoinHandle<T>) -> Self {
+        Self {
+            mode: TaskHandleMode::Native(handle),
+        }
+    }
+
+    fn engine(control: Box<dyn TaskControl>, output: Arc<Mutex<Option<T>>>) -> Self {
+        Self {
+            mode: TaskHandleMode::Engine { control, output },
+        }
+    }
+
+    /// Requests cancellation of the task.
+    pub fn abort(&self) {
+        match &self.mode {
+            TaskHandleMode::Native(handle) => handle.abort(),
+            TaskHandleMode::Engine { control, .. } => control.abort(),
+        }
+    }
+
+    /// Returns whether the task has reached a terminal state.
+    #[must_use]
+    pub fn is_finished(&self) -> bool {
+        match &self.mode {
+            TaskHandleMode::Native(handle) => handle.is_finished(),
+            TaskHandleMode::Engine { control, .. } => control.is_finished(),
+        }
+    }
+}
+
+impl<T> Future for TaskHandle<T> {
+    type Output = Result<T, TaskJoinError>;
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.get_mut();
+        match &mut this.mode {
+            TaskHandleMode::Native(handle) => Pin::new(handle).poll(cx).map(|result| {
+                result.map_err(|error| {
+                    if error.is_cancelled() {
+                        TaskJoinError::cancelled()
+                    } else {
+                        TaskJoinError::panic()
+                    }
+                })
+            }),
+            TaskHandleMode::Engine { control, output } => match control.poll(cx) {
+                Poll::Pending => Poll::Pending,
+                Poll::Ready(TaskControlState::Finished) => {
+                    let value = output
+                        .lock()
+                        .expect("task output lock poisoned")
+                        .take()
+                        .expect("finished task must publish its output");
+                    Poll::Ready(Ok(value))
+                }
+                Poll::Ready(TaskControlState::Cancelled) => {
+                    Poll::Ready(Err(TaskJoinError::cancelled()))
+                }
+                Poll::Ready(TaskControlState::Panicked) => Poll::Ready(Err(TaskJoinError::panic())),
+            },
+        }
+    }
+}
+
+impl<T> Unpin for TaskHandle<T> {}
+
+/// Spawns an async task and returns a Tokio-compatible join shadow.
 ///
 /// If an async spawn hook is installed, the future is routed to that hook and
-/// its output is discarded. Otherwise it is delegated to `tokio::spawn`.
-pub fn spawn_task<T, F>(future: F)
+/// its output is retained in a private slot until the engine reports normal
+/// completion. Otherwise it is delegated to `tokio::spawn`.
+///
+/// # Panics
+///
+/// The engine-backed wrapper panics if its private output slot is poisoned.
+pub fn spawn_task<T, F>(future: F) -> TaskHandle<T>
 where
     T: Send + 'static,
     F: Future<Output = T> + Send + 'static,
 {
     if let Some(hook) = async_spawn_hook() {
-        hook.spawn_task(Box::pin(async move {
-            let _ = future.await;
+        let output = Arc::new(Mutex::new(None));
+        let output_slot = Arc::clone(&output);
+        let control = hook.spawn_task(Box::pin(async move {
+            let value = future.await;
+            *output_slot.lock().expect("task output lock poisoned") = Some(value);
         }));
-    } else {
-        if let Some(hook) = task_observer_hook() {
-            hook.dynamic_task_spawned(next_native_dynamic_task_id());
-        }
-        drop(tokio::spawn(future));
+        return TaskHandle::engine(control, output);
     }
+
+    if let Some(hook) = task_observer_hook() {
+        hook.dynamic_task_spawned(next_native_dynamic_task_id());
+    }
+    TaskHandle::native(tokio::spawn(future))
 }
