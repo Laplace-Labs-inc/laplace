@@ -190,10 +190,10 @@ pub use laplace_probe_sdk::init_cloud_probe;
 pub mod __macro_support {
     pub use crate::ProbeEvent;
     pub use crate::{
-        dump_events_if_configured, run_verification_from, set_probe_sender, set_probe_thread_id,
-        CaptureSession, ProbeSessionConfig, TrackedAtomicBool, TrackedAtomicU32, TrackedAtomicU64,
-        TrackedAtomicUsize, TrackedMutex, TrackedRwLock, TrackedSemaphore, TrackedStdMutex,
-        TrackedStdRwLock,
+        clear_probe_sender, dump_events_if_configured, run_verification_from, set_probe_sender,
+        set_probe_thread_id, CaptureSession, ProbeSessionConfig, TrackedAtomicBool,
+        TrackedAtomicU32, TrackedAtomicU64, TrackedAtomicUsize, TrackedMutex, TrackedRwLock,
+        TrackedSemaphore, TrackedStdMutex, TrackedStdRwLock,
     };
     pub use laplace_probe_sdk::{
         dump_events_with_mode, install_probe_async_hooks, install_probe_lock_hook,

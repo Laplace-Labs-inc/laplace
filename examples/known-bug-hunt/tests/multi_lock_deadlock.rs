@@ -12,7 +12,9 @@
 //! - Thread 1 (Pool::get): A → B
 //! - Thread 2 (HealthChecker): B → A (reverse!)
 //!
-//! **Expected**: BUG DETECTED (AB-BA deadlock cycle)
+//! **Expected**: CLEAN — mobc releases `pool.internals` before `get` returns,
+//! so thread 0 never holds Lock A while acquiring Lock B; the tracked-lock
+//! pattern has no AB-BA cycle. See the assertion comment for scope notes.
 
 use async_trait::async_trait;
 use laplace_probe_sdk::TrackedMutex;
@@ -66,15 +68,15 @@ impl Default for PoolWithHealthCheck {
 // ── Combined Test: 2-thread AB-BA deadlock scenario ────────────────────────────
 
 /// Real mobc Pool with dual-lock health check scenario.
-/// Thread 0: pool.get() → health check (A → B)
-/// Thread 1: health check → pool access (B → A)
+/// Thread 0: pool.get() → health check (A released before B — sequential)
+/// Thread 1: health check → pool access (B → A, nested)
 ///
-/// Expected DPOR result: BUG DETECTED (deadlock cycle)
+/// Expected DPOR result: CLEAN (no tracked-lock cycle; see assertion comment)
 #[test]
 fn multi_lock_ab_ba_deadlock() {
     use laplace_probe_sdk::{
-        run_verification_from, set_probe_sender, set_probe_thread_id, ProbeEvent,
-        ProbeSessionConfig,
+        clear_probe_sender, run_verification_from, set_probe_sender, set_probe_thread_id,
+        ProbeEvent, ProbeSessionConfig,
     };
     use std::sync::mpsc;
 
@@ -126,6 +128,9 @@ fn multi_lock_ab_ba_deadlock() {
         h.join().expect("thread panicked");
     }
 
+    // set_probe_sender는 전역 슬롯에도 클론을 남기므로 수집 전에 클리어해야
+    // rx.into_iter()가 종료된다.
+    clear_probe_sender();
     let events: Vec<ProbeEvent> = rx.into_iter().collect();
 
     println!("\n[known-bug-hunt] Collected {} events:", events.len());
@@ -150,6 +155,14 @@ fn multi_lock_ab_ba_deadlock() {
         ..ProbeSessionConfig::default()
     };
 
-    // Should detect BUG (deadlock cycle: Thread 0 waits for B, Thread 1 waits for A)
-    run_verification_from(&events, "multi_lock_ab_ba", &config).assert_bug(); // Expect deadlock detection!
+    // Honest expectation: CLEAN. mobc's `get` releases `pool_internals` before
+    // returning the connection, so thread 0 never holds Lock A while acquiring
+    // Lock B — the tracked-lock pattern has no AB-BA cycle in any interleaving.
+    // (Thread 0 holding the *connection* is a pool-capacity resource, not a
+    // tracked lock edge, and is outside this trace's scope.) The original
+    // `assert_bug` expectation encoded the retired Ki-DPOR searcher's verdict
+    // and was unreachable since 2026-06-14 because this harness hung before
+    // the assertion; the nested-hold AB-BA composition lives in
+    // bb8-hunt/bb8_lock_ordering.rs and still asserts BugFound.
+    run_verification_from(&events, "multi_lock_ab_ba", &config).assert_clean();
 }

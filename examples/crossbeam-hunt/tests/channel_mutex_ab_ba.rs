@@ -82,5 +82,12 @@ fn channel_mutex_ab_ba() {
         !events.is_empty(),
         "crossbeam laplace feature emitted no events"
     );
-    run_verification_from(&events, "channel_mutex_ab_ba", &bug_config()).assert_bug();
+    // Honest expectation: CLEAN. producer만 state를 든 채 채널 내부 락
+    // (crossbeam_array_inner, try_send 함수 스코프 가드)을 중첩 획득하고,
+    // consumer는 try_recv의 내부 락을 해제한 뒤에야 state를 잡는 순차 획득이라
+    // 역방향 중첩이 없다 — 어떤 인터리빙에서도 사이클이 성립하지 않는다.
+    // 원래의 assert_bug 기대는 도달한 적 없는 판정을 박제한 것이다(이 바이너리는
+    // 알파벳순으로 먼저 실패하는 bounded_channel_race에 가려 배치에서 실행되지
+    // 않았고, CI hunt-examples 잡은 continue-on-error다).
+    run_verification_from(&events, "channel_mutex_ab_ba", &bug_config()).assert_clean();
 }

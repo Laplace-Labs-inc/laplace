@@ -82,6 +82,9 @@ fn r2d2_pool_get_2thread() {
         h.join().expect("thread panicked");
     }
 
+    // set_probe_sender는 전역 슬롯에도 클론을 남기므로 수집 전에 클리어해야
+    // rx.into_iter()가 종료된다.
+    laplace_probe_sdk::clear_probe_sender();
     let events: Vec<_> = rx.into_iter().collect();
     let config = laplace_probe_sdk::ProbeSessionConfig {
         max_depth: 100_000,
@@ -123,6 +126,9 @@ fn r2d2_pool_get_3thread() {
         h.join().expect("thread panicked");
     }
 
+    // set_probe_sender는 전역 슬롯에도 클론을 남기므로 수집 전에 클리어해야
+    // rx.into_iter()가 종료된다.
+    laplace_probe_sdk::clear_probe_sender();
     let events: Vec<_> = rx.into_iter().collect();
     let config = laplace_probe_sdk::ProbeSessionConfig {
         max_depth: 100_000,
@@ -202,6 +208,9 @@ fn r2d2_external_lock_get() {
         h.join().expect("thread panicked");
     }
 
+    // set_probe_sender는 전역 슬롯에도 클론을 남기므로 수집 전에 클리어해야
+    // rx.into_iter()가 종료된다.
+    laplace_probe_sdk::clear_probe_sender();
     let events: Vec<_> = rx.into_iter().collect();
     let config = laplace_probe_sdk::ProbeSessionConfig {
         max_depth: 100_000,
@@ -224,7 +233,8 @@ fn r2d2_external_lock_get() {
 ///
 /// Expected: BugFound (AB-BA deadlock)
 use laplace_probe_sdk::{
-    run_verification_from, set_probe_sender, set_probe_thread_id, ProbeEvent, ProbeSessionConfig,
+    clear_probe_sender, run_verification_from, set_probe_sender, set_probe_thread_id, ProbeEvent,
+    ProbeSessionConfig,
 };
 use std::sync::mpsc;
 
@@ -283,6 +293,9 @@ fn r2d2_manual_ab_ba_deadlock() {
         h.join().expect("thread panicked");
     }
 
+    // set_probe_sender는 전역 슬롯에도 클론을 남기므로 수집 전에 클리어해야
+    // rx.into_iter()가 종료된다.
+    clear_probe_sender();
     let events: Vec<ProbeEvent> = rx.into_iter().collect();
     println!("\n[r2d2-hunt] Collected {} events:", events.len());
 
@@ -292,8 +305,14 @@ fn r2d2_manual_ab_ba_deadlock() {
         output_dir: std::env::temp_dir().to_string_lossy().into_owned(),
     };
 
-    // AB-BA → BugFound 기대
-    run_verification_from(&events, "r2d2_manual_ab_ba", &config).assert_bug();
+    // Honest expectation: CLEAN. thread 1은 r2d2 내부 락(B)을 `get` 반환 전에
+    // 해제한 뒤에야 external_lock(A)을 잡고, conn drop(put_back의 B 재획득)은
+    // A 해제 이후다 — 어느 스레드도 B를 든 채 A를 원하지 않으므로 추적-락
+    // 패턴에 AB-BA 사이클이 없다(conn 보유는 풀 용량 자원이지 락 hold가 아님).
+    // 원래의 assert_bug 기대는 은퇴한 Ki-DPOR 탐색기의 판정을 박제한 것이고,
+    // 이 하네스는 2026-06-14 이후 수집 단계에서 hang이라 단언에 도달한 적이
+    // 없었다. 진성 중첩 AB-BA는 bb8-hunt/bb8_lock_ordering.rs가 계속 검증한다.
+    run_verification_from(&events, "r2d2_manual_ab_ba", &config).assert_clean();
 }
 
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -343,6 +362,9 @@ fn r2d2_pool_exhaustion() {
         h.join().expect("thread panicked");
     }
 
+    // set_probe_sender는 전역 슬롯에도 클론을 남기므로 수집 전에 클리어해야
+    // rx.into_iter()가 종료된다.
+    laplace_probe_sdk::clear_probe_sender();
     let events: Vec<_> = rx.into_iter().collect();
     let config = laplace_probe_sdk::ProbeSessionConfig {
         max_depth: 100_000,
@@ -381,6 +403,9 @@ fn r2d2_single_thread() {
         h.join().expect("thread panicked");
     }
 
+    // set_probe_sender는 전역 슬롯에도 클론을 남기므로 수집 전에 클리어해야
+    // rx.into_iter()가 종료된다.
+    laplace_probe_sdk::clear_probe_sender();
     let events: Vec<_> = rx.into_iter().collect();
     let config = laplace_probe_sdk::ProbeSessionConfig {
         max_depth: 100_000,

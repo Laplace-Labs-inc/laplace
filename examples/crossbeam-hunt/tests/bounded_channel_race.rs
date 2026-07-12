@@ -92,7 +92,11 @@ fn bounded_channel_concurrent_drop() {
         !events.is_empty(),
         "crossbeam laplace feature emitted no events"
     );
-    run_verification_from(&events, "bounded_channel_concurrent_drop", &bug_config()).assert_bug();
+    // Honest expectation: CLEAN. 이 조성은 단일 추적 락(drop_bookkeeping) +
+    // 논블로킹 try_send/try_recv뿐이라 어떤 인터리빙에서도 대기 사이클이
+    // 성립하지 않는다. 원래의 assert_bug 기대는 try_* 채널 op가 블로킹으로
+    // 취급되던 모델(#75 이전) 시절의 판정을 박제한 것이다.
+    run_verification_from(&events, "bounded_channel_concurrent_drop", &bug_config()).assert_clean();
 }
 
 #[test]

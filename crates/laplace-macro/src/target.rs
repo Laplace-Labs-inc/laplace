@@ -160,6 +160,7 @@ pub(crate) fn axiom_target_impl(attr: TokenStream, item: TokenStream) -> TokenSt
         fn #test_fn_name() {
             use ::std::sync::{Arc, mpsc};
             use ::laplace_sdk::__macro_support::{
+                clear_probe_sender,
                 set_probe_sender,
                 set_probe_thread_id,
                 ProbeSessionConfig,
@@ -199,7 +200,9 @@ pub(crate) fn axiom_target_impl(attr: TokenStream, item: TokenStream) -> TokenSt
                 h.join().expect("laplace axiom_target: verification thread panicked");
             }
 
-            // 6. 이벤트 수집
+            // 6. 이벤트 수집 — `set_probe_sender`는 전역 슬롯에도 클론을 남기므로
+            //    수집 전에 반드시 클리어해야 `rx.into_iter()`가 종료된다.
+            clear_probe_sender();
             let events: Vec<ProbeEvent> = rx.into_iter().collect();
 
             // 7. Public macro output collects trace data only. Commercial

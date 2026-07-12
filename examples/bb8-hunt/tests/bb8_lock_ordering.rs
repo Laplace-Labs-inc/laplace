@@ -16,8 +16,8 @@
 //!       Phase 4-C known-bug-hunt의 Thread 0도 순차였으나 BugFound 확인됨.
 
 use laplace_probe_sdk::{
-    run_verification_from, set_probe_sender, set_probe_thread_id, ProbeEvent, ProbeSessionConfig,
-    TrackedStdMutex,
+    clear_probe_sender, run_verification_from, set_probe_sender, set_probe_thread_id, ProbeEvent,
+    ProbeSessionConfig, TrackedStdMutex,
 };
 use std::sync::{mpsc, Arc};
 
@@ -75,6 +75,9 @@ fn bb8_dual_lock_ab_ba() {
         h.join().expect("thread panicked");
     }
 
+    // set_probe_sender는 전역 슬롯에도 클론을 남기므로 수집 전에 클리어해야
+    // rx.into_iter()가 종료된다.
+    clear_probe_sender();
     let events: Vec<ProbeEvent> = rx.into_iter().collect();
 
     println!("\n[bb8-hunt] Collected {} events:", events.len());

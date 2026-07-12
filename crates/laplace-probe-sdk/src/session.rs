@@ -388,34 +388,40 @@ pub fn run_verification_from(
     }
 }
 
+/// Hold/acquire mode for lock-order-cycle detection. Shared (RwLock read)
+/// holds participate in deadlock cycles — a reader blocks a writer — but two
+/// shared operations on the same resource never conflict with each other.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+enum HoldMode {
+    Exclusive,
+    Shared,
+}
+
+fn modes_conflict(a: HoldMode, b: HoldMode) -> bool {
+    !(a == HoldMode::Shared && b == HoldMode::Shared)
+}
+
 fn find_lock_order_cycle(events: &[ProbeEvent]) -> Option<String> {
-    let mut held_by_thread: HashMap<u64, Vec<String>> = HashMap::new();
-    let mut order_edges: HashSet<(String, String)> = HashSet::new();
+    let mut held_by_thread: HashMap<u64, Vec<(String, HoldMode)>> = HashMap::new();
+    // Edge (held, held_mode, acquired, acquired_mode): some thread acquired
+    // `acquired` while holding `held`. A reverse edge closes a cycle only when
+    // both wait directions are mode-conflicting (read-read cannot block).
+    let mut order_edges: HashSet<(String, HoldMode, String, HoldMode)> = HashSet::new();
 
     for event in events {
-        match event {
+        let (thread_id, resource, mode, is_acquire) = match event {
             ProbeEvent::LockAcquired {
                 thread_id,
                 resource,
-            }
-            | ProbeEvent::RwLockWriteAcquired {
+            } => (thread_id, resource, HoldMode::Exclusive, true),
+            ProbeEvent::RwLockWriteAcquired {
                 thread_id,
                 resource,
-            } => {
-                let held = held_by_thread.entry(*thread_id).or_default();
-                for prior in held.iter() {
-                    if prior == resource {
-                        continue;
-                    }
-                    if order_edges.contains(&(resource.clone(), prior.clone())) {
-                        return Some(format!("{prior}->{resource}->{prior}"));
-                    }
-                    order_edges.insert((prior.clone(), resource.clone()));
-                }
-                if !held.contains(resource) {
-                    held.push(resource.clone());
-                }
-            }
+            } => (thread_id, resource, HoldMode::Exclusive, true),
+            ProbeEvent::RwLockReadAcquired {
+                thread_id,
+                resource,
+            } => (thread_id, resource, HoldMode::Shared, true),
             ProbeEvent::LockReleased {
                 thread_id,
                 resource,
@@ -423,12 +429,42 @@ fn find_lock_order_cycle(events: &[ProbeEvent]) -> Option<String> {
             | ProbeEvent::RwLockWriteReleased {
                 thread_id,
                 resource,
-            } => {
-                if let Some(held) = held_by_thread.get_mut(thread_id) {
-                    held.retain(|held_resource| held_resource != resource);
-                }
             }
-            _ => {}
+            | ProbeEvent::RwLockReadReleased {
+                thread_id,
+                resource,
+            } => (thread_id, resource, HoldMode::Exclusive, false),
+            _ => continue,
+        };
+
+        if is_acquire {
+            let held = held_by_thread.entry(*thread_id).or_default();
+            for (prior, prior_mode) in held.iter() {
+                if prior == resource {
+                    continue;
+                }
+                // Reverse edge: another interleaving holds `resource` (their_hold)
+                // and wants `prior` (their_want). Deadlock needs both waits to
+                // block: our acquire vs their hold, and their want vs our hold.
+                let cycle = order_edges.iter().any(|(r, their_hold, p, their_want)| {
+                    r == resource
+                        && p == prior
+                        && modes_conflict(mode, *their_hold)
+                        && modes_conflict(*their_want, *prior_mode)
+                });
+                if cycle {
+                    return Some(format!("{prior}->{resource}->{prior}"));
+                }
+                order_edges.insert((prior.clone(), *prior_mode, resource.clone(), mode));
+            }
+            if !held
+                .iter()
+                .any(|(held_resource, _)| held_resource == resource)
+            {
+                held.push((resource.clone(), mode));
+            }
+        } else if let Some(held) = held_by_thread.get_mut(thread_id) {
+            held.retain(|(held_resource, _)| held_resource != resource);
         }
     }
 

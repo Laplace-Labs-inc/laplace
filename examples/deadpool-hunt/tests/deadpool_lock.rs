@@ -8,8 +8,8 @@ use std::future::Future;
 use deadpool::managed::{Manager, Metrics, Object, RecycleResult};
 use deadpool_hunt::program::{deadpool_ab_ba_program, ModelLock, AB_BA_RESOURCES};
 use laplace_probe_sdk::{
-    run_verification_from, set_probe_sender, set_probe_thread_id, ProbeEvent, ProbeSessionConfig,
-    TrackedStdMutex,
+    clear_probe_sender, run_verification_from, set_probe_sender, set_probe_thread_id, ProbeEvent,
+    ProbeSessionConfig, TrackedStdMutex,
 };
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{mpsc, Arc};
@@ -86,6 +86,9 @@ fn deadpool_pool_get_clean() {
         h.join().expect("thread panic");
     }
 
+    // set_probe_sender는 전역 슬롯에도 클론을 남기므로 수집 전에 클리어해야
+    // rx.into_iter()가 종료된다.
+    clear_probe_sender();
     let events: Vec<ProbeEvent> = rx.into_iter().collect();
     println!("\n[deadpool-hunt A] Collected {} events:", events.len());
     for (i, e) in events.iter().enumerate() {
@@ -138,6 +141,9 @@ fn deadpool_dual_lock_ab_ba() {
 
     drop(tx);
 
+    // set_probe_sender는 전역 슬롯에도 클론을 남기므로 수집 전에 클리어해야
+    // rx.into_iter()가 종료된다.
+    clear_probe_sender();
     let events: Vec<ProbeEvent> = rx.into_iter().collect();
     println!("\n[deadpool-hunt B] Collected {} events:", events.len());
     for (i, e) in events.iter().enumerate() {
