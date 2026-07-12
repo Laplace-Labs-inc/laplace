@@ -3,7 +3,9 @@
 
 //! Runtime seams for annotated Laplace model code.
 //!
-//! `spawn` routes unit-returning model threads through an installed engine hook.
+//! `spawn` routes unit-returning model threads through an installed engine hook;
+//! `spawn_task` routes fire-and-forget async futures through an installed async
+//! engine hook and delegates to `tokio::spawn` without one.
 //! `ModelMutex` routes qualified `std::sync::Mutex` annotated by
 //! `#[laplace::model]` through an installed lock hook. With no hook installed,
 //! these surfaces delegate to the standard library.
@@ -46,7 +48,7 @@
 //! ## Module layout
 //!
 //! - [`hooks`] — engine hook traits + install/clear + resource-id allocation.
-//! - [`spawn`] — the model-thread spawn seam.
+//! - [`spawn`] — model-thread and fire-and-forget async spawn seams.
 //! - [`mutex`] — [`ModelMutex`].
 //! - [`rwlock`] — [`ModelRwLock`].
 //! - [`async_mutex`] — [`ModelAsyncMutex`], the `tokio::sync::Mutex` seam.
@@ -85,17 +87,18 @@ pub use async_rwlock::{
 pub use async_semaphore::{ModelAsyncSemaphore, ModelSemaphoreAcquire, ModelSemaphorePermit};
 pub use hooks::{
     clear_async_channel_hook, clear_async_lock_hook, clear_async_notify_hook,
-    clear_async_timer_hook, clear_lock_hook, clear_spawn_hook, clear_task_observer_hook,
-    deterministic_select_enabled, install_async_channel_hook, install_async_lock_hook,
-    install_async_notify_hook, install_async_timer_hook, install_lock_hook, install_spawn_hook,
-    install_task_observer_hook, reset_model_async_ids_for_model, reset_model_mutex_ids_for_model,
-    set_deterministic_select, AsyncAcquireKind, AsyncChannelHook, AsyncChannelKind, AsyncChannelOp,
-    AsyncChannelOutcome, AsyncChannelSide, AsyncLockHook, AsyncNotifyHook, AsyncTimerHook,
-    LockHook, SpawnHook, TaskObserverHook, TaskPollOutcome,
+    clear_async_spawn_hook, clear_async_timer_hook, clear_lock_hook, clear_spawn_hook,
+    clear_task_observer_hook, deterministic_select_enabled, install_async_channel_hook,
+    install_async_lock_hook, install_async_notify_hook, install_async_spawn_hook,
+    install_async_timer_hook, install_lock_hook, install_spawn_hook, install_task_observer_hook,
+    reset_model_async_ids_for_model, reset_model_mutex_ids_for_model, set_deterministic_select,
+    AsyncAcquireKind, AsyncChannelHook, AsyncChannelKind, AsyncChannelOp, AsyncChannelOutcome,
+    AsyncChannelSide, AsyncLockHook, AsyncNotifyHook, AsyncSpawnHook, AsyncTimerHook, LockHook,
+    SpawnHook, TaskObserverHook, TaskPollOutcome,
 };
 pub use mutex::{ModelMutex, ModelMutexGuard};
 pub use rwlock::{ModelRwLock, ModelRwLockReadGuard, ModelRwLockWriteGuard};
-pub use spawn::{spawn, JoinToken};
+pub use spawn::{spawn, spawn_task, JoinToken};
 pub use task_set::{TaskHandle, TaskSet};
 
 /// `tokio::time`-compatible model virtual-clock shadow (`sleep`, `timeout`,
@@ -311,5 +314,26 @@ mod tests {
 
         assert_eq!(*rw.read().expect("model rwlock read"), 5);
         assert!(rw.try_write().is_ok());
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn spawn_task_passes_through_to_tokio_without_a_hook() {
+        let receiver = {
+            let _serial = serial();
+            clear_async_spawn_hook();
+
+            let (sender, receiver) = tokio::sync::oneshot::channel();
+            spawn_task(async move {
+                sender
+                    .send(())
+                    .expect("native task receiver must remain open");
+            });
+            receiver
+        };
+
+        tokio::time::timeout(Duration::from_secs(1), receiver)
+            .await
+            .expect("native tokio task must run")
+            .expect("native task must send its completion signal");
     }
 }

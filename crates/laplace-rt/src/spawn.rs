@@ -2,12 +2,15 @@
 //! Model-thread spawn seam.
 //!
 //! [`spawn`] routes a unit-returning model thread through an installed
-//! [`SpawnHook`](crate::hooks::SpawnHook); with no hook installed it runs on a
-//! normal OS thread.
+//! [`SpawnHook`](crate::hooks::SpawnHook); [`spawn_task`] similarly routes a
+//! fire-and-forget async future through an [`AsyncSpawnHook`](crate::hooks::AsyncSpawnHook).
+//! With no hook installed, the two seams use their native thread and tokio
+//! implementations respectively.
 
+use std::future::Future;
 use std::thread::JoinHandle;
 
-use crate::hooks::spawn_hook;
+use crate::hooks::{async_spawn_hook, spawn_hook};
 
 enum JoinMode {
     Std(JoinHandle<()>),
@@ -67,4 +70,22 @@ where
     }
 
     JoinToken::from_std(std::thread::spawn(f))
+}
+
+/// Spawns a fire-and-forget async task.
+///
+/// If an async spawn hook is installed, the future is routed to that hook and
+/// its output is discarded. Otherwise it is delegated to `tokio::spawn`.
+pub fn spawn_task<T, F>(future: F)
+where
+    T: Send + 'static,
+    F: Future<Output = T> + Send + 'static,
+{
+    if let Some(hook) = async_spawn_hook() {
+        hook.spawn_task(Box::pin(async move {
+            let _ = future.await;
+        }));
+    } else {
+        drop(tokio::spawn(future));
+    }
 }

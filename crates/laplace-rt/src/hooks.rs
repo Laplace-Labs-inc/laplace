@@ -1,16 +1,19 @@
 // SPDX-License-Identifier: Apache-2.0
 //! Process-local engine hooks and deterministic model resource-id allocation.
 //!
-//! The engine installs a [`SpawnHook`] and/or [`LockHook`] to take control of a
-//! model run; with no hook installed the seams in [`crate::spawn`],
+//! The engine installs a [`SpawnHook`], [`AsyncSpawnHook`], and/or [`LockHook`]
+//! to take control of a model run; with no hook installed the seams in [`crate::spawn`],
 //! [`crate::mutex`], and [`crate::rwlock`] delegate to the standard library.
 
+use std::future::Future;
+use std::pin::Pin;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::{Arc, Mutex as StdMutex, OnceLock};
 
 use crate::spawn::JoinToken;
 
 static SPAWN_HOOK: OnceLock<StdMutex<Option<Arc<dyn SpawnHook>>>> = OnceLock::new();
+static ASYNC_SPAWN_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncSpawnHook>>>> = OnceLock::new();
 static LOCK_HOOK: OnceLock<StdMutex<Option<Arc<dyn LockHook>>>> = OnceLock::new();
 static TASK_OBSERVER_HOOK: OnceLock<StdMutex<Option<Arc<dyn TaskObserverHook>>>> = OnceLock::new();
 static NEXT_LOCK_RESOURCE_ID: AtomicU64 = AtomicU64::new(1);
@@ -35,6 +38,12 @@ static DETERMINISTIC_SELECT: AtomicBool = AtomicBool::new(false);
 pub trait SpawnHook: Send + Sync {
     /// Creates one model thread under engine control.
     fn spawn(&self, f: Box<dyn FnOnce() + Send + 'static>) -> JoinToken;
+}
+
+/// Engine-installed surface for creating one controlled async task.
+pub trait AsyncSpawnHook: Send + Sync {
+    /// Creates one model async task under engine control.
+    fn spawn_task(&self, future: Pin<Box<dyn Future<Output = ()> + Send + 'static>>);
 }
 
 /// Engine- or probe-installed surface for model mutex boundaries.
@@ -250,6 +259,33 @@ pub(crate) fn spawn_hook() -> Option<Arc<dyn SpawnHook>> {
     SPAWN_HOOK
         .get()
         .and_then(|slot| slot.lock().expect("spawn hook lock poisoned").clone())
+}
+
+/// Installs or replaces the process-local async spawn hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn install_async_spawn_hook(hook: Arc<dyn AsyncSpawnHook>) {
+    let slot = ASYNC_SPAWN_HOOK.get_or_init(|| StdMutex::new(None));
+    *slot.lock().expect("async spawn hook lock poisoned") = Some(hook);
+}
+
+/// Clears the process-local async spawn hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn clear_async_spawn_hook() {
+    if let Some(slot) = ASYNC_SPAWN_HOOK.get() {
+        *slot.lock().expect("async spawn hook lock poisoned") = None;
+    }
+}
+
+pub(crate) fn async_spawn_hook() -> Option<Arc<dyn AsyncSpawnHook>> {
+    ASYNC_SPAWN_HOOK
+        .get()
+        .and_then(|slot| slot.lock().expect("async spawn hook lock poisoned").clone())
 }
 
 /// Installs or replaces the process-local lock hook.
