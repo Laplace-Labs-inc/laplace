@@ -307,6 +307,9 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
     let expected = args.expected.as_deref().unwrap_or("clean").to_string();
     let scenario = args.scenario;
     let tasks = args.tasks;
+    // C2 provenance: a scenario capture is one representative execution, and
+    // the envelope must say so — downstream output surfaces the marker.
+    let capture_mode = if scenario { "scenario" } else { "verify" };
     let is_async = func.sig.asyncness.is_some();
     let determinism = &args.determinism;
     let write_ard = args.write_ard;
@@ -473,11 +476,11 @@ pub(crate) fn laplace_verify_impl(attr: TokenStream, item: TokenStream) -> Token
         // Public macro output collects trace data only. Commercial engine
         // verification runs through the private CLI/API boundary: when
         // `$LAPLACE_VERIFY_EVENTS_DIR` is set the captured trace (with the
-        // declared expectation) is dumped as `<target>.json` for
-        // `laplace axiom verify --model-events <dir>` to drive the engine.
+        // declared expectation and capture mode) is dumped as `<target>.json`
+        // for `laplace axiom verify --model-events <dir>` to drive the engine.
         // No-op under a plain `cargo test`.
-        ::laplace_sdk::__macro_support::dump_events_if_configured(
-            __laplace_target_name, __laplace_expected, #determinism, &events,
+        ::laplace_sdk::__macro_support::dump_events_with_mode(
+            __laplace_target_name, __laplace_expected, #determinism, #capture_mode, &events,
         );
     };
 

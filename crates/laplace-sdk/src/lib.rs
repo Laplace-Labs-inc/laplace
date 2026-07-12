@@ -196,8 +196,8 @@ pub mod __macro_support {
         TrackedStdRwLock,
     };
     pub use laplace_probe_sdk::{
-        install_probe_async_hooks, install_probe_lock_hook, install_probe_task_hook,
-        run_task_set_native,
+        dump_events_with_mode, install_probe_async_hooks, install_probe_lock_hook,
+        install_probe_task_hook, run_task_set_native,
     };
     pub use tokio;
 }

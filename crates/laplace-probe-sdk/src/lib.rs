@@ -46,9 +46,9 @@ pub use event::{
 };
 pub use model_lock::{install_probe_lock_hook, ProbeLockHook};
 pub use session::{
-    clear_probe_sender, current_thread_id, dump_events_if_configured, emit, run_verification_from,
-    set_probe_sender, set_probe_thread_id, CaptureSession, ProbeSessionConfig, ReferenceVerdict,
-    VerifyResult,
+    clear_probe_sender, current_thread_id, dump_events_if_configured, dump_events_with_mode, emit,
+    run_verification_from, set_probe_sender, set_probe_thread_id, CaptureSession,
+    ProbeSessionConfig, ReferenceVerdict, VerifyResult,
 };
 pub use task::{install_probe_task_hook, run_task_set_native, ProbeTaskHook};
 pub use tracked::{TrackedGuard, TrackedMutex};

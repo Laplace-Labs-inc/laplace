@@ -235,6 +235,23 @@ pub fn dump_events_if_configured(
     determinism: &str,
     events: &[ProbeEvent],
 ) {
+    dump_events_with_mode(target_name, expected, determinism, "verify", events);
+}
+
+/// [`dump_events_if_configured`] with an explicit capture mode.
+///
+/// `capture_mode` records how the capture was composed: `"verify"` for the
+/// exploration harness modes (`threads`/`tasks`), `"scenario"` for a one-shot
+/// representative execution. Additive envelope field: consumers surface
+/// `"scenario"` so a single-run capture is never mistaken for an exploration
+/// of the target's schedules; older consumers keep parsing unchanged.
+pub fn dump_events_with_mode(
+    target_name: &str,
+    expected: &str,
+    determinism: &str,
+    capture_mode: &str,
+    events: &[ProbeEvent],
+) {
     let Ok(dir) = std::env::var("LAPLACE_VERIFY_EVENTS_DIR") else {
         return;
     };
@@ -248,6 +265,7 @@ pub fn dump_events_if_configured(
         "target": target_name,
         "expected": expected,
         "determinism": determinism,
+        "capture_mode": capture_mode,
         "events": events,
     });
     if let Ok(text) = serde_json::to_string_pretty(&envelope) {
@@ -467,8 +485,13 @@ mod tests {
         assert_eq!(current_thread_id(), 7);
     }
 
+    /// `LAPLACE_VERIFY_EVENTS_DIR` is process-global; dump tests must not
+    /// interleave their set/remove windows.
+    static DUMP_ENV_LOCK: StdMutex<()> = StdMutex::new(());
+
     #[test]
     fn dump_events_writes_envelope_when_env_set_and_noop_otherwise() {
+        let _env = DUMP_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         let events = vec![ProbeEvent::LockAcquired {
             thread_id: 0,
             resource: "a".to_string(),
@@ -489,6 +512,13 @@ mod tests {
         ));
         std::env::set_var("LAPLACE_VERIFY_EVENTS_DIR", &dir);
         dump_events_if_configured("my_crate::module::my_target", "bug", "declared", &events);
+        dump_events_with_mode(
+            "my_crate::module::my_scenario",
+            "clean",
+            "fully_deterministic",
+            "scenario",
+            &events,
+        );
         std::env::remove_var("LAPLACE_VERIFY_EVENTS_DIR");
 
         let path = dir.join("my_crate__module__my_target.json");
@@ -498,13 +528,21 @@ mod tests {
         assert_eq!(value["target"], "my_crate::module::my_target");
         assert_eq!(value["expected"], "bug");
         assert_eq!(value["determinism"], "declared");
+        assert_eq!(value["capture_mode"], "verify");
         assert_eq!(value["events"].as_array().map(|a| a.len()), Some(1));
+
+        let scenario_path = dir.join("my_crate__module__my_scenario.json");
+        let scenario_text = std::fs::read_to_string(&scenario_path).expect("scenario written");
+        let scenario_value: serde_json::Value =
+            serde_json::from_str(&scenario_text).expect("valid json");
+        assert_eq!(scenario_value["capture_mode"], "scenario");
 
         let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]
     fn dump_events_round_trips_async_variants_under_schema_version_2() {
+        let _env = DUMP_ENV_LOCK.lock().unwrap_or_else(|p| p.into_inner());
         let events = vec![
             ProbeEvent::TaskSpawned {
                 task_id: 1,
