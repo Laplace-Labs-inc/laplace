@@ -1,0 +1,24 @@
+bb8-async-patched contains bb8 0.9.1 from https://github.com/djc/bb8.
+The upstream MIT license and copyright notice are preserved in LICENSE.
+
+Laplace-local modifications:
+
+* `src/internals.rs` routes bb8's async Notify surface through
+  `laplace_rt::ModelAsyncNotify` for deterministic observation.
+* `src/inner.rs` routes timeout and sleep through `laplace_rt::time` where the
+  public shadow API is compatible. The reaper's `interval_at` remains native
+  and is outside this hunt's no-reaper scenario scope.
+* Behavioral patch (BB2 option (ii)): the modeled `get` path drives
+  replenishment inline (`replenish_inline`) instead of
+  `spawn_replenishing_approvals`, because the model only accepts tasks
+  registered before the first poll. Replenishment is therefore serialized
+  with the calling task — a declared semantic difference from upstream.
+* Behavioral patch: the broken-connection return path uses
+  `dropped_without_replenishment` (src/internals.rs) so a broken drop does not
+  reserve approvals for a task that cannot be spawned; `notify_one()` is
+  preserved. Together with the inline drive above, this forecloses the
+  upstream async-replenish window, so verdicts from this snapshot are not
+  evidence about upstream PR #201.
+
+This snapshot is private to the Laplace hunt and is not a claim about upstream
+bb8 behavior beyond the vendored source version and the stated substitutions.

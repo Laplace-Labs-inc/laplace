@@ -1,0 +1,27 @@
+[package]
+name = "bb8-async-patched"
+version = "0.9.1"
+edition = "2021"
+rust-version = "1.75"
+description = "Laplace-local bb8 0.9.1 async notification hunt snapshot"
+license = "MIT"
+repository = "https://github.com/djc/bb8"
+readme = "README.md"
+publish = false
+
+[lib]
+name = "bb8_async_patched"
+path = "src/lib.rs"
+
+[features]
+default = ["parking_lot"]
+parking_lot = ["dep:parking_lot", "tokio/parking_lot"]
+
+[dependencies]
+futures-util = { version = "0.3.2", features = ["alloc"], default-features = false }
+laplace-rt = { path = "../../crates/laplace-rt" }
+parking_lot = { version = "0.12", optional = true }
+tokio = { version = "1.0", features = ["rt", "sync", "time"] }
+
+[target.'cfg(not(target_has_atomic = "64"))'.dependencies]
+portable-atomic = "1"

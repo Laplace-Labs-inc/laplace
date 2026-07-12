@@ -1,0 +1,10 @@
+[package]
+name = "bb8-hunt2"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+bb8-async-patched = { path = "../../vendor/bb8-async-patched" }
+laplace-sdk = { path = "../../crates/laplace-sdk" }
+tokio = { workspace = true }
