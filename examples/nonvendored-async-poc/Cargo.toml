@@ -1,0 +1,11 @@
+[package]
+name = "nonvendored-async-poc"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+fault-fixture = []
+
+[dependencies]
+laplace-sdk = { path = "../../crates/laplace-sdk" }
