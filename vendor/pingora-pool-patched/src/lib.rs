@@ -14,6 +14,8 @@
 
 // Laplace 수정 고지: 0.8.1 원문의 구조를 보존하고, connection/lru 모듈의
 // Tokio async 동기화·시간 primitive만 Laplace 결정론 hook으로 alias한다.
+// 원문 `#![warn(clippy::all)]`은 vendored 코드 관례(bb8-patched, crossbeam-patched)에
+// 따라 allow로 교체 — upstream 원문이 clippy 버전 상승마다 -D warnings에 걸리는 것 방지.
 
 //! Generic connection pooling
 //!
@@ -21,7 +23,7 @@
 //! lock free hot pool to reduce the lock contention when some connections are reused and released
 //! very frequently.
 
-#![warn(clippy::all)]
+#![allow(clippy::all, clippy::pedantic)]
 #![allow(clippy::new_without_default)]
 #![allow(clippy::type_complexity)]
 #![allow(clippy::uninlined_format_args)]
