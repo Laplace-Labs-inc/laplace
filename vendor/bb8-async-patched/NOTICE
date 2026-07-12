@@ -8,17 +8,17 @@ Laplace-local modifications:
 * `src/inner.rs` routes timeout and sleep through `laplace_rt::time` where the
   public shadow API is compatible. The reaper's `interval_at` remains native
   and is outside this hunt's no-reaper scenario scope.
-* Behavioral patch (BB2 option (ii)): the modeled `get` path drives
-  replenishment inline (`replenish_inline`) instead of
-  `spawn_replenishing_approvals`, because the model only accepts tasks
-  registered before the first poll. Replenishment is therefore serialized
-  with the calling task — a declared semantic difference from upstream.
-* Behavioral patch: the broken-connection return path uses
-  `dropped_without_replenishment` (src/internals.rs) so a broken drop does not
-  reserve approvals for a task that cannot be spawned; `notify_one()` is
-  preserved. Together with the inline drive above, this forecloses the
-  upstream async-replenish window, so verdicts from this snapshot are not
-  evidence about upstream PR #201.
+* `src/inner.rs` keeps the upstream replenishment control flow while routing
+  `spawn_replenishing_approvals` through `laplace_rt::spawn_task as spawn` so
+  dynamic replenishment tasks are visible to the async model. The reaper's
+  literal `tokio::spawn` remains native and outside this hunt's no-reaper
+  scenario scope.
+* ASYNC-SPAWN S3 removes the two earlier behavioral patches: `get` restores
+  upstream `spawn_replenishing_approvals`, and broken returns restore upstream
+  approval reservation through `dropped`. The resulting verdicts are evidence
+  only for this vendored source, the stated runtime substitutions, and the
+  modeled async range; they are not a claim about every upstream bb8 runtime
+  configuration or release.
 
 This snapshot is private to the Laplace hunt and is not a claim about upstream
 bb8 behavior beyond the vendored source version and the stated substitutions.

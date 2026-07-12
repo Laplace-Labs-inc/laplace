@@ -129,22 +129,6 @@ impl<M: ManageConnection> PoolInternals<M> {
         self.wanted(config)
     }
 
-    /// Decrements the managed-connection count without reserving an approval.
-    ///
-    /// The async hunt's modeled `get` path drives replenishment inline after it
-    /// observes a waiter. This helper keeps a broken return from reserving an
-    /// approval for a task that cannot be spawned after the first poll.
-    pub(crate) fn dropped_without_replenishment(&mut self, num: u32) {
-        #[cfg(debug_assertions)]
-        {
-            self.num_conns -= num;
-        }
-        #[cfg(not(debug_assertions))]
-        {
-            self.num_conns = self.num_conns.saturating_sub(num);
-        }
-    }
-
     pub(crate) fn wanted(&mut self, config: &Builder<M>) -> ApprovalIter {
         let available = self.conns.len() as u32 + self.pending_conns;
         let min_idle = config.min_idle.unwrap_or(0);

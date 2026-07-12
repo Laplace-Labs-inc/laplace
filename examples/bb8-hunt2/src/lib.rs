@@ -123,6 +123,45 @@ fn bb8_w_return(tasks: &mut laplace_sdk::rt::TaskSet) {
     });
 }
 
+/// Broken 반환 경로. owner가 보유한 연결을 broken으로 표시한 뒤 반환하므로
+/// bb8의 `spawn_replenishing_approvals` 동적 task가 native capture에 나타나야 한다.
+#[laplace_sdk::verify(
+    tasks,
+    name = "bb8_hunt2_w_broken",
+    expected = "clean",
+    determinism = "fully_deterministic"
+)]
+fn bb8_w_broken(tasks: &mut laplace_sdk::rt::TaskSet) {
+    let broken = Arc::new(AtomicBool::new(false));
+    let (owner_tx, owner_rx) = laplace_sdk::rt::oneshot::channel();
+    let (waiter_tx, waiter_rx) = laplace_sdk::rt::oneshot::channel();
+    let (owner_holds_tx, owner_holds_rx) = laplace_sdk::rt::oneshot::channel();
+    let (parked_tx, parked_rx) = laplace_sdk::rt::oneshot::channel();
+
+    register_pool_task(
+        tasks,
+        MockManager::new(Arc::clone(&broken)),
+        owner_tx,
+        waiter_tx,
+    );
+
+    tasks.spawn(async move {
+        let pool = owner_rx.await.expect("owner pool");
+        let connection = pool.get().await.expect("owner connection");
+        owner_holds_tx.send(()).expect("waiter start signal");
+        parked_rx.await.expect("waiter parked signal");
+        broken.store(true, Ordering::SeqCst);
+        drop(connection);
+    });
+
+    tasks.spawn(async move {
+        let pool = waiter_rx.await.expect("waiter pool");
+        owner_holds_rx.await.expect("owner holds signal");
+        let get = pool.get();
+        let _ = NotifyOnPending::new(get, parked_tx).await;
+    });
+}
+
 /// `Notify` waiter를 select loser로 취소하는 경로. native capture는 성공적으로
 /// 끝나지만, linear tier-2 replay는 waiter drop을 재현할 수 없어 exit 2가 정답이다.
 #[laplace_sdk::verify(

@@ -9,8 +9,8 @@ use std::time::{Duration, Instant};
 
 use futures_util::stream::{FuturesUnordered, StreamExt};
 use futures_util::TryFutureExt;
+use laplace_rt::spawn_task as spawn;
 use laplace_rt::time::{sleep, timeout};
-use tokio::spawn;
 use tokio::time::{interval_at, Interval};
 
 use crate::api::{
@@ -72,22 +72,6 @@ impl<M: ManageConnection + Send> PoolInner<M> {
         });
     }
 
-    /// Drives replenishment in the caller's async task.
-    ///
-    /// `AsyncLiveSource` only accepts tasks registered before the first poll;
-    /// therefore modeled `get` calls cannot use bb8's native dynamic spawn
-    /// boundary. This is the approved BB2 option (ii): replenishment is
-    /// serialized with the caller, and that semantic difference is part of the
-    /// hunt scope rather than an upstream-behavior claim.
-    async fn replenish_inline(&self, approvals: ApprovalIter) {
-        let mut stream = self.replenish_idle_connections(approvals);
-        while let Some(result) = stream.next().await {
-            if let Err(error) = result {
-                self.inner.forward_error(error);
-            }
-        }
-    }
-
     fn replenish_idle_connections(
         &self,
         approvals: ApprovalIter,
@@ -108,7 +92,7 @@ impl<M: ManageConnection + Send> PoolInner<M> {
             let getting = self.inner.start_get();
             loop {
                 let (conn, approvals) = getting.get();
-                self.replenish_inline(approvals).await;
+                self.spawn_replenishing_approvals(approvals);
 
                 // Cancellation safety: make sure to wrap the connection in a `PooledConnection`
                 // before allowing the code to hit an `await`, so we don't lose the connection.
@@ -182,8 +166,8 @@ impl<M: ManageConnection + Send> PoolInner<M> {
             self.inner.statistics.record_connections_reaped(0, 1);
         }
 
-        locked.dropped_without_replenishment(1);
-        drop(locked);
+        let approvals = locked.dropped(1, &self.inner.statics);
+        self.spawn_replenishing_approvals(approvals);
         self.inner.notify.notify_one();
     }
 
