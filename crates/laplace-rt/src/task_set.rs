@@ -101,8 +101,8 @@ impl TaskSet {
 
         self.tasks.push(Box::pin(ObservedTask {
             task,
-            future: Box::pin(future),
-            completion: Arc::clone(&completion),
+            future: Box::pin(future) as Pin<Box<dyn Future<Output = ()> + 'static>>,
+            completion: Some(Arc::clone(&completion)),
             attempt: 0,
             finished: false,
         }));
@@ -124,17 +124,20 @@ impl Default for TaskSet {
     }
 }
 
-struct ObservedTask {
+pub(crate) struct ObservedTask<F: ?Sized = dyn Future<Output = ()> + 'static> {
     task: u64,
-    future: Pin<Box<dyn Future<Output = ()> + 'static>>,
-    completion: Arc<TaskCompletion>,
+    future: Pin<Box<F>>,
+    completion: Option<Arc<TaskCompletion>>,
     attempt: u64,
     finished: bool,
 }
 
-impl Unpin for ObservedTask {}
+impl<F: ?Sized> Unpin for ObservedTask<F> {}
 
-impl Future for ObservedTask {
+impl<F> Future for ObservedTask<F>
+where
+    F: Future<Output = ()> + ?Sized,
+{
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
@@ -164,12 +167,29 @@ impl Future for ObservedTask {
             TaskPollOutcome::Pending => Poll::Pending,
             TaskPollOutcome::Ready | TaskPollOutcome::Panicked => {
                 this.finished = true;
-                this.completion.complete();
+                if let Some(completion) = this.completion.as_ref() {
+                    completion.complete();
+                }
                 if let Some(hook) = hook.as_ref() {
                     hook.task_completed(this.task);
                 }
                 Poll::Ready(())
             }
+        }
+    }
+}
+
+impl<F> ObservedTask<F>
+where
+    F: Future<Output = ()> + 'static,
+{
+    pub(crate) fn without_completion(task: u64, future: F) -> Self {
+        Self {
+            task,
+            future: Box::pin(future),
+            completion: None,
+            attempt: 0,
+            finished: false,
         }
     }
 }
@@ -315,14 +335,15 @@ mod tests {
         let hook = Arc::new(RecordingTaskHook::new());
         install_task_observer_hook(hook.clone());
 
-        crate::spawn::spawn_task(async {});
+        let handle = crate::spawn::spawn_task(async {});
+        handle.await.expect("native task must complete");
 
         clear_task_observer_hook();
         let events = hook.events();
         let dynamic = events
-            .into_iter()
+            .iter()
             .find_map(|event| match event {
-                Event::Dynamic(task) => Some(task),
+                Event::Dynamic(task) => Some(*task),
                 _ => None,
             })
             .expect("native spawn must report its dynamic task");
@@ -330,6 +351,34 @@ mod tests {
             dynamic >= (1_u64 << 63),
             "dynamic task id must use the reserved namespace: {dynamic}"
         );
+        assert!(events.contains(&Event::Started(dynamic, 0)));
+        assert!(events.contains(&Event::Completed(dynamic, 0, TaskPollOutcome::Ready)));
+        assert!(events.contains(&Event::Finished(dynamic)));
+    }
+
+    #[tokio::test(flavor = "current_thread")]
+    async fn native_spawns_receive_distinct_dynamic_task_ids() {
+        let _serial = serial();
+        clear_async_spawn_hook();
+        let hook = Arc::new(RecordingTaskHook::new());
+        install_task_observer_hook(hook.clone());
+
+        let first = crate::spawn::spawn_task(async {});
+        let second = crate::spawn::spawn_task(async {});
+        first.await.expect("first native task must complete");
+        second.await.expect("second native task must complete");
+
+        clear_task_observer_hook();
+        let dynamic = hook
+            .events()
+            .into_iter()
+            .filter_map(|event| match event {
+                Event::Dynamic(task) => Some(task),
+                _ => None,
+            })
+            .collect::<Vec<_>>();
+        assert_eq!(dynamic.len(), 2);
+        assert_ne!(dynamic[0], dynamic[1]);
     }
 
     #[test]

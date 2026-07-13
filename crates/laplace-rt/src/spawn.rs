@@ -9,11 +9,13 @@
 
 use std::future::Future;
 use std::pin::Pin;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 use std::thread::JoinHandle;
 
 use crate::hooks::{async_spawn_hook, next_native_dynamic_task_id, spawn_hook, task_observer_hook};
+use crate::task_set::ObservedTask;
 
 enum JoinMode {
     Std(JoinHandle<()>),
@@ -151,6 +153,11 @@ impl std::error::Error for TaskJoinError {}
 
 enum TaskHandleMode<T> {
     Native(tokio::task::JoinHandle<T>),
+    ObservedNative {
+        handle: tokio::task::JoinHandle<()>,
+        output: Arc<Mutex<Option<T>>>,
+        panicked: Arc<AtomicBool>,
+    },
     Engine {
         control: Box<dyn TaskControl>,
         output: Arc<Mutex<Option<T>>>,
@@ -169,6 +176,20 @@ impl<T> TaskHandle<T> {
         }
     }
 
+    fn observed_native(
+        handle: tokio::task::JoinHandle<()>,
+        output: Arc<Mutex<Option<T>>>,
+        panicked: Arc<AtomicBool>,
+    ) -> Self {
+        Self {
+            mode: TaskHandleMode::ObservedNative {
+                handle,
+                output,
+                panicked,
+            },
+        }
+    }
+
     fn engine(control: Box<dyn TaskControl>, output: Arc<Mutex<Option<T>>>) -> Self {
         Self {
             mode: TaskHandleMode::Engine { control, output },
@@ -179,6 +200,7 @@ impl<T> TaskHandle<T> {
     pub fn abort(&self) {
         match &self.mode {
             TaskHandleMode::Native(handle) => handle.abort(),
+            TaskHandleMode::ObservedNative { handle, .. } => handle.abort(),
             TaskHandleMode::Engine { control, .. } => control.abort(),
         }
     }
@@ -188,6 +210,7 @@ impl<T> TaskHandle<T> {
     pub fn is_finished(&self) -> bool {
         match &self.mode {
             TaskHandleMode::Native(handle) => handle.is_finished(),
+            TaskHandleMode::ObservedNative { handle, .. } => handle.is_finished(),
             TaskHandleMode::Engine { control, .. } => control.is_finished(),
         }
     }
@@ -208,6 +231,31 @@ impl<T> Future for TaskHandle<T> {
                     }
                 })
             }),
+            TaskHandleMode::ObservedNative {
+                handle,
+                output,
+                panicked,
+            } => Pin::new(handle).poll(cx).map(|result| {
+                result
+                    .map_err(|error| {
+                        if error.is_cancelled() {
+                            TaskJoinError::cancelled()
+                        } else {
+                            TaskJoinError::panic()
+                        }
+                    })
+                    .and_then(|()| {
+                        if panicked.load(Ordering::Acquire) {
+                            Err(TaskJoinError::panic())
+                        } else {
+                            Ok(output
+                                .lock()
+                                .expect("observed task output lock poisoned")
+                                .take()
+                                .expect("observed task must publish its output"))
+                        }
+                    })
+            }),
             TaskHandleMode::Engine { control, output } => match control.poll(cx) {
                 Poll::Pending => Poll::Pending,
                 Poll::Ready(TaskControlState::Finished) => {
@@ -223,6 +271,40 @@ impl<T> Future for TaskHandle<T> {
                 }
                 Poll::Ready(TaskControlState::Panicked) => Poll::Ready(Err(TaskJoinError::panic())),
             },
+        }
+    }
+}
+
+struct NativeObservedFuture<T, F> {
+    future: Pin<Box<F>>,
+    output: Arc<Mutex<Option<T>>>,
+    panicked: Arc<AtomicBool>,
+}
+
+impl<T, F> Future for NativeObservedFuture<T, F>
+where
+    T: Send + 'static,
+    F: Future<Output = T> + Send + 'static,
+{
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        let this = self.get_mut();
+        match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+            this.future.as_mut().poll(cx)
+        })) {
+            Ok(Poll::Pending) => Poll::Pending,
+            Ok(Poll::Ready(value)) => {
+                *this
+                    .output
+                    .lock()
+                    .expect("observed task output lock poisoned") = Some(value);
+                Poll::Ready(())
+            }
+            Err(payload) => {
+                this.panicked.store(true, Ordering::Release);
+                std::panic::resume_unwind(payload);
+            }
         }
     }
 }
@@ -254,7 +336,17 @@ where
     }
 
     if let Some(hook) = task_observer_hook() {
-        hook.dynamic_task_spawned(next_native_dynamic_task_id());
+        let task = next_native_dynamic_task_id();
+        hook.dynamic_task_spawned(task);
+        let output = Arc::new(Mutex::new(None));
+        let panicked = Arc::new(AtomicBool::new(false));
+        let observed_future = NativeObservedFuture {
+            future: Box::pin(future),
+            output: Arc::clone(&output),
+            panicked: Arc::clone(&panicked),
+        };
+        let observed = ObservedTask::without_completion(task, observed_future);
+        return TaskHandle::observed_native(tokio::spawn(observed), output, panicked);
     }
     TaskHandle::native(tokio::spawn(future))
 }
