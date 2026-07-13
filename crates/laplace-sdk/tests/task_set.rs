@@ -15,6 +15,7 @@ fn task_set_e2e(tasks: &mut laplace_sdk::rt::TaskSet) {
     tasks.spawn(async move {
         let _guard = producer_lock_for_task.lock().expect("producer lock");
         producer_notify.notify_one();
+        tokio::spawn(async {});
     });
 
     let waiter_notify = Arc::clone(&notify);
@@ -82,10 +83,18 @@ fn task_set_native_run_emits_and_dumps_task_events() {
         .iter()
         .filter(|event| matches!(event, laplace_sdk::ProbeEvent::FutureReady { .. }))
         .count();
-    assert_eq!(spawned, 3);
+    assert_eq!(spawned, 4);
     assert_eq!(completed, 3);
     assert!(polled >= 3);
     assert!(ready >= 3);
+    assert!(events.iter().any(|event| matches!(
+        event,
+        laplace_sdk::ProbeEvent::TaskSpawned {
+            task_id,
+            parent_task_id: Some(0),
+            source_location: None,
+        } if *task_id >= (1_u64 << 63)
+    )));
 
     let lock_threads: Vec<_> = events
         .iter()
@@ -109,7 +118,7 @@ fn task_set_native_run_emits_and_dumps_task_events() {
             .iter()
             .filter(|event| matches!(event, laplace_sdk::ProbeEvent::TaskSpawned { .. }))
             .count(),
-        3
+        4
     );
     assert_eq!(
         dumped
@@ -212,7 +221,7 @@ fn native_fire_and_forget_spawn_emits_dynamic_task_marker() {
         .filter_map(|event| match event {
             laplace_sdk::ProbeEvent::TaskSpawned {
                 task_id,
-                parent_task_id: None,
+                parent_task_id: Some(0),
                 source_location: None,
             } if *task_id >= (1_u64 << 63) => Some(*task_id),
             _ => None,
@@ -222,6 +231,37 @@ fn native_fire_and_forget_spawn_emits_dynamic_task_marker() {
         dynamic_ids.len(),
         1,
         "native dynamic spawn marker missing: {events:?}"
+    );
+}
+
+#[test]
+fn dynamic_spawn_capture_emits_two_parent_attributed_envelopes() {
+    let _serial = serial();
+    let first = capture_async_task_events(task_set_e2e);
+    let second = capture_async_task_events(task_set_e2e);
+
+    for events in [&first, &second] {
+        assert!(events.iter().any(|event| matches!(
+            event,
+            laplace_sdk::ProbeEvent::TaskSpawned {
+                task_id,
+                parent_task_id: Some(0),
+                source_location: None,
+            } if *task_id >= (1_u64 << 63)
+        )));
+    }
+
+    laplace_sdk::dump_events_if_configured(
+        "dynamic_spawn_capture_one",
+        "clean",
+        "fully_deterministic",
+        &first,
+    );
+    laplace_sdk::dump_events_if_configured(
+        "dynamic_spawn_capture_two",
+        "clean",
+        "fully_deterministic",
+        &second,
     );
 }
 

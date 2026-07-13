@@ -18,6 +18,11 @@ thread_local! {
 
     /// Current OS-thread logical thread id used by generated test harnesses.
     static PROBE_THREAD_ID: Cell<Option<u64>> = const { Cell::new(None) };
+
+    /// Current task being polled on this OS thread. Unlike `PROBE_THREAD_ID`,
+    /// this is cleared at the poll boundary so spawn callbacks outside a poll
+    /// cannot inherit a stale parent.
+    static CURRENT_TASK_ID: Cell<Option<u64>> = const { Cell::new(None) };
 }
 
 static GLOBAL_PROBE_SENDER: OnceLock<StdMutex<Option<mpsc::SyncSender<ProbeEvent>>>> =
@@ -141,6 +146,18 @@ impl Drop for CaptureSession {
 /// Assigns the current OS thread's logical probe thread id.
 pub fn set_probe_thread_id(id: u64) {
     PROBE_THREAD_ID.with(|c| c.set(Some(id)));
+}
+
+pub(crate) fn set_current_task_id(id: u64) {
+    CURRENT_TASK_ID.with(|c| c.set(Some(id)));
+}
+
+pub(crate) fn clear_current_task_id() {
+    CURRENT_TASK_ID.with(|c| c.set(None));
+}
+
+pub(crate) fn current_task_id() -> Option<u64> {
+    CURRENT_TASK_ID.with(Cell::get)
 }
 
 /// Reads the current OS thread's logical probe thread id.

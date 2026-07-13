@@ -3,7 +3,9 @@
 
 use std::sync::Arc;
 
-use crate::session::{emit, set_probe_thread_id};
+use crate::session::{
+    clear_current_task_id, current_task_id, emit, set_current_task_id, set_probe_thread_id,
+};
 use crate::ProbeEvent;
 
 /// Probe hook that projects TaskSet lifecycle callbacks into existing async
@@ -22,12 +24,13 @@ impl laplace_rt::TaskObserverHook for ProbeTaskHook {
     fn dynamic_task_spawned(&self, task: u64) {
         emit(ProbeEvent::TaskSpawned {
             task_id: task,
-            parent_task_id: None,
+            parent_task_id: current_task_id(),
             source_location: None,
         });
     }
 
     fn poll_started(&self, task: u64, attempt: u64) {
+        set_current_task_id(task);
         set_probe_thread_id(task);
         emit(ProbeEvent::TaskPolled {
             task_id: task,
@@ -53,9 +56,11 @@ impl laplace_rt::TaskObserverHook for ProbeTaskHook {
             }
             laplace_rt::TaskPollOutcome::Panicked => {}
         }
+        clear_current_task_id();
     }
 
     fn task_completed(&self, task: u64) {
+        clear_current_task_id();
         emit(ProbeEvent::TaskCompleted { task_id: task });
     }
 }
