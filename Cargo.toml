@@ -13,6 +13,7 @@ members = [
     "examples/bb8-hunt2",
     "examples/pingora-hunt",
     "examples/nonvendored-async-poc",
+    "examples/quilkin-pktq-analog",
     "examples/byoc-demo",
     "examples/crossbeam-hunt",
     "examples/deadpool-hunt",

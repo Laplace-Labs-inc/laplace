@@ -1,0 +1,13 @@
+[package]
+name = "quilkin-pktq-analog"
+version = "0.1.0"
+edition = "2021"
+license.workspace = true
+publish = false
+
+[features]
+fault-fixture = []
+laplace-gate = []
+
+[dependencies]
+laplace-sdk = { path = "../../crates/laplace-sdk" }
