@@ -10,6 +10,7 @@ use std::sync::Arc;
 
 use crate::event::{
     AsyncAcquireKind, AsyncChannelKind, AsyncChannelOp, AsyncChannelOutcome, AsyncChannelSide,
+    BroadcastOp, BroadcastOutcome,
 };
 use crate::session::{current_thread_id, emit};
 use crate::ProbeEvent;
@@ -36,6 +37,7 @@ impl From<laplace_rt::AsyncChannelKind> for AsyncChannelKind {
             laplace_rt::AsyncChannelKind::MpscUnbounded => Self::MpscUnbounded,
             laplace_rt::AsyncChannelKind::Oneshot => Self::Oneshot,
             laplace_rt::AsyncChannelKind::Watch => Self::Watch,
+            _ => unreachable!("laplace-probe-sdk channel kind mirror out of date"),
         }
     }
 }
@@ -45,6 +47,7 @@ impl From<laplace_rt::AsyncChannelSide> for AsyncChannelSide {
         match side {
             laplace_rt::AsyncChannelSide::Sender => Self::Sender,
             laplace_rt::AsyncChannelSide::Receiver => Self::Receiver,
+            _ => unreachable!("laplace-probe-sdk channel side mirror out of date"),
         }
     }
 }
@@ -55,6 +58,7 @@ impl From<laplace_rt::AsyncChannelOp> for AsyncChannelOp {
             laplace_rt::AsyncChannelOp::Send => Self::Send,
             laplace_rt::AsyncChannelOp::Recv => Self::Recv,
             laplace_rt::AsyncChannelOp::Changed => Self::Changed,
+            _ => unreachable!("laplace-probe-sdk channel op mirror out of date"),
         }
     }
 }
@@ -66,6 +70,31 @@ impl From<laplace_rt::AsyncChannelOutcome> for AsyncChannelOutcome {
             laplace_rt::AsyncChannelOutcome::Closed => Self::Closed,
             laplace_rt::AsyncChannelOutcome::Empty => Self::Empty,
             laplace_rt::AsyncChannelOutcome::Full => Self::Full,
+            _ => unreachable!("laplace-probe-sdk channel outcome mirror out of date"),
+        }
+    }
+}
+
+impl From<laplace_rt::AsyncBroadcastOp> for BroadcastOp {
+    fn from(op: laplace_rt::AsyncBroadcastOp) -> Self {
+        match op {
+            laplace_rt::AsyncBroadcastOp::Send => Self::Send,
+            laplace_rt::AsyncBroadcastOp::Recv => Self::Recv,
+            laplace_rt::AsyncBroadcastOp::TryRecv => Self::TryRecv,
+            laplace_rt::AsyncBroadcastOp::Resubscribe => Self::Resubscribe,
+            _ => unreachable!("laplace-probe-sdk broadcast op mirror out of date"),
+        }
+    }
+}
+
+impl From<laplace_rt::AsyncBroadcastOutcome> for BroadcastOutcome {
+    fn from(outcome: laplace_rt::AsyncBroadcastOutcome) -> Self {
+        match outcome {
+            laplace_rt::AsyncBroadcastOutcome::Ok { receivers } => Self::Ok { receivers },
+            laplace_rt::AsyncBroadcastOutcome::Closed => Self::Closed,
+            laplace_rt::AsyncBroadcastOutcome::Empty => Self::Empty,
+            laplace_rt::AsyncBroadcastOutcome::Lagged { missed } => Self::Lagged { missed },
+            _ => unreachable!("laplace-probe-sdk broadcast outcome mirror out of date"),
         }
     }
 }
@@ -238,9 +267,103 @@ impl laplace_rt::AsyncChannelHook for ProbeAsyncChannelHook {
     }
 }
 
+/// W broadcast hook의 probe 투영. 이벤트는 capture 봉투에만 실리고
+/// 현재 엔진 판정 경로에는 소비되지 않는다.
+pub struct ProbeAsyncBroadcastHook;
+
+impl laplace_rt::AsyncBroadcastHook for ProbeAsyncBroadcastHook {
+    fn broadcast_created(&self, resource: u64, capacity: usize) {
+        emit(ProbeEvent::AsyncBroadcastCreated {
+            thread_id: current_thread_id(),
+            resource,
+            capacity,
+        });
+    }
+
+    fn subscribed(&self, resource: u64, receiver_id: u64, at_seq: u64) {
+        emit(ProbeEvent::AsyncBroadcastSubscribed {
+            thread_id: current_thread_id(),
+            resource,
+            receiver_id,
+            at_seq,
+        });
+    }
+
+    fn op_requested(
+        &self,
+        resource: u64,
+        op: u64,
+        receiver_id: Option<u64>,
+        kind: laplace_rt::AsyncBroadcastOp,
+    ) {
+        emit(ProbeEvent::AsyncBroadcastOpRequested {
+            thread_id: current_thread_id(),
+            resource,
+            op,
+            receiver_id,
+            op_kind: kind.into(),
+        });
+    }
+
+    fn op_resolved(
+        &self,
+        resource: u64,
+        op: u64,
+        receiver_id: Option<u64>,
+        kind: laplace_rt::AsyncBroadcastOp,
+        outcome: laplace_rt::AsyncBroadcastOutcome,
+    ) {
+        emit(ProbeEvent::AsyncBroadcastOpResolved {
+            thread_id: current_thread_id(),
+            resource,
+            op,
+            receiver_id,
+            op_kind: kind.into(),
+            outcome: outcome.into(),
+        });
+    }
+
+    fn op_dropped(&self, resource: u64, op: u64) {
+        emit(ProbeEvent::AsyncBroadcastOpDropped {
+            thread_id: current_thread_id(),
+            resource,
+            op,
+        });
+    }
+
+    fn endpoint_cloned(
+        &self,
+        resource: u64,
+        side: laplace_rt::AsyncChannelSide,
+        receiver_id: Option<u64>,
+    ) {
+        emit(ProbeEvent::AsyncBroadcastEndpointCloned {
+            thread_id: current_thread_id(),
+            resource,
+            side: side.into(),
+            receiver_id,
+        });
+    }
+
+    fn endpoint_dropped(
+        &self,
+        resource: u64,
+        side: laplace_rt::AsyncChannelSide,
+        receiver_id: Option<u64>,
+    ) {
+        emit(ProbeEvent::AsyncBroadcastEndpointDropped {
+            thread_id: current_thread_id(),
+            resource,
+            side: side.into(),
+            receiver_id,
+        });
+    }
+}
+
 /// Timer hook을 제외한 모든 probe async hook을 설치한다.
 pub fn install_probe_async_hooks() {
     laplace_rt::install_async_lock_hook(Arc::new(ProbeAsyncLockHook));
     laplace_rt::install_async_notify_hook(Arc::new(ProbeAsyncNotifyHook));
     laplace_rt::install_async_channel_hook(Arc::new(ProbeAsyncChannelHook));
+    laplace_rt::install_async_broadcast_hook(Arc::new(ProbeAsyncBroadcastHook));
 }

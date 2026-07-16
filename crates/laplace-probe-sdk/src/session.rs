@@ -491,6 +491,7 @@ fn find_lock_order_cycle(events: &[ProbeEvent]) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::event::{BroadcastOp, BroadcastOutcome};
     use std::sync::{
         atomic::{AtomicUsize, Ordering},
         Arc,
@@ -623,6 +624,14 @@ mod tests {
             },
             ProbeEvent::TaskCompleted { task_id: 1 },
             ProbeEvent::CancelRequested { task_id: 2 },
+            ProbeEvent::AsyncBroadcastOpResolved {
+                thread_id: 0,
+                resource: 4,
+                op: 5,
+                receiver_id: Some(6),
+                op_kind: BroadcastOp::Recv,
+                outcome: BroadcastOutcome::Lagged { missed: 7 },
+            },
             ProbeEvent::LockAcquired {
                 thread_id: 0,
                 resource: "a".to_string(),
@@ -651,7 +660,14 @@ mod tests {
             serde_json::from_value(value["events"].clone()).expect("events round-trip");
         assert_eq!(round_tripped.len(), events.len());
         assert!(matches!(round_tripped[0], ProbeEvent::TaskSpawned { .. }));
-        assert!(matches!(round_tripped[7], ProbeEvent::LockAcquired { .. }));
+        assert!(matches!(
+            round_tripped[7],
+            ProbeEvent::AsyncBroadcastOpResolved {
+                outcome: BroadcastOutcome::Lagged { missed: 7 },
+                ..
+            }
+        ));
+        assert!(matches!(round_tripped[8], ProbeEvent::LockAcquired { .. }));
 
         let _ = std::fs::remove_dir_all(&dir);
     }

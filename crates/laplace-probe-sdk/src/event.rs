@@ -62,6 +62,26 @@ pub enum AsyncChannelOutcome {
     Full,
 }
 
+/// W broadcast operation vocabulary mirrored from `laplace_rt`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum BroadcastOp {
+    Send,
+    Recv,
+    TryRecv,
+    Resubscribe,
+}
+
+/// W broadcast outcome vocabulary mirrored from `laplace_rt`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[non_exhaustive]
+pub enum BroadcastOutcome {
+    Ok { receivers: usize },
+    Closed,
+    Empty,
+    Lagged { missed: u64 },
+}
+
 /// Runtime event collected by the public instrumentation SDK.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ProbeEvent {
@@ -254,6 +274,57 @@ pub enum ProbeEvent {
     },
     /// [v2] Async channel receiver가 닫힘.
     AsyncChannelClosed { thread_id: u64, channel: u64 },
+    /// W broadcast resource가 생성됨. The engine still treats this surface
+    /// as unmodeled capture data.
+    AsyncBroadcastCreated {
+        thread_id: u64,
+        resource: u64,
+        capacity: usize,
+    },
+    /// W broadcast receiver가 구독함.
+    AsyncBroadcastSubscribed {
+        thread_id: u64,
+        resource: u64,
+        receiver_id: u64,
+        at_seq: u64,
+    },
+    /// W broadcast operation이 요청됨.
+    AsyncBroadcastOpRequested {
+        thread_id: u64,
+        resource: u64,
+        op: u64,
+        receiver_id: Option<u64>,
+        op_kind: BroadcastOp,
+    },
+    /// W broadcast operation이 해결됨.
+    AsyncBroadcastOpResolved {
+        thread_id: u64,
+        resource: u64,
+        op: u64,
+        receiver_id: Option<u64>,
+        op_kind: BroadcastOp,
+        outcome: BroadcastOutcome,
+    },
+    /// W broadcast operation이 해결 전에 drop됨.
+    AsyncBroadcastOpDropped {
+        thread_id: u64,
+        resource: u64,
+        op: u64,
+    },
+    /// W broadcast endpoint가 clone됨.
+    AsyncBroadcastEndpointCloned {
+        thread_id: u64,
+        resource: u64,
+        side: AsyncChannelSide,
+        receiver_id: Option<u64>,
+    },
+    /// W broadcast endpoint가 drop됨.
+    AsyncBroadcastEndpointDropped {
+        thread_id: u64,
+        resource: u64,
+        side: AsyncChannelSide,
+        receiver_id: Option<u64>,
+    },
 }
 
 impl ProbeEvent {
@@ -310,7 +381,14 @@ impl ProbeEvent {
             | Self::AsyncChannelOpDropped { .. }
             | Self::AsyncChannelEndpointCloned { .. }
             | Self::AsyncChannelEndpointDropped { .. }
-            | Self::AsyncChannelClosed { .. } => None,
+            | Self::AsyncChannelClosed { .. }
+            | Self::AsyncBroadcastCreated { .. }
+            | Self::AsyncBroadcastSubscribed { .. }
+            | Self::AsyncBroadcastOpRequested { .. }
+            | Self::AsyncBroadcastOpResolved { .. }
+            | Self::AsyncBroadcastOpDropped { .. }
+            | Self::AsyncBroadcastEndpointCloned { .. }
+            | Self::AsyncBroadcastEndpointDropped { .. } => None,
         }
     }
 }

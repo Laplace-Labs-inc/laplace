@@ -67,6 +67,7 @@ mod async_notify;
 mod async_rwlock;
 mod async_semaphore;
 mod async_time;
+pub mod broadcast;
 mod hooks;
 pub mod mpsc;
 mod mutex;
@@ -86,15 +87,17 @@ pub use async_rwlock::{
 };
 pub use async_semaphore::{ModelAsyncSemaphore, ModelSemaphoreAcquire, ModelSemaphorePermit};
 pub use hooks::{
-    clear_async_channel_hook, clear_async_lock_hook, clear_async_notify_hook,
-    clear_async_spawn_hook, clear_async_timer_hook, clear_lock_hook, clear_spawn_hook,
-    clear_task_observer_hook, deterministic_select_enabled, install_async_channel_hook,
-    install_async_lock_hook, install_async_notify_hook, install_async_spawn_hook,
-    install_async_timer_hook, install_lock_hook, install_spawn_hook, install_task_observer_hook,
+    clear_async_broadcast_hook, clear_async_channel_hook, clear_async_lock_hook,
+    clear_async_notify_hook, clear_async_spawn_hook, clear_async_timer_hook, clear_lock_hook,
+    clear_spawn_hook, clear_task_observer_hook, deterministic_select_enabled,
+    install_async_broadcast_hook, install_async_channel_hook, install_async_lock_hook,
+    install_async_notify_hook, install_async_spawn_hook, install_async_timer_hook,
+    install_lock_hook, install_spawn_hook, install_task_observer_hook,
     reset_model_async_ids_for_model, reset_model_mutex_ids_for_model, set_deterministic_select,
-    AsyncAcquireKind, AsyncChannelHook, AsyncChannelKind, AsyncChannelOp, AsyncChannelOutcome,
-    AsyncChannelSide, AsyncLockHook, AsyncNotifyHook, AsyncSpawnHook, AsyncTimerHook, LockHook,
-    SpawnHook, TaskObserverHook, TaskPollOutcome,
+    AsyncAcquireKind, AsyncBroadcastHook, AsyncBroadcastOp, AsyncBroadcastOutcome,
+    AsyncChannelHook, AsyncChannelKind, AsyncChannelOp, AsyncChannelOutcome, AsyncChannelSide,
+    AsyncLockHook, AsyncNotifyHook, AsyncSpawnHook, AsyncTimerHook, LockHook, SpawnHook,
+    TaskObserverHook, TaskPollOutcome,
 };
 pub use mutex::{ModelMutex, ModelMutexGuard};
 pub use rwlock::{ModelRwLock, ModelRwLockReadGuard, ModelRwLockWriteGuard};

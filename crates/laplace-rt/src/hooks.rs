@@ -25,6 +25,8 @@ static NEXT_NATIVE_DYNAMIC_TASK_ID: AtomicU64 = AtomicU64::new(NATIVE_DYNAMIC_TA
 static ASYNC_LOCK_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncLockHook>>>> = OnceLock::new();
 static ASYNC_NOTIFY_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncNotifyHook>>>> = OnceLock::new();
 static ASYNC_CHANNEL_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncChannelHook>>>> = OnceLock::new();
+static ASYNC_BROADCAST_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncBroadcastHook>>>> =
+    OnceLock::new();
 static ASYNC_TIMER_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncTimerHook>>>> = OnceLock::new();
 /// Shared across the whole async model family (Mutex, `RwLock`, Semaphore,
 /// Notify, the `mpsc`/oneshot/watch channels, and the timer shadows) so
@@ -165,6 +167,7 @@ pub trait AsyncNotifyHook: Send + Sync {
 
 /// Which channel flavor a model channel resource is.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum AsyncChannelKind {
     MpscBounded { capacity: usize },
     MpscUnbounded,
@@ -174,6 +177,7 @@ pub enum AsyncChannelKind {
 
 /// Which side of a channel an endpoint event concerns.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum AsyncChannelSide {
     Sender,
     Receiver,
@@ -181,6 +185,7 @@ pub enum AsyncChannelSide {
 
 /// Operation classification for channel op events.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum AsyncChannelOp {
     Send,
     Recv,
@@ -189,6 +194,7 @@ pub enum AsyncChannelOp {
 
 /// Terminal outcome of a channel op event.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
 pub enum AsyncChannelOutcome {
     Ok,
     Closed,
@@ -234,6 +240,63 @@ pub trait AsyncChannelHook: Send + Sync {
 
     /// Reports a receiver's `close()` boundary.
     fn channel_closed(&self, channel: u64);
+}
+
+/// Operation classification for the W broadcast capture/wrap surface.
+///
+/// This vocabulary is deliberately separate from [`AsyncChannelOp`]: the
+/// broadcast outcomes carry receiver-count and lag payloads that the existing
+/// channel family cannot represent without breaking its consumers.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum AsyncBroadcastOp {
+    Send,
+    Recv,
+    TryRecv,
+    Resubscribe,
+}
+
+/// Terminal outcome for one W broadcast operation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum AsyncBroadcastOutcome {
+    Ok { receivers: usize },
+    Closed,
+    Empty,
+    Lagged { missed: u64 },
+}
+
+/// Engine- or probe-installed observation surface for the W broadcast
+/// capture/wrap seam. This is not product broadcast support: the
+/// `TOKIO_CHANNEL` unmodeled marker remains active and no engine verdict path
+/// consumes these events.
+pub trait AsyncBroadcastHook: Send + Sync {
+    fn broadcast_created(&self, resource: u64, capacity: usize);
+
+    fn subscribed(&self, resource: u64, receiver_id: u64, at_seq: u64);
+
+    fn op_requested(
+        &self,
+        resource: u64,
+        op: u64,
+        receiver_id: Option<u64>,
+        kind: AsyncBroadcastOp,
+    );
+
+    fn op_resolved(
+        &self,
+        resource: u64,
+        op: u64,
+        receiver_id: Option<u64>,
+        kind: AsyncBroadcastOp,
+        outcome: AsyncBroadcastOutcome,
+    );
+
+    fn op_dropped(&self, resource: u64, op: u64);
+
+    fn endpoint_cloned(&self, resource: u64, side: AsyncChannelSide, receiver_id: Option<u64>);
+
+    fn endpoint_dropped(&self, resource: u64, side: AsyncChannelSide, receiver_id: Option<u64>);
 }
 
 /// Deterministic virtual-clock seam for the model time shadows.
@@ -466,6 +529,35 @@ pub(crate) fn async_channel_hook() -> Option<Arc<dyn AsyncChannelHook>> {
     })
 }
 
+/// Installs or replaces the process-local W broadcast hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn install_async_broadcast_hook(hook: Arc<dyn AsyncBroadcastHook>) {
+    let slot = ASYNC_BROADCAST_HOOK.get_or_init(|| StdMutex::new(None));
+    *slot.lock().expect("async broadcast hook lock poisoned") = Some(hook);
+}
+
+/// Clears the process-local W broadcast hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn clear_async_broadcast_hook() {
+    if let Some(slot) = ASYNC_BROADCAST_HOOK.get() {
+        *slot.lock().expect("async broadcast hook lock poisoned") = None;
+    }
+}
+
+pub(crate) fn async_broadcast_hook() -> Option<Arc<dyn AsyncBroadcastHook>> {
+    ASYNC_BROADCAST_HOOK.get().and_then(|slot| {
+        slot.lock()
+            .expect("async broadcast hook lock poisoned")
+            .clone()
+    })
+}
+
 /// Installs or replaces the process-local async timer hook.
 ///
 /// # Panics
@@ -512,7 +604,7 @@ pub fn deterministic_select_enabled() -> bool {
 /// process-wide distinct resource/waiter ids, while the private engine can
 /// make each reset replay the same resource/waiter shape. Shared by all
 /// async model-family primitives (Mutex, RwLock, Semaphore, Notify, and the
-/// `mpsc`/oneshot/watch channels) since they share one id space.
+/// `mpsc`/oneshot/watch/broadcast channels) since they share one id space.
 #[doc(hidden)]
 pub fn reset_model_async_ids_for_model() {
     NEXT_ASYNC_LOCK_RESOURCE_ID.store(1, Ordering::SeqCst);

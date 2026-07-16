@@ -37,12 +37,13 @@ pub mod tracked_std_rwlock;
 // ── 공개 재내보내기 ────────────────────────────────────────────────────────────
 
 pub use async_hooks::{
-    install_probe_async_hooks, ProbeAsyncChannelHook, ProbeAsyncLockHook, ProbeAsyncNotifyHook,
+    install_probe_async_hooks, ProbeAsyncBroadcastHook, ProbeAsyncChannelHook, ProbeAsyncLockHook,
+    ProbeAsyncNotifyHook,
 };
 pub use config::{load_project_config, load_toml_max_depth, ProjectConfig};
 pub use event::{
     AsyncAcquireKind, AsyncChannelKind, AsyncChannelOp, AsyncChannelOutcome, AsyncChannelSide,
-    ProbeEvent,
+    BroadcastOp, BroadcastOutcome, ProbeEvent,
 };
 pub use model_lock::{install_probe_lock_hook, ProbeLockHook};
 pub use session::{

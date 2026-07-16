@@ -328,6 +328,12 @@ mod tests {
         );
     }
 
+    // `serial()`'s guard is deliberately held across the `.await` points below
+    // (process-wide *test* serialization, not application state): each test's
+    // `current_thread` runtime runs exactly one task, so no other task can
+    // contend for it and the guard never crosses a thread. Mirrors the
+    // crate-level allow in `tests/async_*_fidelity.rs`.
+    #[allow(clippy::await_holding_lock)]
     #[tokio::test(flavor = "current_thread")]
     async fn native_spawn_reports_a_reserved_dynamic_task_id() {
         let _serial = serial();
@@ -356,6 +362,8 @@ mod tests {
         assert!(events.contains(&Event::Finished(dynamic)));
     }
 
+    // Guard-across-await: same test-serialization rationale as above.
+    #[allow(clippy::await_holding_lock)]
     #[tokio::test(flavor = "current_thread")]
     async fn native_spawns_receive_distinct_dynamic_task_ids() {
         let _serial = serial();
