@@ -102,8 +102,11 @@ impl<T: Clone> Sender<T> {
     ///
     /// Returns tokio's [`SendError`] when no receiver is live.
     pub fn send(&self, value: T) -> Result<usize, SendError<T>> {
-        let result = self.inner.send(value);
         let op = next_async_lock_waiter_id();
+        if let Some(hook) = async_broadcast_hook() {
+            hook.op_requested(self.resource, op, None, AsyncBroadcastOp::Send);
+        }
+        let result = self.inner.send(value);
         let outcome = match &result {
             Ok(receivers) => {
                 self.send_seq.fetch_add(1, Ordering::SeqCst);

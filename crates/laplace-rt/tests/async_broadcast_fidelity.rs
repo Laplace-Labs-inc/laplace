@@ -226,6 +226,13 @@ async fn broadcast_hook_records_payload_and_endpoint_lifecycle() {
     )));
     assert!(events.iter().any(|event| matches!(
         event,
+        BroadcastEvent::OpRequested {
+            kind: AsyncBroadcastOp::Send,
+            ..
+        }
+    )));
+    assert!(events.iter().any(|event| matches!(
+        event,
         BroadcastEvent::OpResolved {
             kind: AsyncBroadcastOp::Resubscribe,
             outcome: AsyncBroadcastOutcome::Ok { receivers: 1 },
