@@ -58,3 +58,10 @@ pub const TOKIO_SPAWN: () = ();
 )]
 #[doc(hidden)]
 pub const TOKIO_TIME: () = ();
+
+/// Marker for an un-modeled `arc_swap` snapshot or cache primitive.
+#[deprecated(
+    note = "#[laplace::model]: `arc_swap` is not modeled; lock-free snapshot loads/stores here are invisible to the verifier — stale-read windows around them are a verification blind spot (BCAST G4; evidence-only modeling is tracked as A-1)"
+)]
+#[doc(hidden)]
+pub const ARC_SWAP: () = ();

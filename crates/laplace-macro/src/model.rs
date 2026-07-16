@@ -161,9 +161,9 @@ fn apply_model_rewrite_to_items(
 /// model equivalents, and `tokio::sync::{mpsc,oneshot,watch}` constructors
 /// and types → their `::laplace_sdk::rt::{mpsc,oneshot,watch}` model
 /// equivalents, and records any recognized-but-un-modeled primitive
-/// (`Condvar`, `atomic`, `std::sync::mpsc`, `tokio::spawn`, and
-/// `tokio::sync::broadcast`) so a compile-time blind-spot warning can be
-/// injected.
+/// (`Condvar`, `atomic`, `std::sync::mpsc`, `tokio::spawn`,
+/// `tokio::sync::broadcast`, and `arc_swap`) so a compile-time blind-spot
+/// warning can be injected.
 ///
 /// AXM2 A2-5 adds `aliases`: a `use`-import-derived table (binding ident →
 /// canonical `tokio::...` path segments, see [`canonicalize`](Self::canonicalize))
@@ -230,6 +230,7 @@ enum Unmodeled {
     TokioChannel,
     TokioSpawn,
     TokioTime,
+    ArcSwap,
 }
 
 impl Unmodeled {
@@ -242,6 +243,7 @@ impl Unmodeled {
             Unmodeled::TokioChannel => "TOKIO_CHANNEL",
             Unmodeled::TokioSpawn => "TOKIO_SPAWN",
             Unmodeled::TokioTime => "TOKIO_TIME",
+            Unmodeled::ArcSwap => "ARC_SWAP",
         };
         Ident::new(name, proc_macro2::Span::call_site())
     }
@@ -813,6 +815,24 @@ fn classify_tokio_sync_unmodeled(path: &Path) -> Option<Unmodeled> {
     }
 }
 
+/// Classifies an `arc_swap` path as un-modeled. The crate root is authoritative
+/// for fully-qualified paths; bare imported types are restricted to the
+/// concrete `ArcSwap` family to avoid treating ordinary `Cache` names as proof
+/// of an arc-swap cache.
+fn classify_arc_swap_unmodeled(path: &Path) -> Option<Unmodeled> {
+    let first = path.segments.first()?;
+    if first.ident == "arc_swap"
+        || matches!(
+            first.ident.to_string().as_str(),
+            "ArcSwap" | "ArcSwapOption" | "ArcSwapAny" | "ArcSwapWeak"
+        )
+    {
+        Some(Unmodeled::ArcSwap)
+    } else {
+        None
+    }
+}
+
 /// Whether `path` is a `tokio::spawn`/`tokio::task::spawn` call, by exact
 /// plain-segment match. Unqualified bare `spawn(...)` is intentionally
 /// excluded — too high a false-positive risk against an unrelated user
@@ -882,6 +902,9 @@ fn classify_unmodeled(path: &Path) -> Option<Unmodeled> {
     }
     if is_tokio_spawn_path(path) || is_unmodeled_tokio_spawn_path(path) {
         return Some(Unmodeled::TokioSpawn);
+    }
+    if let Some(primitive) = classify_arc_swap_unmodeled(path) {
+        return Some(primitive);
     }
 
     let has = |name: &str| path.segments.iter().any(|segment| segment.ident == name);
@@ -1123,6 +1146,55 @@ mod tests {
         // not be flagged (else a clean run injects a false blind-spot marker).
         assert_eq!(classify("AtomicState"), None);
         assert_eq!(classify("AtomicWaker"), None);
+    }
+
+    #[test]
+    fn classify_flags_arc_swap_paths_and_imported_types() {
+        for path in [
+            "arc_swap::ArcSwap",
+            "arc_swap::ArcSwapOption",
+            "arc_swap::ArcSwapAny",
+            "arc_swap::ArcSwapWeak",
+            "arc_swap::cache::Cache",
+            "ArcSwap",
+            "ArcSwapOption",
+            "ArcSwapAny",
+            "ArcSwapWeak",
+        ] {
+            assert_eq!(
+                classify(path),
+                Some(Unmodeled::ArcSwap),
+                "arc_swap path must be classified: {path}"
+            );
+        }
+    }
+
+    #[test]
+    fn classify_does_not_flag_ambiguous_arc_swap_like_names() {
+        for path in ["Cache", "ArcSwapper", "ArcSwapLike", "my_mod::ArcSwapLike"] {
+            assert_eq!(classify(path), None, "false-positive arc_swap path: {path}");
+        }
+    }
+
+    #[test]
+    fn rewrite_injects_one_blind_spot_marker_for_arc_swap() {
+        let out = rewrite_to_string(
+            "fn f() { \
+                use arc_swap::ArcSwap; \
+                let _ = arc_swap::ArcSwap::from_pointee(0); \
+                let _ = ArcSwap::from_pointee(1); \
+                let _: ArcSwapOption<()>; \
+            }",
+        );
+        assert!(
+            out.contains("laplace_sdk") && out.contains("unmodeled") && out.contains("ARC_SWAP"),
+            "arc_swap blind-spot marker missing: {out}"
+        );
+        assert_eq!(
+            out.matches("ARC_SWAP").count(),
+            1,
+            "expected one deduplicated arc_swap marker: {out}"
+        );
     }
 
     #[test]
