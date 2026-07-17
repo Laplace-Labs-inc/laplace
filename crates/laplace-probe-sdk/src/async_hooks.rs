@@ -360,10 +360,39 @@ impl laplace_rt::AsyncBroadcastHook for ProbeAsyncBroadcastHook {
     }
 }
 
+/// ArcSwap evidence cell hook의 probe 투영.
+pub struct ProbeAsyncCellHook;
+
+impl laplace_rt::AsyncCellHook for ProbeAsyncCellHook {
+    fn cell_created(&self, resource: u64) {
+        emit(ProbeEvent::AsyncCellCreated {
+            thread_id: current_thread_id(),
+            resource,
+        });
+    }
+
+    fn cell_load(&self, resource: u64, version: u64) {
+        emit(ProbeEvent::AsyncCellLoad {
+            thread_id: current_thread_id(),
+            resource,
+            version,
+        });
+    }
+
+    fn cell_store(&self, resource: u64, version: u64) {
+        emit(ProbeEvent::AsyncCellStore {
+            thread_id: current_thread_id(),
+            resource,
+            version,
+        });
+    }
+}
+
 /// Timer hook을 제외한 모든 probe async hook을 설치한다.
 pub fn install_probe_async_hooks() {
     laplace_rt::install_async_lock_hook(Arc::new(ProbeAsyncLockHook));
     laplace_rt::install_async_notify_hook(Arc::new(ProbeAsyncNotifyHook));
     laplace_rt::install_async_channel_hook(Arc::new(ProbeAsyncChannelHook));
     laplace_rt::install_async_broadcast_hook(Arc::new(ProbeAsyncBroadcastHook));
+    laplace_rt::install_async_cell_hook(Arc::new(ProbeAsyncCellHook));
 }

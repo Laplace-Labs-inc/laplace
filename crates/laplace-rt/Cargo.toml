@@ -11,6 +11,10 @@ publish = false
 
 [dependencies]
 tokio = { version = "1.42", default-features = false, features = ["sync", "time", "macros", "rt"] }
+arc-swap = { version = "1.9", optional = true }
+
+[features]
+arc-swap = ["dep:arc-swap"]
 
 [dev-dependencies]
 tokio = { version = "1.42", features = ["sync", "rt", "macros", "time", "test-util"] }

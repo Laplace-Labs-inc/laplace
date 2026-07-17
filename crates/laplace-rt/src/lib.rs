@@ -62,6 +62,8 @@
 //! - [`select_macro`] — [`laplace_select`], the `tokio::select!` seam.
 //! - [`unmodeled`] — compile-time blind-spot markers.
 
+#[cfg(feature = "arc-swap")]
+pub mod arc_swap;
 mod async_mutex;
 mod async_notify;
 mod async_rwlock;
@@ -79,6 +81,10 @@ mod task_set;
 pub mod unmodeled;
 pub mod watch;
 
+#[cfg(feature = "arc-swap")]
+pub use arc_swap::{
+    Cache, ModelArcSwap, ModelArcSwapGuard, ModelArcSwapOption, ModelArcSwapOptionGuard,
+};
 pub use async_mutex::{ModelAsyncLock, ModelAsyncMutex, ModelAsyncMutexGuard};
 pub use async_notify::{ModelAsyncNotify, ModelNotified};
 pub use async_rwlock::{
@@ -87,14 +93,14 @@ pub use async_rwlock::{
 };
 pub use async_semaphore::{ModelAsyncSemaphore, ModelSemaphoreAcquire, ModelSemaphorePermit};
 pub use hooks::{
-    clear_async_broadcast_hook, clear_async_channel_hook, clear_async_lock_hook,
-    clear_async_notify_hook, clear_async_spawn_hook, clear_async_timer_hook, clear_lock_hook,
-    clear_spawn_hook, clear_task_observer_hook, deterministic_select_enabled,
-    install_async_broadcast_hook, install_async_channel_hook, install_async_lock_hook,
-    install_async_notify_hook, install_async_spawn_hook, install_async_timer_hook,
-    install_lock_hook, install_spawn_hook, install_task_observer_hook,
+    clear_async_broadcast_hook, clear_async_cell_hook, clear_async_channel_hook,
+    clear_async_lock_hook, clear_async_notify_hook, clear_async_spawn_hook, clear_async_timer_hook,
+    clear_lock_hook, clear_spawn_hook, clear_task_observer_hook, deterministic_select_enabled,
+    install_async_broadcast_hook, install_async_cell_hook, install_async_channel_hook,
+    install_async_lock_hook, install_async_notify_hook, install_async_spawn_hook,
+    install_async_timer_hook, install_lock_hook, install_spawn_hook, install_task_observer_hook,
     reset_model_async_ids_for_model, reset_model_mutex_ids_for_model, set_deterministic_select,
-    AsyncAcquireKind, AsyncBroadcastHook, AsyncBroadcastOp, AsyncBroadcastOutcome,
+    AsyncAcquireKind, AsyncBroadcastHook, AsyncBroadcastOp, AsyncBroadcastOutcome, AsyncCellHook,
     AsyncChannelHook, AsyncChannelKind, AsyncChannelOp, AsyncChannelOutcome, AsyncChannelSide,
     AsyncLockHook, AsyncNotifyHook, AsyncSpawnHook, AsyncTimerHook, LockHook, SpawnHook,
     TaskObserverHook, TaskPollOutcome,

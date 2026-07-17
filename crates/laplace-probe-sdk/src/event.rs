@@ -325,6 +325,20 @@ pub enum ProbeEvent {
         side: AsyncChannelSide,
         receiver_id: Option<u64>,
     },
+    /// [v2] ArcSwap evidence cell이 생성됨. 초기 버전은 0이다.
+    AsyncCellCreated { thread_id: u64, resource: u64 },
+    /// [v2] ArcSwap evidence cell load가 관측한 스냅샷 버전.
+    AsyncCellLoad {
+        thread_id: u64,
+        resource: u64,
+        version: u64,
+    },
+    /// [v2] ArcSwap evidence cell store가 발행한 버전.
+    AsyncCellStore {
+        thread_id: u64,
+        resource: u64,
+        version: u64,
+    },
 }
 
 impl ProbeEvent {
@@ -388,7 +402,10 @@ impl ProbeEvent {
             | Self::AsyncBroadcastOpResolved { .. }
             | Self::AsyncBroadcastOpDropped { .. }
             | Self::AsyncBroadcastEndpointCloned { .. }
-            | Self::AsyncBroadcastEndpointDropped { .. } => None,
+            | Self::AsyncBroadcastEndpointDropped { .. }
+            | Self::AsyncCellCreated { .. }
+            | Self::AsyncCellLoad { .. }
+            | Self::AsyncCellStore { .. } => None,
         }
     }
 }

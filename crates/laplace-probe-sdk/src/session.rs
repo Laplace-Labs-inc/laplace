@@ -636,6 +636,20 @@ mod tests {
                 thread_id: 0,
                 resource: "a".to_string(),
             },
+            ProbeEvent::AsyncCellCreated {
+                thread_id: 0,
+                resource: 8,
+            },
+            ProbeEvent::AsyncCellLoad {
+                thread_id: 0,
+                resource: 8,
+                version: 3,
+            },
+            ProbeEvent::AsyncCellStore {
+                thread_id: 0,
+                resource: 8,
+                version: 4,
+            },
         ];
 
         let dir = std::env::temp_dir().join(format!(
@@ -668,6 +682,26 @@ mod tests {
             }
         ));
         assert!(matches!(round_tripped[8], ProbeEvent::LockAcquired { .. }));
+        assert!(matches!(
+            round_tripped[9],
+            ProbeEvent::AsyncCellCreated { resource: 8, .. }
+        ));
+        assert!(matches!(
+            round_tripped[10],
+            ProbeEvent::AsyncCellLoad {
+                resource: 8,
+                version: 3,
+                ..
+            }
+        ));
+        assert!(matches!(
+            round_tripped[11],
+            ProbeEvent::AsyncCellStore {
+                resource: 8,
+                version: 4,
+                ..
+            }
+        ));
 
         let _ = std::fs::remove_dir_all(&dir);
     }

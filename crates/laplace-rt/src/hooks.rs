@@ -27,6 +27,7 @@ static ASYNC_NOTIFY_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncNotifyHook>>>> =
 static ASYNC_CHANNEL_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncChannelHook>>>> = OnceLock::new();
 static ASYNC_BROADCAST_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncBroadcastHook>>>> =
     OnceLock::new();
+static ASYNC_CELL_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncCellHook>>>> = OnceLock::new();
 static ASYNC_TIMER_HOOK: OnceLock<StdMutex<Option<Arc<dyn AsyncTimerHook>>>> = OnceLock::new();
 /// Shared across the whole async model family (Mutex, `RwLock`, Semaphore,
 /// Notify, the `mpsc`/oneshot/watch channels, and the timer shadows) so
@@ -299,6 +300,22 @@ pub trait AsyncBroadcastHook: Send + Sync {
     fn endpoint_dropped(&self, resource: u64, side: AsyncChannelSide, receiver_id: Option<u64>);
 }
 
+/// Engine- or probe-installed evidence surface for a wrap-real `ArcSwap` cell.
+///
+/// This trait is intentionally feature-independent: capture producers can
+/// install the vocabulary even when the optional `ArcSwap` wrapper is not
+/// enabled in the runtime crate.
+pub trait AsyncCellHook: Send + Sync {
+    /// Reports construction of a cell at version zero.
+    fn cell_created(&self, resource: u64);
+
+    /// Reports a load of the version carried by the observed snapshot.
+    fn cell_load(&self, resource: u64, version: u64);
+
+    /// Reports a store after the new version has been published.
+    fn cell_store(&self, resource: u64, version: u64);
+}
+
 /// Deterministic virtual-clock seam for the model time shadows.
 pub trait AsyncTimerHook: Send + Sync {
     /// Current virtual time in nanoseconds.
@@ -556,6 +573,34 @@ pub(crate) fn async_broadcast_hook() -> Option<Arc<dyn AsyncBroadcastHook>> {
             .expect("async broadcast hook lock poisoned")
             .clone()
     })
+}
+
+/// Installs or replaces the process-local `ArcSwap` cell hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn install_async_cell_hook(hook: Arc<dyn AsyncCellHook>) {
+    let slot = ASYNC_CELL_HOOK.get_or_init(|| StdMutex::new(None));
+    *slot.lock().expect("async cell hook lock poisoned") = Some(hook);
+}
+
+/// Clears the process-local `ArcSwap` cell hook.
+///
+/// # Panics
+///
+/// Panics if the internal hook registry mutex is poisoned.
+pub fn clear_async_cell_hook() {
+    if let Some(slot) = ASYNC_CELL_HOOK.get() {
+        *slot.lock().expect("async cell hook lock poisoned") = None;
+    }
+}
+
+#[cfg(feature = "arc-swap")]
+pub(crate) fn async_cell_hook() -> Option<Arc<dyn AsyncCellHook>> {
+    ASYNC_CELL_HOOK
+        .get()
+        .and_then(|slot| slot.lock().expect("async cell hook lock poisoned").clone())
 }
 
 /// Installs or replaces the process-local async timer hook.
