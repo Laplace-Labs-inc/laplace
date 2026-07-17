@@ -15,6 +15,7 @@ members = [
     "examples/nonvendored-async-poc",
     "examples/quilkin-pktq-analog",
     "examples/quilkin-fchain-analog",
+    "examples/quilkin-qcmp-analog",
     "examples/byoc-demo",
     "examples/crossbeam-hunt",
     "examples/deadpool-hunt",
