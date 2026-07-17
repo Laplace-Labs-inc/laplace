@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// W is a capture/wrap experimental surface, not product broadcast support;
-// the TOKIO_CHANNEL unmodeled marker remains in force.
+// Broadcast is modeled as of BCAST G4 keep (LEP-0027); these differential
+// tests are the fidelity gate for the wrap-real model channel.
 #![allow(clippy::await_holding_lock)]
 
-//! Differential fidelity tests for the W broadcast capture/wrap surface.
+//! Differential fidelity tests for the broadcast wrap-real model channel.
 //!
 //! Each semantic scenario is run against raw tokio and the wrapper. The
 //! wrapper must preserve tokio's values and error payloads; hook assertions

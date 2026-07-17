@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: Apache-2.0
-//! `tokio::sync::broadcast`-compatible capture/wrap experimental surface.
+//! `tokio::sync::broadcast`-compatible wrap-real model channel.
 //!
-//! W is not product broadcast support and does not model broadcast execution:
-//! the `TOKIO_CHANNEL` unmodeled marker remains active. `Sender` and `Receiver`
-//! hold real tokio endpoints and delegate value delivery, wake registration,
-//! ring overwrite, subscription cursors, lag handling, and cancellation to
-//! tokio. The wrapper adds observation events only.
+//! Modeled as of BCAST G4 keep (LEP-0027): `#[laplace::model]` rewrites
+//! `tokio::sync::broadcast` here (the former `TOKIO_CHANNEL` unmodeled
+//! marker was removed), the engine consumes the events for wake attribution
+//! and terminal wait evidence, and the CLI replays them. `Sender` and
+//! `Receiver` hold real tokio endpoints and delegate value delivery, wake
+//! registration, ring overwrite, subscription cursors, lag handling, and
+//! cancellation to tokio. The wrapper adds observation events only.
 //!
 //! The `at_seq` field is evidence bookkeeping, not a reimplementation of the
 //! queue. Tokio does not expose its sequence number, so a per-channel counter

@@ -33,14 +33,9 @@ pub const ATOMIC: () = ();
 #[doc(hidden)]
 pub const CHANNEL: () = ();
 
-/// Marker for an un-modeled `tokio::sync::broadcast` channel. `mpsc`,
-/// `oneshot`, and `watch` are modeled as of AXM2 A2-4 (see
-/// [`crate`]`::{mpsc,oneshot,watch}`).
-#[deprecated(
-    note = "#[laplace::model]: `tokio::sync::broadcast` is not modeled yet (AXM2 A2-4 residue); waits here are a verification blind spot"
-)]
-#[doc(hidden)]
-pub const TOKIO_CHANNEL: () = ();
+// `TOKIO_CHANNEL` (un-modeled `tokio::sync::broadcast`) was removed at BCAST
+// G4 keep (LEP-0027): broadcast is modeled via [`crate::broadcast`] and the
+// macro rewrites it like the rest of the `mpsc`/`oneshot`/`watch` family.
 
 /// Marker for an un-modeled `tokio::spawn` (or `tokio::task::spawn*`) task.
 #[deprecated(

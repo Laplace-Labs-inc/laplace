@@ -267,10 +267,10 @@ pub enum AsyncBroadcastOutcome {
     Lagged { missed: u64 },
 }
 
-/// Engine- or probe-installed observation surface for the W broadcast
-/// capture/wrap seam. This is not product broadcast support: the
-/// `TOKIO_CHANNEL` unmodeled marker remains active and no engine verdict path
-/// consumes these events.
+/// Engine- or probe-installed observation surface for the broadcast
+/// wrap-real seam. As of BCAST G4 keep (LEP-0027) broadcast is modeled:
+/// the macro rewrites it, and the engine consumes these events for wake
+/// attribution and terminal wait evidence.
 pub trait AsyncBroadcastHook: Send + Sync {
     fn broadcast_created(&self, resource: u64, capacity: usize);
 

@@ -35,10 +35,11 @@
 //! through it. AXM2 A2-4 adds the `mpsc`/oneshot/watch channel family:
 //! [`mpsc`], [`oneshot`], and [`watch`] rewrite qualified
 //! `tokio::sync::{mpsc,oneshot,watch}` constructors and types to wrap-real
-//! model channels. Only `tokio::sync::broadcast` remains
-//! recognized-but-un-modeled and flagged via [`unmodeled`], same as
-//! `std::sync::mpsc`; `tokio::spawn` is also flagged as un-modeled (the
-//! deterministic executor does not yet control it).
+//! model channels, and BCAST G4 keep (LEP-0027) completes the family with
+//! [`broadcast`] — all four `tokio::sync` channel primitives are modeled.
+//! `std::sync::mpsc` remains flagged via [`unmodeled`]; `tokio::spawn` is
+//! also flagged as un-modeled (the deterministic executor does not yet
+//! control it).
 //!
 //! AXM2 A2-4 adds [`time`] — a `tokio::time::{sleep,timeout,interval}`
 //! virtual-clock shadow driven by [`AsyncTimerHook`] — and
