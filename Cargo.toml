@@ -16,6 +16,7 @@ members = [
     "examples/quilkin-pktq-analog",
     "examples/quilkin-fchain-analog",
     "examples/quilkin-qcmp-analog",
+    "examples/quilkin-xds-analog",
     "examples/byoc-demo",
     "examples/crossbeam-hunt",
     "examples/deadpool-hunt",
