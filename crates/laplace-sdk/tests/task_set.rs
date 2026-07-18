@@ -71,10 +71,16 @@ fn task_set_native_run_emits_and_dumps_task_events() {
         .iter()
         .filter(|event| matches!(event, laplace_sdk::ProbeEvent::TaskSpawned { .. }))
         .count();
-    let completed = events
+    let mut completed_registered: Vec<_> = events
         .iter()
-        .filter(|event| matches!(event, laplace_sdk::ProbeEvent::TaskCompleted { .. }))
-        .count();
+        .filter_map(|event| match event {
+            laplace_sdk::ProbeEvent::TaskCompleted { task_id } if *task_id < (1_u64 << 63) => {
+                Some(*task_id)
+            }
+            _ => None,
+        })
+        .collect();
+    completed_registered.sort_unstable();
     let polled = events
         .iter()
         .filter(|event| matches!(event, laplace_sdk::ProbeEvent::TaskPolled { .. }))
@@ -84,7 +90,7 @@ fn task_set_native_run_emits_and_dumps_task_events() {
         .filter(|event| matches!(event, laplace_sdk::ProbeEvent::FutureReady { .. }))
         .count();
     assert_eq!(spawned, 4);
-    assert_eq!(completed, 3);
+    assert_eq!(completed_registered, vec![0, 1, 2]);
     assert!(polled >= 3);
     assert!(ready >= 3);
     assert!(events.iter().any(|event| matches!(
@@ -120,13 +126,17 @@ fn task_set_native_run_emits_and_dumps_task_events() {
             .count(),
         4
     );
-    assert_eq!(
-        dumped
-            .iter()
-            .filter(|event| matches!(event, laplace_sdk::ProbeEvent::TaskCompleted { .. }))
-            .count(),
-        3
-    );
+    let mut dumped_completed_registered: Vec<_> = dumped
+        .iter()
+        .filter_map(|event| match event {
+            laplace_sdk::ProbeEvent::TaskCompleted { task_id } if *task_id < (1_u64 << 63) => {
+                Some(*task_id)
+            }
+            _ => None,
+        })
+        .collect();
+    dumped_completed_registered.sort_unstable();
+    assert_eq!(dumped_completed_registered, vec![0, 1, 2]);
     assert!(dumped
         .iter()
         .any(|event| matches!(event, laplace_sdk::ProbeEvent::TaskPolled { .. })));
