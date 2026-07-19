@@ -1,0 +1,20 @@
+[package]
+name = "laplace-model-rt"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+authors.workspace = true
+license = "Apache-2.0"
+repository.workspace = true
+description = "Runtime seams for annotated Laplace model code"
+publish = false
+
+[dependencies]
+tokio = { version = "1.42", default-features = false, features = ["sync", "time", "macros", "rt"] }
+arc-swap = { version = "1.9", optional = true }
+
+[features]
+arc-swap = ["dep:arc-swap"]
+
+[dev-dependencies]
+tokio = { version = "1.42", features = ["sync", "rt", "macros", "time", "test-util"] }

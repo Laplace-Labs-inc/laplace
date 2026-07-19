@@ -8,4 +8,3 @@ publish = false
 
 [dependencies]
 laplace-macro = { path = "../../.." }
-inventory = "=0.3.24"

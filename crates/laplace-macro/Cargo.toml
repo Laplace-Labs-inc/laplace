@@ -21,8 +21,7 @@ quote = "1"
 proc-macro2 = "1"
 
 [dev-dependencies]
-inventory = "0.3"
-laplace-rt = { path = "../laplace-rt" }
+laplace-model-rt = { path = "../laplace-model-rt" }
 laplace-probe-sdk = { path = "../laplace-probe-sdk" }
 laplace-sdk = { path = "../laplace-sdk" }
 tokio = { workspace = true }

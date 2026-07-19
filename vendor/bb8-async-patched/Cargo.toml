@@ -19,7 +19,7 @@ parking_lot = ["dep:parking_lot", "tokio/parking_lot"]
 
 [dependencies]
 futures-util = { version = "0.3.2", features = ["alloc"], default-features = false }
-laplace-rt = { path = "../../crates/laplace-rt" }
+laplace-model-rt = { path = "../../crates/laplace-model-rt" }
 parking_lot = { version = "0.12", optional = true }
 tokio = { version = "1.0", features = ["rt", "sync", "time"] }
 

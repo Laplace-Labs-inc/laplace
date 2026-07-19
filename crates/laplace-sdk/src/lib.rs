@@ -165,7 +165,7 @@ pub use laplace_probe_sdk::CaptureSession;
 /// Generated macro output routes rewritten primitives through this single root
 /// (`::laplace_sdk::rt::…`) so an adopter only ever depends on `laplace-sdk`;
 /// the runtime crate is never a direct dependency of user code.
-pub use laplace_rt as rt;
+pub use laplace_model_rt as rt;
 
 /// Project-level configuration loaded from laplace.toml.
 pub use laplace_probe_sdk::ProjectConfig;

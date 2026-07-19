@@ -35,7 +35,7 @@ The following boundaries are explicit and are not claims of coverage:
   `FuturesUnordered` is a combinator, not an independently modeled primitive.
 - The reaper's native `interval_at`/`tokio::spawn` path and `build_unchecked()`
   dynamic-start path are excluded. The modeled `spawn_replenishing_approvals`
-  boundary is routed through `laplace_rt::spawn_task` so S3 can observe its
+  boundary is routed through `laplace_model_rt::spawn_task` so S3 can observe its
   dynamic task; the upstream approval and replenishment control flow is kept.
 - Route A installs the public async probe hooks but no private
   `AsyncTimerHook`; timer deadlines therefore do not appear as captured events.

@@ -18,11 +18,11 @@ fn public_facade_exports_project_config_loader() {
 
 /// `laplace_sdk::rt::time` and `laplace_sdk::rt::laplace_select!` are the two
 /// AXM2 A2-4 seams macro-generated code routes through — this proves both
-/// are actually reachable via the `pub use laplace_rt as rt` facade (the
+/// are actually reachable via the `pub use laplace_model_rt as rt` facade (the
 /// macro path is the interesting case: `#[macro_export]` hoists
-/// `laplace_select!` to `laplace_rt`'s crate root, and this checks that
+/// `laplace_select!` to `laplace_model_rt`'s crate root, and this checks that
 /// hoisted macro stays reachable through a re-exported module path, not just
-/// `::laplace_rt::laplace_select!` directly).
+/// `::laplace_model_rt::laplace_select!` directly).
 #[tokio::test]
 async fn public_facade_exports_rt_time_and_laplace_select_macro_path() {
     laplace_sdk::rt::time::sleep(std::time::Duration::from_millis(0)).await;

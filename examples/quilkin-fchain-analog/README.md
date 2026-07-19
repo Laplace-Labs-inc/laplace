@@ -21,7 +21,7 @@ Quilkin 프로덕션 버그를 주장하지 않는다.
 - 통지는 `tokio::sync::broadcast` customer syntax를 Route A의
   `#[laplace_sdk::verify(tasks)]` 매크로에 통과시킨다. 매크로가 `channel`과
   `Receiver` 표면을 `laplace_sdk::rt::broadcast`로 rewrite한다.
-- `arc_swap`은 매크로 rewrite 대상이 아니다. 예제는 `laplace-rt`의 `arc-swap`
+- `arc_swap`은 매크로 rewrite 대상이 아니다. 예제는 `laplace-model-rt`의 `arc-swap`
   feature를 직접 활성화하고 `ModelArcSwap`을 명시적으로 사용한다.
 - fault-fixture는 store 뒤 broadcast send만 생략하는 counterfactual이다.
 

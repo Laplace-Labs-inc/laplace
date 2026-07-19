@@ -12,7 +12,7 @@ use crate::ProbeEvent;
 /// ProbeEvent variants.
 pub struct ProbeTaskHook;
 
-impl laplace_rt::TaskObserverHook for ProbeTaskHook {
+impl laplace_model_rt::TaskObserverHook for ProbeTaskHook {
     fn task_registered(&self, task: u64) {
         emit(ProbeEvent::TaskSpawned {
             task_id: task,
@@ -38,23 +38,23 @@ impl laplace_rt::TaskObserverHook for ProbeTaskHook {
         });
     }
 
-    fn poll_completed(&self, task: u64, attempt: u64, outcome: laplace_rt::TaskPollOutcome) {
+    fn poll_completed(&self, task: u64, attempt: u64, outcome: laplace_model_rt::TaskPollOutcome) {
         match outcome {
-            laplace_rt::TaskPollOutcome::Pending => {
+            laplace_model_rt::TaskPollOutcome::Pending => {
                 emit(ProbeEvent::FuturePending {
                     task_id: task,
                     future_id: None,
                     poll_attempt_id: attempt,
                 });
             }
-            laplace_rt::TaskPollOutcome::Ready => {
+            laplace_model_rt::TaskPollOutcome::Ready => {
                 emit(ProbeEvent::FutureReady {
                     task_id: task,
                     future_id: None,
                     poll_attempt_id: attempt,
                 });
             }
-            laplace_rt::TaskPollOutcome::Panicked => {}
+            laplace_model_rt::TaskPollOutcome::Panicked => {}
         }
         clear_current_task_id();
     }
@@ -67,14 +67,14 @@ impl laplace_rt::TaskObserverHook for ProbeTaskHook {
 
 /// Installs the process-local probe task hook.
 pub fn install_probe_task_hook() {
-    laplace_rt::install_task_observer_hook(Arc::new(ProbeTaskHook));
+    laplace_model_rt::install_task_observer_hook(Arc::new(ProbeTaskHook));
 }
 
 /// Runs all registered tasks once on a current-thread Tokio runtime.
 ///
 /// This is a native observation runner. A composition that deadlocks also
 /// hangs here; deadlock handling belongs to the later modeled execution tier.
-pub fn run_task_set_native(set: laplace_rt::TaskSet) {
+pub fn run_task_set_native(set: laplace_model_rt::TaskSet) {
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()

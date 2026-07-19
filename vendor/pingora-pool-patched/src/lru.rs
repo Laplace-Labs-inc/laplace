@@ -16,7 +16,7 @@
 // wrap-real async Notify로 alias해 eviction 통지 경계를 모델링한다.
 
 use core::hash::Hash;
-use laplace_rt::ModelAsyncNotify as Notify;
+use laplace_model_rt::ModelAsyncNotify as Notify;
 use lru::LruCache;
 use parking_lot::RwLock;
 use std::cell::RefCell;

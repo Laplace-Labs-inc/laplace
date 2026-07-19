@@ -5,8 +5,8 @@ use std::sync::Arc;
 
 #[laplace_macro::model]
 fn uses_qualified_std_rwlock() {
-    // Type ascription proves the rewrite std::sync::RwLock -> laplace_rt::ModelRwLock.
-    let value: Arc<laplace_rt::ModelRwLock<u8>> = Arc::new(std::sync::RwLock::new(1_u8));
+    // Type ascription proves the rewrite std::sync::RwLock -> laplace_model_rt::ModelRwLock.
+    let value: Arc<laplace_model_rt::ModelRwLock<u8>> = Arc::new(std::sync::RwLock::new(1_u8));
     {
         let r = value.read().expect("read succeeds");
         assert_eq!(*r, 1);
@@ -20,7 +20,7 @@ fn uses_qualified_std_rwlock() {
 
 #[laplace_macro::model]
 fn uses_try_lock_on_std_mutex() {
-    let value: laplace_rt::ModelMutex<u8> = std::sync::Mutex::new(3);
+    let value: laplace_model_rt::ModelMutex<u8> = std::sync::Mutex::new(3);
     let guard = value.try_lock().expect("uncontended try_lock succeeds");
     assert_eq!(*guard, 3);
 }

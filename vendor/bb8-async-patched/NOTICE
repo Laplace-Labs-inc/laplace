@@ -4,12 +4,12 @@ The upstream MIT license and copyright notice are preserved in LICENSE.
 Laplace-local modifications:
 
 * `src/internals.rs` routes bb8's async Notify surface through
-  `laplace_rt::ModelAsyncNotify` for deterministic observation.
-* `src/inner.rs` routes timeout and sleep through `laplace_rt::time` where the
+  `laplace_model_rt::ModelAsyncNotify` for deterministic observation.
+* `src/inner.rs` routes timeout and sleep through `laplace_model_rt::time` where the
   public shadow API is compatible. The reaper's `interval_at` remains native
   and is outside this hunt's no-reaper scenario scope.
 * `src/inner.rs` keeps the upstream replenishment control flow while routing
-  `spawn_replenishing_approvals` through `laplace_rt::spawn_task as spawn` so
+  `spawn_replenishing_approvals` through `laplace_model_rt::spawn_task as spawn` so
   dynamic replenishment tasks are visible to the async model. The reaper's
   literal `tokio::spawn` remains native and outside this hunt's no-reaper
   scenario scope.

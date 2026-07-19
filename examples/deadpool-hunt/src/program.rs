@@ -4,7 +4,7 @@
 //! This is the **one** definition of the deadpool-hunt AB-BA lock-order program.
 //! Both paths execute THIS body — there is no second hand-authored AB-BA program:
 //!   * the public passive toy scanner (`TrackedStdMutex` + `std::thread::spawn`), and
-//!   * the private engine route (`laplace_sync::Mutex` + `LiveEnv::spawn`).
+//!   * the private engine route (`laplace_shadow_sync::Mutex` + `LiveEnv::spawn`).
 //!
 //! The lock surface ([`ModelLock`]) and the spawn surface are injected so the
 //! exact same source drives both. The file is pure `std` + the injected traits;

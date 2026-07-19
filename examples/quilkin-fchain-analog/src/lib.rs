@@ -91,7 +91,7 @@ impl FilterChain {
 /// Route A public capture. The `tokio::sync::broadcast` import and channel
 /// constructor in this function are intentionally left in customer syntax so
 /// `#[laplace_sdk::verify(tasks)]` proves the macro rewrite path. ArcSwap is
-/// adopted explicitly through `laplace_rt::ModelArcSwap`; it is not a macro
+/// adopted explicitly through `laplace_model_rt::ModelArcSwap`; it is not a macro
 /// rewrite surface.
 #[allow(dead_code)]
 #[laplace_sdk::verify(tasks, name = "quilkin_filter_chain_store_notify_reload")]

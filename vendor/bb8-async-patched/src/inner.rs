@@ -1,4 +1,4 @@
-// Laplace hunt modification: route timeout/sleep through laplace_rt. The
+// Laplace hunt modification: route timeout/sleep through laplace_model_rt. The
 // reaper remains outside this hunt and keeps native interval_at semantics.
 
 use std::cmp::{max, min};
@@ -9,8 +9,8 @@ use std::time::{Duration, Instant};
 
 use futures_util::stream::{FuturesUnordered, StreamExt};
 use futures_util::TryFutureExt;
-use laplace_rt::spawn_task as spawn;
-use laplace_rt::time::{sleep, timeout};
+use laplace_model_rt::spawn_task as spawn;
+use laplace_model_rt::time::{sleep, timeout};
 use tokio::time::{interval_at, Interval};
 
 use crate::api::{

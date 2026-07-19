@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 #[laplace_macro::laplace_verify(scenario, expected = "clean")]
 fn scenario_rewrites_spawn_join() {
-    let value: Arc<laplace_rt::ModelMutex<u8>> = Arc::new(std::sync::Mutex::new(1_u8));
+    let value: Arc<laplace_model_rt::ModelMutex<u8>> = Arc::new(std::sync::Mutex::new(1_u8));
     let worker_value = Arc::clone(&value);
     let handle = std::thread::spawn(move || {
         let guard = worker_value.lock().expect("lock succeeds");

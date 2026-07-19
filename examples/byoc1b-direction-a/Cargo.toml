@@ -10,7 +10,7 @@ license = "Apache-2.0"
 [dependencies]
 laplace = { package = "laplace-macro", path = "../../crates/laplace-macro" }
 laplace-probe-sdk = { path = "../../crates/laplace-probe-sdk" }
-laplace-rt = { path = "../../crates/laplace-rt" }
+laplace-model-rt = { path = "../../crates/laplace-model-rt" }
 parking_lot = { version = "=0.12.5", features = ["laplace"] }
 crossbeam-channel = { version = "=0.5.15", features = ["laplace"] }
 

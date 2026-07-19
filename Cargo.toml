@@ -3,11 +3,10 @@ resolver = "2"
 members = [
     "crates/laplace-interfaces",
     "crates/laplace-dpor",
-    "crates/laplace-rt",
+    "crates/laplace-model-rt",
     "crates/laplace-macro",
     "crates/laplace-probe-common",
     "crates/laplace-probe-sdk",
-    "crates/laplace-harness",
     "crates/laplace-sdk",
     "examples/bb8-hunt",
     "examples/bb8-hunt2",
@@ -86,7 +85,6 @@ unexpected_cfgs = { level = "warn", check-cfg = ['cfg(kani)', 'cfg(laplace_priva
 
 # Patched crates for bug-detection examples (hunt examples only)
 [patch.crates-io]
-laplace-harness    = { path = "crates/laplace-harness" }
 lock_api          = { path = "vendor/lock_api-patched" }
 dashmap           = { path = "vendor/dashmap-patched" }
 parking_lot       = { path = "vendor/parking_lot-patched" }

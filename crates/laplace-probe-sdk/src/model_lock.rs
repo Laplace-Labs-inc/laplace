@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-//! Probe emission hook for `laplace_rt::ModelMutex`.
+//! Probe emission hook for `laplace_model_rt::ModelMutex`.
 
 use std::sync::Arc;
 
@@ -9,7 +9,7 @@ use crate::ProbeEvent;
 /// Probe hook that emits lock-order events for annotated `std::sync::Mutex`.
 pub struct ProbeLockHook;
 
-impl laplace_rt::LockHook for ProbeLockHook {
+impl laplace_model_rt::LockHook for ProbeLockHook {
     fn acquire(&self, resource: u64) {
         emit(ProbeEvent::LockAcquired {
             thread_id: current_thread_id(),
@@ -27,7 +27,7 @@ impl laplace_rt::LockHook for ProbeLockHook {
 
 /// Installs the process-local probe lock hook used by free-tier tests.
 pub fn install_probe_lock_hook() {
-    laplace_rt::install_lock_hook(Arc::new(ProbeLockHook));
+    laplace_model_rt::install_lock_hook(Arc::new(ProbeLockHook));
 }
 
 fn resource_name(resource: u64) -> String {

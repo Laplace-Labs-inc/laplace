@@ -5,7 +5,7 @@ use std::sync::Arc;
 
 #[laplace_macro::model]
 fn uses_qualified_std_mutex() {
-    let value: Arc<laplace_rt::ModelMutex<u8>> = Arc::new(std::sync::Mutex::new(1_u8));
+    let value: Arc<laplace_model_rt::ModelMutex<u8>> = Arc::new(std::sync::Mutex::new(1_u8));
     let guard = value.lock().expect("lock succeeds");
     assert_eq!(*guard, 1);
 }
@@ -20,7 +20,7 @@ fn uses_absolute_std_mutex() {
 
 #[laplace_macro::model]
 fn uses_turbofish_std_mutex_new() {
-    let value: laplace_rt::ModelMutex<u8> = std::sync::Mutex::<u8>::new(3);
+    let value: laplace_model_rt::ModelMutex<u8> = std::sync::Mutex::<u8>::new(3);
     let guard = value.lock().expect("lock succeeds");
     assert_eq!(*guard, 3);
 }

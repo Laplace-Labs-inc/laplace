@@ -17,8 +17,8 @@
 
 //! Generic connection pooling
 
-use laplace_rt::time::{sleep, timeout};
-use laplace_rt::{oneshot, watch, ModelAsyncNotify as Notify};
+use laplace_model_rt::time::{sleep, timeout};
+use laplace_model_rt::{oneshot, watch, ModelAsyncNotify as Notify};
 use log::{debug, warn};
 use parking_lot::{Mutex, RwLock};
 use std::collections::HashMap;

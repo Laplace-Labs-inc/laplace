@@ -9,7 +9,7 @@ use std::sync::atomic::Ordering;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
-use laplace_rt::ModelAsyncNotify as Notify;
+use laplace_model_rt::ModelAsyncNotify as Notify;
 #[cfg(not(target_has_atomic = "64"))]
 use portable_atomic::AtomicU64;
 

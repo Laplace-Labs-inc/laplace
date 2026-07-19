@@ -247,7 +247,7 @@ impl Unmodeled {
 }
 
 impl ModelRewrite {
-    /// Prepends a `let _ = ::laplace_rt::unmodeled::<MARKER>;` statement for each
+    /// Prepends a `let _ = ::laplace_model_rt::unmodeled::<MARKER>;` statement for each
     /// distinct un-modeled primitive seen, emitting an honest deprecation
     /// warning at the annotated function (anti-false-green, day-1 non-negotiable).
     fn inject_unmodeled_markers(&self, func: &mut ItemFn) {
@@ -335,7 +335,7 @@ impl VisitMut for ModelRewrite {
     }
 
     /// Rewrites a `tokio::select!` invocation's macro path to
-    /// [`laplace_rt::laplace_select`](crate) — the runtime-gated,
+    /// [`laplace_model_rt::laplace_select`](crate) — the runtime-gated,
     /// biased-under-a-model-run drop-in (see that macro's own doc).
     ///
     /// Only the macro's *path* is visited/rewritten here — `syn`'s default
@@ -364,7 +364,7 @@ impl VisitMut for ModelRewrite {
 
 impl ModelRewrite {
     /// Rewrites a direct `tokio::spawn` expression. In tasks mode the returned
-    /// value is the `laplace_rt::TaskHandle` shadow, so bindings, awaits, and
+    /// value is the `laplace_model_rt::TaskHandle` shadow, so bindings, awaits, and
     /// `abort()` calls remain visible to the modelled program.
     fn rewrite_discarded_spawn(&mut self, expr: &mut Expr) {
         let Expr::Call(call) = expr else {
@@ -406,7 +406,7 @@ fn is_supported_spawn_path(path: &Path) -> bool {
     )
 }
 
-/// The `::laplace_rt` model type name for a `std::sync` lock type, if supported.
+/// The `::laplace_model_rt` model type name for a `std::sync` lock type, if supported.
 fn model_target_for(ident: &Ident) -> Option<&'static str> {
     if ident == "Mutex" {
         Some("ModelMutex")
@@ -417,7 +417,7 @@ fn model_target_for(ident: &Ident) -> Option<&'static str> {
     }
 }
 
-/// Rewrites a `std::sync::{Mutex,RwLock}` *type* path to its `::laplace_rt`
+/// Rewrites a `std::sync::{Mutex,RwLock}` *type* path to its `::laplace_model_rt`
 /// model equivalent, preserving generic arguments.
 fn rewrite_std_sync_type_path(path: &Path) -> Option<Path> {
     let segments: Vec<_> = path.segments.iter().collect();
@@ -475,7 +475,7 @@ fn model_path(target: &str, arguments: PathArguments, method: Option<PathSegment
     path
 }
 
-/// The `::laplace_rt` model type name for a `tokio::sync` type, if
+/// The `::laplace_model_rt` model type name for a `tokio::sync` type, if
 /// supported. `Mutex`/`RwLock`/`Semaphore`/`Notify` are all modeled as of
 /// AXM2 A2-3 slice 2; the full `mpsc`/oneshot/watch/broadcast channel family
 /// is modeled via [`tokio_channel_fn_target_for`]/
@@ -495,7 +495,7 @@ fn tokio_model_target_for(ident: &Ident) -> Option<&'static str> {
     }
 }
 
-/// Rewrites a `tokio::sync::Mutex` *type* path to its `::laplace_rt` model
+/// Rewrites a `tokio::sync::Mutex` *type* path to its `::laplace_model_rt` model
 /// equivalent, preserving generic arguments.
 fn rewrite_tokio_sync_type_path(path: &Path) -> Option<Path> {
     let segments: Vec<_> = path.segments.iter().collect();
@@ -546,7 +546,7 @@ fn rewrite_tokio_sync_constructor_path(path: &Path) -> Option<Path> {
     ))
 }
 
-/// The `::laplace_rt` model channel module + name for a
+/// The `::laplace_model_rt` model channel module + name for a
 /// `tokio::sync::{mpsc,oneshot,watch,broadcast}::{channel,unbounded_channel}`
 /// constructor, if supported.
 fn tokio_channel_fn_target_for(
@@ -563,12 +563,12 @@ fn tokio_channel_fn_target_for(
     }
 }
 
-/// The `::laplace_rt` model channel module + type name for a
+/// The `::laplace_model_rt` model channel module + type name for a
 /// `tokio::sync::{mpsc,oneshot,watch,broadcast}::TYPE`, if supported.
 /// Channel-family types outside this set (`error::*`, `Permit`,
 /// `OwnedPermit`, `WeakSender`, ...) are intentionally left unrewritten —
 /// see the module's "loud residual" honesty-contract bullets in
-/// `async_mpsc`/`async_oneshot`/`async_watch` and `laplace_rt::broadcast`
+/// `async_mpsc`/`async_oneshot`/`async_watch` and `laplace_model_rt::broadcast`
 /// (whose error surface reuses tokio's own
 /// `tokio::sync::broadcast::error` types, so unrewritten error paths stay
 /// type-compatible).
@@ -594,7 +594,7 @@ fn tokio_channel_type_target_for(
 
 /// Rewrites a
 /// `tokio::sync::{mpsc,oneshot,watch,broadcast}::{channel,unbounded_channel}`
-/// *constructor* call path to its `::laplace_rt` model equivalent,
+/// *constructor* call path to its `::laplace_model_rt` model equivalent,
 /// preserving any turbofish generic arguments on the constructor segment.
 fn rewrite_tokio_sync_channel_constructor_path(path: &Path) -> Option<Path> {
     let segments: Vec<_> = path.segments.iter().collect();
@@ -620,7 +620,7 @@ fn rewrite_tokio_sync_channel_constructor_path(path: &Path) -> Option<Path> {
 }
 
 /// Rewrites a `tokio::sync::{mpsc,oneshot,watch,broadcast}::TYPE` *type*
-/// path to its `::laplace_rt` model equivalent, preserving generic
+/// path to its `::laplace_model_rt` model equivalent, preserving generic
 /// arguments.
 fn rewrite_tokio_sync_channel_type_path(path: &Path) -> Option<Path> {
     let segments: Vec<_> = path.segments.iter().collect();
@@ -656,7 +656,7 @@ fn channel_path(module: &str, name: &str, arguments: PathArguments) -> Path {
     path
 }
 
-/// The `::laplace_rt::time` free function name for a `tokio::time` seam
+/// The `::laplace_model_rt::time` free function name for a `tokio::time` seam
 /// function, if supported. `sleep`/`timeout`/`interval` are modeled as of
 /// AXM2 A2-4; the rest of `tokio::time` remains recognized-but-un-modeled
 /// via [`classify_tokio_time_unmodeled`].
@@ -694,7 +694,7 @@ fn rewrite_tokio_time_fn_path(path: &Path) -> Option<Path> {
     Some(parse_quote!(::laplace_sdk::rt::time::#ident))
 }
 
-/// The `::laplace_rt::time` model type name for a `tokio::time` type, if
+/// The `::laplace_model_rt::time` model type name for a `tokio::time` type, if
 /// supported.
 fn time_type_target_for(ident: &Ident) -> Option<&'static str> {
     if ident == "Sleep" {
@@ -1353,7 +1353,7 @@ mod tests {
     #[test]
     fn rewrite_maps_qualified_tokio_broadcast_channel_and_types() {
         // BCAST G4 keep (LEP-0027): broadcast is modeled — the constructor
-        // and Sender/Receiver types must rewrite to `laplace_rt::broadcast`
+        // and Sender/Receiver types must rewrite to `laplace_model_rt::broadcast`
         // and no TOKIO_CHANNEL blind-spot marker may remain.
         let out = rewrite_to_string(
             "fn f( \

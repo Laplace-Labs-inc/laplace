@@ -4,7 +4,7 @@ use laplace_probe_sdk::{
     clear_probe_sender, install_probe_lock_hook, run_verification_from, set_probe_sender,
     set_probe_thread_id, ProbeEvent, ProbeSessionConfig, ReferenceVerdict,
 };
-use laplace_rt::{JoinToken, SpawnHook};
+use laplace_model_rt::{JoinToken, SpawnHook};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::mpsc;
 
@@ -33,7 +33,7 @@ impl SpawnHook for SequentialProbeSpawnHook {
 }
 
 fn install_sequential_probe_spawn_hook() {
-    laplace_rt::install_spawn_hook(std::sync::Arc::new(SequentialProbeSpawnHook::new()));
+    laplace_model_rt::install_spawn_hook(std::sync::Arc::new(SequentialProbeSpawnHook::new()));
 }
 
 #[test]
@@ -43,10 +43,10 @@ fn shared_source_uses_real_parking_lot_mutex_without_laplace_mutex_traits() {
     assert!(source.contains("parking_lot::Mutex"));
     assert!(source.contains("std::thread::spawn"));
     assert!(source.contains("#[laplace::model]"));
-    assert!(!source.contains("laplace_sync"));
+    assert!(!source.contains("laplace_shadow_sync"));
     assert!(!source.contains("ModelLock"));
     assert!(!source.contains("env.spawn"));
-    assert!(!source.contains("laplace_rt::spawn"));
+    assert!(!source.contains("laplace_model_rt::spawn"));
 }
 
 #[test]
@@ -56,7 +56,7 @@ fn shared_source_uses_real_parking_lot_rwlock_without_laplace_mutex_traits() {
     assert!(source.contains("parking_lot::RwLock"));
     assert!(source.contains(".read()"));
     assert!(source.contains(".write()"));
-    assert!(!source.contains("laplace_sync"));
+    assert!(!source.contains("laplace_shadow_sync"));
     assert!(!source.contains("ModelLock"));
 }
 
@@ -67,7 +67,7 @@ fn shared_source_uses_real_crossbeam_channel_without_laplace_channel_traits() {
     assert!(source.contains("crossbeam_channel::bounded"));
     assert!(source.contains(".send("));
     assert!(source.contains(".recv()"));
-    assert!(!source.contains("laplace_sync"));
+    assert!(!source.contains("laplace_shadow_sync"));
     assert!(!source.contains("ChannelEvent"));
     assert!(!source.contains("run_live_channel"));
 }
@@ -124,10 +124,10 @@ fn shared_source_uses_real_std_sync_mutex_without_laplace_mutex_traits() {
     assert!(source.contains("std::sync::Mutex"));
     assert!(source.contains("std::thread::spawn"));
     assert!(source.contains("#[laplace::model]"));
-    assert!(!source.contains("laplace_rt::ModelMutex"));
-    assert!(!source.contains("laplace_rt::spawn"));
+    assert!(!source.contains("laplace_model_rt::ModelMutex"));
+    assert!(!source.contains("laplace_model_rt::spawn"));
     assert!(!source.contains("env.spawn"));
-    assert!(!source.contains("laplace_sync"));
+    assert!(!source.contains("laplace_shadow_sync"));
     assert!(!source.contains("ModelLock"));
 }
 
@@ -162,7 +162,7 @@ fn std_spawn_model_toy_route_detects_lock_order_cycle() {
     set_probe_sender(tx.clone());
     install_sequential_probe_spawn_hook();
     program::std_spawn_mutex_ab_ba_program();
-    laplace_rt::clear_spawn_hook();
+    laplace_model_rt::clear_spawn_hook();
     clear_probe_sender();
     drop(tx);
 
@@ -186,8 +186,8 @@ fn std_sync_mutex_model_toy_route_detects_lock_order_cycle() {
     install_sequential_probe_spawn_hook();
     install_probe_lock_hook();
     program::std_sync_mutex_ab_ba_program();
-    laplace_rt::clear_spawn_hook();
-    laplace_rt::clear_lock_hook();
+    laplace_model_rt::clear_spawn_hook();
+    laplace_model_rt::clear_lock_hook();
     clear_probe_sender();
     drop(tx);
 

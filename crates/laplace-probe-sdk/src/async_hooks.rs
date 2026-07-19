@@ -15,85 +15,85 @@ use crate::event::{
 use crate::session::{current_thread_id, emit};
 use crate::ProbeEvent;
 
-impl From<laplace_rt::AsyncAcquireKind> for AsyncAcquireKind {
-    fn from(kind: laplace_rt::AsyncAcquireKind) -> Self {
+impl From<laplace_model_rt::AsyncAcquireKind> for AsyncAcquireKind {
+    fn from(kind: laplace_model_rt::AsyncAcquireKind) -> Self {
         match kind {
-            laplace_rt::AsyncAcquireKind::Mutex => Self::Mutex,
-            laplace_rt::AsyncAcquireKind::RwRead => Self::RwRead,
-            laplace_rt::AsyncAcquireKind::RwWrite => Self::RwWrite,
-            laplace_rt::AsyncAcquireKind::SemaphorePermits(permits) => {
+            laplace_model_rt::AsyncAcquireKind::Mutex => Self::Mutex,
+            laplace_model_rt::AsyncAcquireKind::RwRead => Self::RwRead,
+            laplace_model_rt::AsyncAcquireKind::RwWrite => Self::RwWrite,
+            laplace_model_rt::AsyncAcquireKind::SemaphorePermits(permits) => {
                 Self::SemaphorePermits(permits)
             }
         }
     }
 }
 
-impl From<laplace_rt::AsyncChannelKind> for AsyncChannelKind {
-    fn from(kind: laplace_rt::AsyncChannelKind) -> Self {
+impl From<laplace_model_rt::AsyncChannelKind> for AsyncChannelKind {
+    fn from(kind: laplace_model_rt::AsyncChannelKind) -> Self {
         match kind {
-            laplace_rt::AsyncChannelKind::MpscBounded { capacity } => {
+            laplace_model_rt::AsyncChannelKind::MpscBounded { capacity } => {
                 Self::MpscBounded { capacity }
             }
-            laplace_rt::AsyncChannelKind::MpscUnbounded => Self::MpscUnbounded,
-            laplace_rt::AsyncChannelKind::Oneshot => Self::Oneshot,
-            laplace_rt::AsyncChannelKind::Watch => Self::Watch,
+            laplace_model_rt::AsyncChannelKind::MpscUnbounded => Self::MpscUnbounded,
+            laplace_model_rt::AsyncChannelKind::Oneshot => Self::Oneshot,
+            laplace_model_rt::AsyncChannelKind::Watch => Self::Watch,
             _ => unreachable!("laplace-probe-sdk channel kind mirror out of date"),
         }
     }
 }
 
-impl From<laplace_rt::AsyncChannelSide> for AsyncChannelSide {
-    fn from(side: laplace_rt::AsyncChannelSide) -> Self {
+impl From<laplace_model_rt::AsyncChannelSide> for AsyncChannelSide {
+    fn from(side: laplace_model_rt::AsyncChannelSide) -> Self {
         match side {
-            laplace_rt::AsyncChannelSide::Sender => Self::Sender,
-            laplace_rt::AsyncChannelSide::Receiver => Self::Receiver,
+            laplace_model_rt::AsyncChannelSide::Sender => Self::Sender,
+            laplace_model_rt::AsyncChannelSide::Receiver => Self::Receiver,
             _ => unreachable!("laplace-probe-sdk channel side mirror out of date"),
         }
     }
 }
 
-impl From<laplace_rt::AsyncChannelOp> for AsyncChannelOp {
-    fn from(op: laplace_rt::AsyncChannelOp) -> Self {
+impl From<laplace_model_rt::AsyncChannelOp> for AsyncChannelOp {
+    fn from(op: laplace_model_rt::AsyncChannelOp) -> Self {
         match op {
-            laplace_rt::AsyncChannelOp::Send => Self::Send,
-            laplace_rt::AsyncChannelOp::Recv => Self::Recv,
-            laplace_rt::AsyncChannelOp::Changed => Self::Changed,
+            laplace_model_rt::AsyncChannelOp::Send => Self::Send,
+            laplace_model_rt::AsyncChannelOp::Recv => Self::Recv,
+            laplace_model_rt::AsyncChannelOp::Changed => Self::Changed,
             _ => unreachable!("laplace-probe-sdk channel op mirror out of date"),
         }
     }
 }
 
-impl From<laplace_rt::AsyncChannelOutcome> for AsyncChannelOutcome {
-    fn from(outcome: laplace_rt::AsyncChannelOutcome) -> Self {
+impl From<laplace_model_rt::AsyncChannelOutcome> for AsyncChannelOutcome {
+    fn from(outcome: laplace_model_rt::AsyncChannelOutcome) -> Self {
         match outcome {
-            laplace_rt::AsyncChannelOutcome::Ok => Self::Ok,
-            laplace_rt::AsyncChannelOutcome::Closed => Self::Closed,
-            laplace_rt::AsyncChannelOutcome::Empty => Self::Empty,
-            laplace_rt::AsyncChannelOutcome::Full => Self::Full,
+            laplace_model_rt::AsyncChannelOutcome::Ok => Self::Ok,
+            laplace_model_rt::AsyncChannelOutcome::Closed => Self::Closed,
+            laplace_model_rt::AsyncChannelOutcome::Empty => Self::Empty,
+            laplace_model_rt::AsyncChannelOutcome::Full => Self::Full,
             _ => unreachable!("laplace-probe-sdk channel outcome mirror out of date"),
         }
     }
 }
 
-impl From<laplace_rt::AsyncBroadcastOp> for BroadcastOp {
-    fn from(op: laplace_rt::AsyncBroadcastOp) -> Self {
+impl From<laplace_model_rt::AsyncBroadcastOp> for BroadcastOp {
+    fn from(op: laplace_model_rt::AsyncBroadcastOp) -> Self {
         match op {
-            laplace_rt::AsyncBroadcastOp::Send => Self::Send,
-            laplace_rt::AsyncBroadcastOp::Recv => Self::Recv,
-            laplace_rt::AsyncBroadcastOp::TryRecv => Self::TryRecv,
-            laplace_rt::AsyncBroadcastOp::Resubscribe => Self::Resubscribe,
+            laplace_model_rt::AsyncBroadcastOp::Send => Self::Send,
+            laplace_model_rt::AsyncBroadcastOp::Recv => Self::Recv,
+            laplace_model_rt::AsyncBroadcastOp::TryRecv => Self::TryRecv,
+            laplace_model_rt::AsyncBroadcastOp::Resubscribe => Self::Resubscribe,
             _ => unreachable!("laplace-probe-sdk broadcast op mirror out of date"),
         }
     }
 }
 
-impl From<laplace_rt::AsyncBroadcastOutcome> for BroadcastOutcome {
-    fn from(outcome: laplace_rt::AsyncBroadcastOutcome) -> Self {
+impl From<laplace_model_rt::AsyncBroadcastOutcome> for BroadcastOutcome {
+    fn from(outcome: laplace_model_rt::AsyncBroadcastOutcome) -> Self {
         match outcome {
-            laplace_rt::AsyncBroadcastOutcome::Ok { receivers } => Self::Ok { receivers },
-            laplace_rt::AsyncBroadcastOutcome::Closed => Self::Closed,
-            laplace_rt::AsyncBroadcastOutcome::Empty => Self::Empty,
-            laplace_rt::AsyncBroadcastOutcome::Lagged { missed } => Self::Lagged { missed },
+            laplace_model_rt::AsyncBroadcastOutcome::Ok { receivers } => Self::Ok { receivers },
+            laplace_model_rt::AsyncBroadcastOutcome::Closed => Self::Closed,
+            laplace_model_rt::AsyncBroadcastOutcome::Empty => Self::Empty,
+            laplace_model_rt::AsyncBroadcastOutcome::Lagged { missed } => Self::Lagged { missed },
             _ => unreachable!("laplace-probe-sdk broadcast outcome mirror out of date"),
         }
     }
@@ -102,8 +102,8 @@ impl From<laplace_rt::AsyncBroadcastOutcome> for BroadcastOutcome {
 /// 런타임 async lock family hook의 probe 투영.
 pub struct ProbeAsyncLockHook;
 
-impl laplace_rt::AsyncLockHook for ProbeAsyncLockHook {
-    fn requested(&self, resource: u64, waiter: u64, kind: laplace_rt::AsyncAcquireKind) {
+impl laplace_model_rt::AsyncLockHook for ProbeAsyncLockHook {
+    fn requested(&self, resource: u64, waiter: u64, kind: laplace_model_rt::AsyncAcquireKind) {
         emit(ProbeEvent::AsyncLockRequested {
             thread_id: current_thread_id(),
             resource,
@@ -112,7 +112,7 @@ impl laplace_rt::AsyncLockHook for ProbeAsyncLockHook {
         });
     }
 
-    fn acquired(&self, resource: u64, waiter: u64, kind: laplace_rt::AsyncAcquireKind) {
+    fn acquired(&self, resource: u64, waiter: u64, kind: laplace_model_rt::AsyncAcquireKind) {
         emit(ProbeEvent::AsyncLockAcquired {
             thread_id: current_thread_id(),
             resource,
@@ -121,7 +121,7 @@ impl laplace_rt::AsyncLockHook for ProbeAsyncLockHook {
         });
     }
 
-    fn released(&self, resource: u64, waiter: u64, kind: laplace_rt::AsyncAcquireKind) {
+    fn released(&self, resource: u64, waiter: u64, kind: laplace_model_rt::AsyncAcquireKind) {
         emit(ProbeEvent::AsyncLockReleased {
             thread_id: current_thread_id(),
             resource,
@@ -158,7 +158,7 @@ impl laplace_rt::AsyncLockHook for ProbeAsyncLockHook {
 /// 런타임 async Notify hook의 probe 투영.
 pub struct ProbeAsyncNotifyHook;
 
-impl laplace_rt::AsyncNotifyHook for ProbeAsyncNotifyHook {
+impl laplace_model_rt::AsyncNotifyHook for ProbeAsyncNotifyHook {
     fn wait_requested(&self, resource: u64, waiter: u64) {
         emit(ProbeEvent::AsyncNotifyWaitRequested {
             thread_id: current_thread_id(),
@@ -201,8 +201,8 @@ impl laplace_rt::AsyncNotifyHook for ProbeAsyncNotifyHook {
 /// 런타임 async channel hook의 probe 투영.
 pub struct ProbeAsyncChannelHook;
 
-impl laplace_rt::AsyncChannelHook for ProbeAsyncChannelHook {
-    fn channel_created(&self, channel: u64, kind: laplace_rt::AsyncChannelKind) {
+impl laplace_model_rt::AsyncChannelHook for ProbeAsyncChannelHook {
+    fn channel_created(&self, channel: u64, kind: laplace_model_rt::AsyncChannelKind) {
         emit(ProbeEvent::AsyncChannelCreated {
             thread_id: current_thread_id(),
             channel,
@@ -210,7 +210,7 @@ impl laplace_rt::AsyncChannelHook for ProbeAsyncChannelHook {
         });
     }
 
-    fn op_requested(&self, channel: u64, op: u64, kind: laplace_rt::AsyncChannelOp) {
+    fn op_requested(&self, channel: u64, op: u64, kind: laplace_model_rt::AsyncChannelOp) {
         emit(ProbeEvent::AsyncChannelOpRequested {
             thread_id: current_thread_id(),
             channel,
@@ -223,8 +223,8 @@ impl laplace_rt::AsyncChannelHook for ProbeAsyncChannelHook {
         &self,
         channel: u64,
         op: u64,
-        kind: laplace_rt::AsyncChannelOp,
-        outcome: laplace_rt::AsyncChannelOutcome,
+        kind: laplace_model_rt::AsyncChannelOp,
+        outcome: laplace_model_rt::AsyncChannelOutcome,
     ) {
         emit(ProbeEvent::AsyncChannelOpResolved {
             thread_id: current_thread_id(),
@@ -243,7 +243,7 @@ impl laplace_rt::AsyncChannelHook for ProbeAsyncChannelHook {
         });
     }
 
-    fn endpoint_cloned(&self, channel: u64, side: laplace_rt::AsyncChannelSide) {
+    fn endpoint_cloned(&self, channel: u64, side: laplace_model_rt::AsyncChannelSide) {
         emit(ProbeEvent::AsyncChannelEndpointCloned {
             thread_id: current_thread_id(),
             channel,
@@ -251,7 +251,7 @@ impl laplace_rt::AsyncChannelHook for ProbeAsyncChannelHook {
         });
     }
 
-    fn endpoint_dropped(&self, channel: u64, side: laplace_rt::AsyncChannelSide) {
+    fn endpoint_dropped(&self, channel: u64, side: laplace_model_rt::AsyncChannelSide) {
         emit(ProbeEvent::AsyncChannelEndpointDropped {
             thread_id: current_thread_id(),
             channel,
@@ -271,7 +271,7 @@ impl laplace_rt::AsyncChannelHook for ProbeAsyncChannelHook {
 /// 현재 엔진 판정 경로에는 소비되지 않는다.
 pub struct ProbeAsyncBroadcastHook;
 
-impl laplace_rt::AsyncBroadcastHook for ProbeAsyncBroadcastHook {
+impl laplace_model_rt::AsyncBroadcastHook for ProbeAsyncBroadcastHook {
     fn broadcast_created(&self, resource: u64, capacity: usize) {
         emit(ProbeEvent::AsyncBroadcastCreated {
             thread_id: current_thread_id(),
@@ -294,7 +294,7 @@ impl laplace_rt::AsyncBroadcastHook for ProbeAsyncBroadcastHook {
         resource: u64,
         op: u64,
         receiver_id: Option<u64>,
-        kind: laplace_rt::AsyncBroadcastOp,
+        kind: laplace_model_rt::AsyncBroadcastOp,
     ) {
         emit(ProbeEvent::AsyncBroadcastOpRequested {
             thread_id: current_thread_id(),
@@ -310,8 +310,8 @@ impl laplace_rt::AsyncBroadcastHook for ProbeAsyncBroadcastHook {
         resource: u64,
         op: u64,
         receiver_id: Option<u64>,
-        kind: laplace_rt::AsyncBroadcastOp,
-        outcome: laplace_rt::AsyncBroadcastOutcome,
+        kind: laplace_model_rt::AsyncBroadcastOp,
+        outcome: laplace_model_rt::AsyncBroadcastOutcome,
     ) {
         emit(ProbeEvent::AsyncBroadcastOpResolved {
             thread_id: current_thread_id(),
@@ -334,7 +334,7 @@ impl laplace_rt::AsyncBroadcastHook for ProbeAsyncBroadcastHook {
     fn endpoint_cloned(
         &self,
         resource: u64,
-        side: laplace_rt::AsyncChannelSide,
+        side: laplace_model_rt::AsyncChannelSide,
         receiver_id: Option<u64>,
     ) {
         emit(ProbeEvent::AsyncBroadcastEndpointCloned {
@@ -348,7 +348,7 @@ impl laplace_rt::AsyncBroadcastHook for ProbeAsyncBroadcastHook {
     fn endpoint_dropped(
         &self,
         resource: u64,
-        side: laplace_rt::AsyncChannelSide,
+        side: laplace_model_rt::AsyncChannelSide,
         receiver_id: Option<u64>,
     ) {
         emit(ProbeEvent::AsyncBroadcastEndpointDropped {
@@ -363,7 +363,7 @@ impl laplace_rt::AsyncBroadcastHook for ProbeAsyncBroadcastHook {
 /// ArcSwap evidence cell hook의 probe 투영.
 pub struct ProbeAsyncCellHook;
 
-impl laplace_rt::AsyncCellHook for ProbeAsyncCellHook {
+impl laplace_model_rt::AsyncCellHook for ProbeAsyncCellHook {
     fn cell_created(&self, resource: u64) {
         emit(ProbeEvent::AsyncCellCreated {
             thread_id: current_thread_id(),
@@ -390,9 +390,9 @@ impl laplace_rt::AsyncCellHook for ProbeAsyncCellHook {
 
 /// Timer hook을 제외한 모든 probe async hook을 설치한다.
 pub fn install_probe_async_hooks() {
-    laplace_rt::install_async_lock_hook(Arc::new(ProbeAsyncLockHook));
-    laplace_rt::install_async_notify_hook(Arc::new(ProbeAsyncNotifyHook));
-    laplace_rt::install_async_channel_hook(Arc::new(ProbeAsyncChannelHook));
-    laplace_rt::install_async_broadcast_hook(Arc::new(ProbeAsyncBroadcastHook));
-    laplace_rt::install_async_cell_hook(Arc::new(ProbeAsyncCellHook));
+    laplace_model_rt::install_async_lock_hook(Arc::new(ProbeAsyncLockHook));
+    laplace_model_rt::install_async_notify_hook(Arc::new(ProbeAsyncNotifyHook));
+    laplace_model_rt::install_async_channel_hook(Arc::new(ProbeAsyncChannelHook));
+    laplace_model_rt::install_async_broadcast_hook(Arc::new(ProbeAsyncBroadcastHook));
+    laplace_model_rt::install_async_cell_hook(Arc::new(ProbeAsyncCellHook));
 }

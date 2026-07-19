@@ -12,40 +12,12 @@ use proc_macro::TokenStream;
 
 mod byoc_test;
 mod convenience;
-mod harness;
 mod model;
 mod target;
 mod tracked_derive;
 mod verify;
 
 use syn::parse_macro_input;
-
-/// Register a function as a verification harness via `inventory`.
-///
-/// The decorated function must have the signature:
-/// `fn(ThreadId, usize) -> Option<(Operation, ResourceId)>`
-///
-/// The macro emits the original function unchanged, followed by an
-/// `inventory::submit!` block that statically registers a
-/// `laplace_harness::registry::HarnessConfig`.
-///
-/// # Example
-///
-/// ```rust,ignore
-/// #[axiom_harness(name = "template", threads = 2, resources = 1,
-///                 desc = "Test harness")]
-/// pub fn op_provider(_thread: ThreadId, pc: usize) -> Option<(Operation, ResourceId)> {
-///     match pc {
-///         0 => Some((Operation::Request, ResourceId::new(0))),
-///         1 => Some((Operation::Release, ResourceId::new(0))),
-///         _ => None,
-///     }
-/// }
-/// ```
-#[proc_macro_attribute]
-pub fn axiom_harness(attr: TokenStream, item: TokenStream) -> TokenStream {
-    harness::axiom_harness_impl(attr, item)
-}
 
 /// Marker attribute for documentation and metadata purposes.
 ///
@@ -161,8 +133,8 @@ pub fn laplace_probe(attr: TokenStream, item: TokenStream) -> TokenStream {
 /// # Single-annotation control layer
 ///
 /// `#[laplace::verify]` self-contains the model rewrite: it applies the same
-/// `std::thread::spawn` → `::laplace_rt::spawn` and `std::sync::Mutex` →
-/// `::laplace_rt::ModelMutex` rewrite as `#[laplace::model]` to the function body
+/// `std::thread::spawn` → `::laplace_model_rt::spawn` and `std::sync::Mutex` →
+/// `::laplace_model_rt::ModelMutex` rewrite as `#[laplace::model]` to the function body
 /// before emitting the harness. Users therefore need only this one attribute;
 /// the separate `#[laplace::model]` attribute remains available for backward
 /// compatibility. Note that the compile-time `[patch.crates-io]` redirection is
@@ -212,7 +184,7 @@ pub fn laplace_verify(attr: TokenStream, item: TokenStream) -> TokenStream {
 }
 
 /// Annotates a model function and routes qualified `std::thread::spawn` calls
-/// through `laplace_rt::spawn`.
+/// through `laplace_model_rt::spawn`.
 ///
 /// P-1 rewrites exactly these call paths:
 /// `std::thread::spawn`, `::std::thread::spawn`, and `thread::spawn`.

@@ -62,7 +62,7 @@ pub enum AsyncChannelOutcome {
     Full,
 }
 
-/// W broadcast operation vocabulary mirrored from `laplace_rt`.
+/// W broadcast operation vocabulary mirrored from `laplace_model_rt`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum BroadcastOp {
@@ -72,7 +72,7 @@ pub enum BroadcastOp {
     Resubscribe,
 }
 
-/// W broadcast outcome vocabulary mirrored from `laplace_rt`.
+/// W broadcast outcome vocabulary mirrored from `laplace_model_rt`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
 pub enum BroadcastOutcome {
@@ -368,7 +368,7 @@ impl ProbeEvent {
             | Self::CancelRequested { .. }
             | Self::TaskCompleted { .. } => None,
             // [v2] Notify vocabulary carries a numeric `notify_id` identity
-            // (mirrors `laplace_sync::notify::NotifyEvent`), not a named
+            // (mirrors `laplace_shadow_sync::notify::NotifyEvent`), not a named
             // resource — same policy as the other [v2] async variants above.
             Self::NotifyWaiterRegistered { .. }
             | Self::NotifyStoredPermit { .. }

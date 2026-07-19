@@ -68,7 +68,7 @@ Annotate your test harness:
 ```rust
 use laplace_sdk::prelude::*;
 
-#[axiom_harness]
+#[laplace_sdk::verify]
 async fn my_concurrent_test() {
     // Laplace exhaustively explores all interleavings
     let mutex = TrackedMutex::new(0u64);
@@ -98,7 +98,7 @@ The `laplace` CLI binary contains the Ki-DPOR engine. Your code only depends on 
 ```
 Your crate
 └── laplace-sdk          (this repo, ~thin client)
-    └── #[axiom_harness] (instrumentation only)
+    └── #[laplace_sdk::verify] (instrumentation only)
 
 laplace binary           (installed separately)
 └── Ki-DPOR engine       (closed, exhaustive verification)
@@ -127,11 +127,10 @@ This repository contains the open SDK tier. The engine is distributed as a CLI b
 | Crate | Status | Description |
 | :--- | :--- | :--- |
 | `laplace-interfaces` | published | ABI/FFI types (`#[repr(C)]`) |
-| `laplace-macro` | published | Proc-macros (`#[axiom_harness]`) |
+| `laplace-macro` | published | Proc-macros (`#[laplace_sdk::verify]`) |
 | `laplace-probe-common` | published | `RawProbeEvent` ABI |
 | `laplace-sdk` | alpha-2 | Master re-export — user entry point |
 | `laplace-probe-sdk` | alpha-2 | `TrackedMutex`, BYOC integration |
-| `laplace-harness` | alpha-2 | Built-in verification scenarios |
 
 ---
 

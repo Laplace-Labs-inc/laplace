@@ -16,7 +16,7 @@ path = "src/lib.rs"
 
 [dependencies]
 crossbeam-queue = "0.3"
-laplace-rt = { path = "../../crates/laplace-rt" }
+laplace-model-rt = { path = "../../crates/laplace-model-rt" }
 log = "0.4"
 lru = "0.16.3"
 parking_lot = "0.12"
