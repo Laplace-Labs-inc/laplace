@@ -73,6 +73,9 @@ pub fn channel<T: Clone>(capacity: usize) -> (Sender<T>, Receiver<T>) {
 pub struct Sender<T> {
     inner: tokio::sync::broadcast::Sender<T>,
     resource: u64,
+    /// Per-channel send position reported to `subscribed`. A position, not an
+    /// id namespace, so the fail-closed id policy (ENGAUD F8) does not apply:
+    /// nothing is named by it and it cannot alias two entities into one.
     send_seq: Arc<AtomicU64>,
 }
 

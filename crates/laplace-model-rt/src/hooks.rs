@@ -457,8 +457,19 @@ pub fn reset_model_mutex_ids_for_model() {
 }
 
 /// Allocates the next distinct process-local model resource id.
+///
+/// Fail-closed on exhaustion, the same policy
+/// [`next_native_dynamic_task_id`] already applies: a wrapped counter would
+/// hand two distinct model mutexes the same resource id, which the engine
+/// reads as *one* resource — a silently wrong model instead of a loud
+/// failure. Exhausting `u64` is unreachable in a real run, so this is a
+/// policy statement rather than a live branch.
 pub(crate) fn next_lock_resource_id() -> u64 {
-    NEXT_LOCK_RESOURCE_ID.fetch_add(1, Ordering::SeqCst)
+    NEXT_LOCK_RESOURCE_ID
+        .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+            current.checked_add(1)
+        })
+        .expect("laplace: model lock resource id namespace exhausted")
 }
 
 /// Installs or replaces the process-local async lock hook.
@@ -659,16 +670,38 @@ pub fn reset_model_async_ids_for_model() {
 /// Allocates the next distinct process-local model async model-family
 /// resource id (also used as a channel id by the `mpsc`/oneshot/watch
 /// channel seams).
+/// Test-only: positions every model id counter one step from exhaustion so the
+/// fail-closed branches are reachable without performing `u64::MAX`
+/// allocations. Callers must hold the tests' serialization guard and restore
+/// with [`reset_model_mutex_ids_for_model`] +
+/// [`reset_model_async_ids_for_model`].
+#[cfg(test)]
+pub(crate) fn saturate_model_id_counters_for_test() {
+    NEXT_LOCK_RESOURCE_ID.store(u64::MAX, Ordering::SeqCst);
+    NEXT_ASYNC_LOCK_RESOURCE_ID.store(u64::MAX, Ordering::SeqCst);
+    NEXT_ASYNC_LOCK_WAITER_ID.store(u64::MAX, Ordering::SeqCst);
+}
+
+/// Fail-closed on exhaustion — see [`next_lock_resource_id`] for the policy.
 pub(crate) fn next_async_lock_resource_id() -> u64 {
-    NEXT_ASYNC_LOCK_RESOURCE_ID.fetch_add(1, Ordering::SeqCst)
+    NEXT_ASYNC_LOCK_RESOURCE_ID
+        .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+            current.checked_add(1)
+        })
+        .expect("laplace: model async resource id namespace exhausted")
 }
 
 /// Allocates the next distinct process-local model async model-family waiter
 /// id, one per acquisition-future call (not per task — see
 /// [`crate::ModelAsyncLock`]). Also used as a channel op id by the
 /// `mpsc`/oneshot/watch channel seams, one per send/recv/changed call.
+/// Fail-closed on exhaustion — see [`next_lock_resource_id`] for the policy.
 pub(crate) fn next_async_lock_waiter_id() -> u64 {
-    NEXT_ASYNC_LOCK_WAITER_ID.fetch_add(1, Ordering::SeqCst)
+    NEXT_ASYNC_LOCK_WAITER_ID
+        .fetch_update(Ordering::SeqCst, Ordering::SeqCst, |current| {
+            current.checked_add(1)
+        })
+        .expect("laplace: model async waiter id namespace exhausted")
 }
 
 /// Lazily-assigned resource id for `const fn` constructors (`const_new`).

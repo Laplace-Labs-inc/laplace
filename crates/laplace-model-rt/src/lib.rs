@@ -348,4 +348,55 @@ mod tests {
             .expect("native tokio task must run")
             .expect("native task must send its completion signal");
     }
+
+    /// ENGAUD F8 non-vacuity: every model id namespace must fail closed on
+    /// exhaustion rather than wrap into an alias. Each counter is positioned
+    /// one step from the end and the next allocation is required to panic —
+    /// swapping any allocator back to a wrapping `fetch_add` makes this fail.
+    #[test]
+    fn exhausted_model_id_namespaces_fail_closed_instead_of_aliasing() {
+        let _serial = serial();
+        crate::hooks::saturate_model_id_counters_for_test();
+
+        let outcomes = [
+            (
+                "model lock resource id",
+                std::panic::catch_unwind(crate::hooks::next_lock_resource_id),
+            ),
+            (
+                "model async resource id",
+                std::panic::catch_unwind(crate::hooks::next_async_lock_resource_id),
+            ),
+            (
+                "model async waiter id",
+                std::panic::catch_unwind(crate::hooks::next_async_lock_waiter_id),
+            ),
+        ];
+
+        reset_model_mutex_ids_for_model();
+        reset_model_async_ids_for_model();
+
+        for (expected, outcome) in outcomes {
+            let payload = outcome
+                .err()
+                .unwrap_or_else(|| panic!("{expected} must not wrap into an alias"));
+            let message = payload
+                .downcast_ref::<String>()
+                .cloned()
+                .or_else(|| payload.downcast_ref::<&str>().map(|s| (*s).to_string()))
+                .unwrap_or_default();
+            assert!(
+                message.contains(expected),
+                "unexpected panic payload for {expected}: {message}"
+            );
+        }
+
+        // Positive control: the reset restored allocation for the rest of the
+        // suite instead of leaving a poisoned global behind.
+        assert_eq!(crate::hooks::next_lock_resource_id(), 1);
+        assert_eq!(crate::hooks::next_async_lock_resource_id(), 1);
+        assert_eq!(crate::hooks::next_async_lock_waiter_id(), 1);
+        reset_model_mutex_ids_for_model();
+        reset_model_async_ids_for_model();
+    }
 }
