@@ -4,7 +4,8 @@
 use std::sync::Arc;
 
 use crate::session::{
-    clear_current_task_id, current_task_id, emit, set_current_task_id, set_probe_thread_id,
+    clear_current_task_id, current_task_id, current_thread_id, emit, set_current_task_id,
+    set_probe_thread_id,
 };
 use crate::ProbeEvent;
 
@@ -62,6 +63,20 @@ impl laplace_model_rt::TaskObserverHook for ProbeTaskHook {
     fn task_completed(&self, task: u64) {
         clear_current_task_id();
         emit(ProbeEvent::TaskCompleted { task_id: task });
+    }
+
+    fn join_requested(&self, joined: u64) {
+        emit(ProbeEvent::TaskJoinRequested {
+            thread_id: current_thread_id(),
+            joined_task_id: joined,
+        });
+    }
+
+    fn join_resolved(&self, joined: u64) {
+        emit(ProbeEvent::TaskJoinResolved {
+            thread_id: current_thread_id(),
+            joined_task_id: joined,
+        });
     }
 }
 

@@ -52,14 +52,32 @@ impl TaskCompletion {
 /// A handle that resolves when its associated `TaskSet` task reaches a terminal
 /// state, including a contained panic.
 pub struct TaskHandle {
+    task: u64,
     completion: Arc<TaskCompletion>,
+    requested: bool,
+    resolved: bool,
 }
 
 impl Future for TaskHandle {
     type Output = ();
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        self.get_mut().completion.poll(cx)
+        let this = self.get_mut();
+        let hook = task_observer_hook();
+        if !this.requested {
+            this.requested = true;
+            if let Some(hook) = hook.as_ref() {
+                hook.join_requested(this.task);
+            }
+        }
+        let outcome = this.completion.poll(cx);
+        if outcome.is_ready() && !this.resolved {
+            this.resolved = true;
+            if let Some(hook) = hook.as_ref() {
+                hook.join_resolved(this.task);
+            }
+        }
+        outcome
     }
 }
 
@@ -107,7 +125,12 @@ impl TaskSet {
             finished: false,
         }));
 
-        TaskHandle { completion }
+        TaskHandle {
+            task,
+            completion,
+            requested: false,
+            resolved: false,
+        }
     }
 
     /// Consumes the collection for the native runner.

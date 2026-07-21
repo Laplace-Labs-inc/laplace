@@ -154,6 +154,7 @@ impl std::error::Error for TaskJoinError {}
 enum TaskHandleMode<T> {
     Native(tokio::task::JoinHandle<T>),
     ObservedNative {
+        task: u64,
         handle: tokio::task::JoinHandle<()>,
         output: Arc<Mutex<Option<T>>>,
         panicked: Arc<AtomicBool>,
@@ -167,32 +168,44 @@ enum TaskHandleMode<T> {
 /// Tokio-compatible shadow of an async task join handle.
 pub struct TaskHandle<T> {
     mode: TaskHandleMode<T>,
+    /// Join reporting state; only the observed-native mode reports, because it
+    /// is the only mode whose task carries a capture identity.
+    requested: bool,
+    resolved: bool,
 }
 
 impl<T> TaskHandle<T> {
     fn native(handle: tokio::task::JoinHandle<T>) -> Self {
         Self {
             mode: TaskHandleMode::Native(handle),
+            requested: false,
+            resolved: false,
         }
     }
 
     fn observed_native(
+        task: u64,
         handle: tokio::task::JoinHandle<()>,
         output: Arc<Mutex<Option<T>>>,
         panicked: Arc<AtomicBool>,
     ) -> Self {
         Self {
             mode: TaskHandleMode::ObservedNative {
+                task,
                 handle,
                 output,
                 panicked,
             },
+            requested: false,
+            resolved: false,
         }
     }
 
     fn engine(control: Box<dyn TaskControl>, output: Arc<Mutex<Option<T>>>) -> Self {
         Self {
             mode: TaskHandleMode::Engine { control, output },
+            requested: false,
+            resolved: false,
         }
     }
 
@@ -221,7 +234,33 @@ impl<T> Future for TaskHandle<T> {
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let this = self.get_mut();
-        match &mut this.mode {
+        if let TaskHandleMode::ObservedNative { task, .. } = &this.mode {
+            if !this.requested {
+                this.requested = true;
+                if let Some(hook) = task_observer_hook() {
+                    hook.join_requested(*task);
+                }
+            }
+        }
+        let outcome = Self::poll_mode(&mut this.mode, cx);
+        if outcome.is_ready() && !this.resolved {
+            this.resolved = true;
+            if let TaskHandleMode::ObservedNative { task, .. } = &this.mode {
+                if let Some(hook) = task_observer_hook() {
+                    hook.join_resolved(*task);
+                }
+            }
+        }
+        outcome
+    }
+}
+
+impl<T> TaskHandle<T> {
+    fn poll_mode(
+        mode: &mut TaskHandleMode<T>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<T, TaskJoinError>> {
+        match mode {
             TaskHandleMode::Native(handle) => Pin::new(handle).poll(cx).map(|result| {
                 result.map_err(|error| {
                     if error.is_cancelled() {
@@ -235,6 +274,7 @@ impl<T> Future for TaskHandle<T> {
                 handle,
                 output,
                 panicked,
+                ..
             } => Pin::new(handle).poll(cx).map(|result| {
                 result
                     .map_err(|error| {
@@ -346,7 +386,7 @@ where
             panicked: Arc::clone(&panicked),
         };
         let observed = ObservedTask::without_completion(task, observed_future);
-        return TaskHandle::observed_native(tokio::spawn(observed), output, panicked);
+        return TaskHandle::observed_native(task, tokio::spawn(observed), output, panicked);
     }
     TaskHandle::native(tokio::spawn(future))
 }

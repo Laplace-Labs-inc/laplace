@@ -152,6 +152,15 @@ pub enum ProbeEvent {
     CancelRequested { task_id: u64 },
     /// [v2] An async task completed (ready or cancelled).
     TaskCompleted { task_id: u64 },
+    /// [v2] A task began awaiting another task's completion handle.
+    ///
+    /// The other task/channel variants record *what* each task did; this pair
+    /// records *when it had to wait*. A consumer that reconstructs a program
+    /// from a capture without it must substitute some blunt stand-in for the
+    /// missing structure.
+    TaskJoinRequested { thread_id: u64, joined_task_id: u64 },
+    /// [v2] An awaited completion handle resolved.
+    TaskJoinResolved { thread_id: u64, joined_task_id: u64 },
     /// [v2] A task registered as a waiter on a Notify slot.
     NotifyWaiterRegistered { notify_id: u64, task_id: u64 },
     /// [v2] A notify call stored the single permit bit.
@@ -366,7 +375,9 @@ impl ProbeEvent {
             | Self::FutureReady { .. }
             | Self::WakeIssued { .. }
             | Self::CancelRequested { .. }
-            | Self::TaskCompleted { .. } => None,
+            | Self::TaskCompleted { .. }
+            | Self::TaskJoinRequested { .. }
+            | Self::TaskJoinResolved { .. } => None,
             // [v2] Notify vocabulary carries a numeric `notify_id` identity
             // (mirrors `laplace_shadow_sync::notify::NotifyEvent`), not a named
             // resource — same policy as the other [v2] async variants above.

@@ -96,6 +96,17 @@ pub trait TaskObserverHook: Send + Sync {
 
     /// Reports that a task reached a terminal state.
     fn task_completed(&self, task: u64);
+
+    /// Reports that the polling task began awaiting `joined`'s completion
+    /// handle, emitted once on the handle's first poll. This is the *when it
+    /// had to wait* half of a capture: without it a consumer sees which
+    /// operations each task performed but not where one task's progress was
+    /// gated on another's completion. The default preserves source
+    /// compatibility, like [`Self::dynamic_task_spawned`].
+    fn join_requested(&self, _joined: u64) {}
+
+    /// Reports that an awaited completion handle resolved.
+    fn join_resolved(&self, _joined: u64) {}
 }
 
 /// Acquisition mode for an async lock-family boundary.
