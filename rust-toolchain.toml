@@ -1,0 +1,15 @@
+# Pinned compiler for this workspace.
+#
+# The trybuild ui snapshots in laplace-macro / laplace-sdk compare rustc's own
+# diagnostic text, so a toolchain roll rewrites the expected output and turns CI
+# red for a pure wording change — rustc renamed "non-inline modules in proc macro
+# input are unstable" to "file modules in ..." (E0658), which is exactly how this
+# file came to exist. The pin makes those snapshots deterministic across CI,
+# local checkouts, and contributors; raising the toolchain becomes an explicit
+# re-bless PR instead of a surprise red on an unrelated change.
+#
+# rustup resolves this file from the current directory, not from --manifest-path:
+# run cargo from inside this workspace (cd open) or the pin is silently ignored.
+[toolchain]
+channel = "1.97.1"
+components = ["rustfmt", "clippy"]
