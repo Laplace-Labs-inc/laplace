@@ -4,8 +4,7 @@
 use std::sync::Arc;
 
 use crate::session::{
-    clear_current_task_id, current_task_id, current_thread_id, emit, set_current_task_id,
-    set_probe_thread_id,
+    clear_current_task_id, current_task_id, emit, set_current_task_id, set_probe_thread_id,
 };
 use crate::ProbeEvent;
 
@@ -66,17 +65,64 @@ impl laplace_model_rt::TaskObserverHook for ProbeTaskHook {
     }
 
     fn join_requested(&self, joined: u64) {
+        let Some(thread_id) = current_task_id() else {
+            return;
+        };
         emit(ProbeEvent::TaskJoinRequested {
-            thread_id: current_thread_id(),
+            thread_id,
             joined_task_id: joined,
         });
     }
 
     fn join_resolved(&self, joined: u64) {
+        let Some(thread_id) = current_task_id() else {
+            return;
+        };
         emit(ProbeEvent::TaskJoinResolved {
-            thread_id: current_thread_id(),
+            thread_id,
             joined_task_id: joined,
         });
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::event::ProbeEvent;
+    use crate::session::{clear_probe_sender, set_probe_sender};
+    use laplace_model_rt::TaskObserverHook;
+    use std::sync::mpsc;
+
+    #[test]
+    fn join_attribution_requires_a_current_task() {
+        let (tx, rx) = mpsc::sync_channel(8);
+        set_probe_sender(tx);
+        clear_current_task_id();
+        assert_eq!(current_task_id(), None);
+        let hook = ProbeTaskHook;
+        hook.join_requested(9);
+        hook.join_resolved(9);
+        clear_probe_sender();
+        let events: Vec<ProbeEvent> = rx.into_iter().collect();
+        assert!(events.is_empty(), "task-less joins must not be captured");
+
+        let (tx, rx) = mpsc::sync_channel(8);
+        set_probe_sender(tx);
+        set_current_task_id(7);
+        assert_eq!(current_task_id(), Some(7));
+        hook.join_requested(9);
+        clear_probe_sender();
+        let events: Vec<ProbeEvent> = rx.into_iter().collect();
+        assert_eq!(events.len(), 1);
+        assert!(matches!(
+            events.as_slice(),
+            [ProbeEvent::TaskJoinRequested {
+                thread_id: 7,
+                joined_task_id: 9,
+            }]
+        ));
+
+        clear_current_task_id();
     }
 }
 
