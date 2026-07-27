@@ -1,6 +1,6 @@
 #![deny(clippy::all, clippy::pedantic)]
 
-//! Basic DashMap test without probing to verify TrackedParkingLotRwLock works
+//! Basic `DashMap` test without probing to verify `TrackedParkingLotRwLock` works
 
 use dashmap::DashMap;
 use std::sync::Arc;
@@ -33,9 +33,9 @@ fn dashmap_concurrent_basic() {
     for tid in 0..2 {
         let m = map.clone();
         handles.push(std::thread::spawn(move || {
-            m.insert(format!("key_{}", tid), tid as i64);
-            let val = m.get(&format!("key_{}", tid)).unwrap();
-            assert_eq!(*val, tid as i64);
+            m.insert(format!("key_{tid}"), i64::from(tid));
+            let val = m.get(&format!("key_{tid}")).unwrap();
+            assert_eq!(*val, i64::from(tid));
         }));
     }
 

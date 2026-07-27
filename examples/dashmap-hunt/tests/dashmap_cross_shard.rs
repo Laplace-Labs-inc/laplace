@@ -1,14 +1,14 @@
 #![deny(clippy::all, clippy::pedantic)]
 
-//! DashMap 실전 버그 사냥 — 교차 shard AB-BA Deadlock
+//! `DashMap` 실전 버그 사냥 — 교차 shard AB-BA Deadlock
 //!
-//! DashMap v6.1의 각 shard RwLock이 TrackedStdRwLock으로 패치됨.
+//! `DashMap` v6.1의 각 shard `RwLock`이 `TrackedStdRwLock`으로 패치됨.
 //! 서로 다른 shard의 lock을 교차 획득하면 AB-BA 교착이 발생한다.
-//! 이것은 DashMap의 **알려진 교착 패턴**이다.
+//! 이것은 `DashMap`의 **알려진 교착 패턴**이다.
 //!
-//! 참조: "Beware of the DashMap deadlock" 블로그
+//! 참조: "Beware of the `DashMap` deadlock" 블로그
 //!
-//! 탐색 깊이: max_depth = 100_000 (최대)
+//! 탐색 깊이: `max_depth` = `100_000` (최대)
 
 use dashmap::DashMap;
 use laplace_probe_sdk::{
@@ -21,13 +21,13 @@ use std::sync::{mpsc, Arc};
 // Scenario 1: 교차 shard get() + insert() — 알려진 교착 패턴 (핵심!)
 // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-/// DashMap의 알려진 교착 패턴:
-/// Ref (read guard)를 보유한 채 다른 shard에 insert (write lock) 시도.
+/// `DashMap`의 알려진 교착 패턴:
+/// `Ref` (read guard)를 보유한 채 다른 shard에 insert (write lock) 시도.
 ///
-/// Thread 0: get("alpha") → read(shard_A) 보유 → insert("beta") → write(shard_B) 시도
-/// Thread 1: get("beta")  → read(shard_B) 보유 → insert("alpha") → write(shard_A) 시도
+/// Thread 0: get("alpha") → read(`shard_A`) 보유 → insert("beta") → write(`shard_B`) 시도
+/// Thread 1: get("beta")  → read(`shard_B`) 보유 → insert("alpha") → write(`shard_A`) 시도
 ///
-/// Expected: BugFound (AB-BA Deadlock)
+/// Expected: `BugFound` (AB-BA Deadlock)
 #[test]
 fn dashmap_cross_shard_deadlock() {
     let events = vec![
@@ -87,7 +87,7 @@ fn dashmap_concurrent_insert() {
             set_probe_thread_id(tid);
 
             // 각 스레드가 다른 키에 insert
-            m.insert(format!("thread_{}_key", tid), tid as i64);
+            m.insert(format!("thread_{tid}_key"), tid.cast_signed());
         }));
     }
 

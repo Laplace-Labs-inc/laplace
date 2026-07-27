@@ -17,6 +17,12 @@ members = [
     "examples/quilkin-xds-analog",
     "examples/byoc-demo",
     "examples/crossbeam-hunt",
+    # Promoted out of `exclude` 2026-07-27 (REDESIGN-2a): the recorded blocker
+    # ("resolve the parking_lot patch with SDK parking_lot_tracking without a
+    # Cargo cycle") was not a cycle — dashmap-patched's `laplace` feature simply
+    # never turned `laplace-probe-sdk/parking_lot_tracking` on, so the three
+    # TrackedParkingLotRwLock imports failed and 84 errors cascaded from them.
+    "examples/dashmap-hunt",
     "examples/deadpool-hunt",
     "examples/integration-test",
     "examples/known-bug-hunt",
@@ -30,11 +36,20 @@ exclude = [
     "examples/ebpf-lock-test",
     # Depends on cloud/private laplace_probe paths; keep out of public workspace checks.
     "examples/demo-server",
-    # Requires resolving the parking_lot patch with SDK parking_lot_tracking without a Cargo cycle.
-    "examples/dashmap-hunt",
-    # Requires resolving the parking_lot patch with SDK parking_lot_tracking without a Cargo cycle.
+    # Measured 2026-07-27 (REDESIGN-2a): the stated "parking_lot patch vs SDK
+    # parking_lot_tracking Cargo cycle" does not exist. parking_lot-patched's
+    # dependency on the SDK is optional and off, so enabling the feature resolves
+    # cleanly — `laplace-probe-sdk = { features = ["parking_lot_tracking"] }` in
+    # this example's dev-dependencies builds and passes 6/6 with 0 hangs in 120
+    # runs. What is left is 27 clippy::pedantic findings this crate never saw
+    # while it sat outside the workspace. Promotion is a follow-up, not a cycle.
     "examples/parking_lot-hunt",
-    # Patched tokio exposes unstable all-features knobs that require tokio_unstable.
+    # Measured 2026-07-27 (REDESIGN-2a): tokio_unstable is not the blocker — the
+    # patched tokio builds clean here. Two real defects are: `tokio_three_lock_chain`
+    # asserts a bug the public reference checker structurally cannot find (it
+    # detects 2-cycles; that test builds a 3-cycle A->B->C->A), and the suite
+    # executes real blocking lock cycles on real OS threads, so it self-deadlocks
+    # 14/60 runs. Fix the test, not the workspace wiring.
     "examples/tokio-hunt",
     # Vendored upstream patched crates auto-promote from [patch.crates-io] paths; do not lint upstream code as first-class workspace code.
     "vendor/bb8-patched",

@@ -1,15 +1,15 @@
 #![deny(clippy::all, clippy::pedantic)]
 
-//! DashMap async Ref deadlock — Ki-DPOR 탐지
+//! `DashMap` async `Ref` deadlock — Ki-DPOR 탐지
 //!
 //! 알려진 패턴: GitHub Issues #79, #253
 //! Ref (read guard) 보유 중 다른 shard에 대한 insert (write lock) 시도.
 //! async 코드에서는 .await 포인트에서 Ref를 보유하면 더 쉽게 발생.
 //!
-//! 이미 cross_shard 테스트에서 검증됨 — 이 테스트는 "Ref 보유 기간이 긴" 패턴
+//! 이미 `cross_shard` 테스트에서 검증됨 — 이 테스트는 "Ref 보유 기간이 긴" 패턴
 //! (실제 async 코드의 .await 지점을 시뮬레이션)에 집중한다.
 //!
-//! Scenario A: Ref + RefMut 교차 획득 (더 긴 hold time 시뮬레이션) — BugFound
+//! Scenario A: `Ref` + `RefMut` 교차 획득 (더 긴 hold time 시뮬레이션) — `BugFound`
 //! Scenario B: 동일 shard 연속 접근 (CLEAN baseline) — CLEAN
 
 use dashmap::DashMap;

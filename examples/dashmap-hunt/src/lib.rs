@@ -1,3 +1,3 @@
 #![deny(clippy::all, clippy::pedantic)]
 
-//! DashMap bug hunting harness
+//! `DashMap` bug hunting harness
