@@ -68,7 +68,7 @@ edition = "2021"
 rust-version = "1.88.0"
 authors = ["Laplace Labs"]
 license = "Apache-2.0"
-repository = "https://github.com/laplace-labs/laplace"
+repository = "https://github.com/Laplace-Labs-inc/laplace"
 
 [workspace.dependencies]
 tokio = { version = "1.42", features = ["full"] }
