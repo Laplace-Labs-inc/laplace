@@ -75,7 +75,6 @@ jobs:
             -p laplace-macro \
             -p laplace-probe-common \
             -p laplace-probe-sdk \
-            -p laplace-dpor \
             -p laplace-sdk
 
       # Adopter first-mile gate: the generated `#[verify]` harness + hand-written

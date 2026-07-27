@@ -12,14 +12,12 @@ categories = ["development-tools::testing", "concurrency"]
 
 [features]
 default = []
-dpor = ["dep:laplace-dpor"]
 cloud        = ["laplace-probe-sdk/cloud"]
 
 [dependencies]
 laplace-probe-sdk = { path = "../laplace-probe-sdk", version = "0.1.0-alpha-1" }
 laplace-macro     = { path = "../laplace-macro", version = "0.1.0-alpha-1" }
 laplace-model-rt        = { path = "../laplace-model-rt", version = "0.1.0-alpha-1" }
-laplace-dpor      = { path = "../laplace-dpor", version = "0.1.0-alpha-1", optional = true }
 tokio             = { workspace = true }
 
 [dev-dependencies]
