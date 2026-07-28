@@ -111,7 +111,7 @@ pub use rwlock::{ModelRwLock, ModelRwLockReadGuard, ModelRwLockWriteGuard};
 pub use spawn::{
     spawn, spawn_task, JoinToken, TaskControl, TaskControlState, TaskHandle, TaskJoinError,
 };
-pub use task_set::{TaskHandle as TaskSetHandle, TaskSet};
+pub use task_set::{TaskHandle as TaskSetHandle, TaskSet, MAX_MODEL_TASKS};
 
 /// `tokio::time`-compatible model virtual-clock shadow (`sleep`, `timeout`,
 /// `interval`). See [`async_time`] for the honesty contract.

@@ -7,7 +7,19 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll, Waker};
 
-const MAX_MODEL_TASKS: usize = 8;
+/// Maximum number of tasks one [`TaskSet`] accepts.
+///
+/// Kept level with the private engine's `MAX_ASYNC_TASKS`. This crate is
+/// Apache-2.0 and cannot name a constant in the Elastic-2.0 engine, so the two
+/// numbers are bound from the other side: `laplace-compose` carries a
+/// `const _: () = assert!` against this value, which makes a raise on one side
+/// a compile failure in the workspace where raises happen.
+///
+/// ⭐ That binding exists because the drift already happened. The engine went
+/// 8 → 16 (LEP-0033 ④) and this constant did not, so every customer authoring
+/// through `TaskSet` still died at the ninth task while the engine advertised
+/// sixteen — the raise never reached the surface it was raised for.
+pub const MAX_MODEL_TASKS: usize = 16;
 
 #[derive(Default)]
 struct CompletionState {
@@ -97,18 +109,22 @@ impl TaskSet {
 
     /// Registers one task and returns a handle that resolves on completion.
     ///
-    /// The task limit mirrors the private engine's eight model-task limit.
+    /// The task limit mirrors the private engine's model-task limit; see
+    /// [`MAX_MODEL_TASKS`].
     ///
     /// # Panics
     ///
-    /// Panics when more than eight tasks are registered.
+    /// Panics when more than [`MAX_MODEL_TASKS`] tasks are registered.
     pub fn spawn<F>(&mut self, future: F) -> TaskHandle
     where
         F: Future<Output = ()> + 'static,
     {
+        // The number is interpolated, not spelled: a literal here is a second
+        // copy of the cap, and a message that disagrees with the constant is
+        // how a customer learns the wrong limit.
         assert!(
             self.tasks.len() < MAX_MODEL_TASKS,
-            "laplace: engine model-task limit is 8"
+            "laplace: engine model-task limit is {MAX_MODEL_TASKS}"
         );
 
         let task = self.tasks.len() as u64;
@@ -430,12 +446,15 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "engine model-task limit is 8")]
-    fn ninth_task_is_rejected_at_runtime() {
+    // `expected` deliberately stops before the number: `should_panic` takes a
+    // literal, so including the digits would reintroduce the copy this test is
+    // here to catch.
+    #[should_panic(expected = "engine model-task limit is")]
+    fn task_past_the_limit_is_rejected_at_runtime() {
         let _serial = serial();
         clear_task_observer_hook();
         let mut set = TaskSet::new();
-        for _ in 0..9 {
+        for _ in 0..=MAX_MODEL_TASKS {
             drop(set.spawn(async {}));
         }
     }
