@@ -34,11 +34,18 @@ pub enum AxiomOperation {
 }
 
 /// Determinism guarantee declared by an [`ExecutionSource`].
+///
+/// There is deliberately no `Default`. This enum used to derive one with
+/// [`Self::FullyDeterministic`] as the default variant, which handed out the
+/// *strongest* claim to any caller that said nothing — the exact opposite of
+/// how the rest of this contract behaves, where an unmeasured run must claim
+/// [`Self::BestEffort`]. A determinism class is a conclusion about a specific
+/// execution, so every value of it has to be argued for at its construction
+/// site.
 #[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum DeterminismClass {
     /// The source is deterministic for the same seed, code, and config.
-    #[default]
     FullyDeterministic = 0,
     /// The source is deterministic when declared external inputs are identical.
     DeterministicWithDeclaredInputs = 1,

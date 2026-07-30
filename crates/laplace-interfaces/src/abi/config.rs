@@ -409,7 +409,13 @@ pub struct LaplaceConfig {
 #[repr(C, align(8))]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AxiomConfig {
-    /// Maximum concurrent threads tracked by DPOR (≤ 64, TinyBitSet limit).
+    /// Maximum concurrent threads tracked by DPOR (≤ 64 — the scheduler tracks
+    /// its thread set in a single 64-bit word).
+    ///
+    /// The bound is stated as a property, not by naming the backing type: this
+    /// line carried a private engine type's name until that type was renamed,
+    /// and a doc comment cannot be bound to a constant across a crate boundary
+    /// the way a `const` assertion can.
     pub max_threads: u32,
     /// Maximum exploration depth / step budget for Classic DPOR.
     pub max_depth: u32,
