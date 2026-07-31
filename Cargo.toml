@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "crates/laplace-axiom-contract",
     "crates/laplace-interfaces",
     "crates/laplace-model-rt",
     "crates/laplace-macro",

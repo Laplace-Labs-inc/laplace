@@ -13,6 +13,7 @@ name = "laplace_interfaces"
 path = "src/lib.rs"
 
 [dependencies]
+laplace-axiom-contract = { path = "../laplace-axiom-contract", version = "0.1.0-alpha-1" }
 laplace-macro = { path = "../laplace-macro", version = "0.1.0-alpha-1" }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
@@ -24,7 +25,10 @@ default = []
 # Enables Kraken (digital twin / load test) domain contracts
 twin = []
 
-scribe_docs = []
+# Must forward: `ThreadId`/`ResourceId` carry their `laplace_meta` tags in the
+# contract crate now, so turning extraction on here without turning it on there
+# would silently drop them from the emitted docs.
+scribe_docs = ["laplace-axiom-contract/scribe_docs"]
 
 [build-dependencies]
 prost-build = "0.14.3"
