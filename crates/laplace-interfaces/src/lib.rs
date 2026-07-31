@@ -43,15 +43,15 @@ pub use error::{LaplaceError, TenantError};
 
 pub use domain::{
     AxiomOperation, AxiomThreadSet, Confidence, DeadlockProbe, DeterminismClass, DeterminismReport,
-    ExecutionSource, ExecutionSourceVTable, GateId, GateSpec, HarnessResourceId, HarnessSpec,
-    HttpMethod, KernelCapabilities, KnulConnection, KnulEndpoint, KnulStream, LogRedacted, NdKind,
+    ExecutionSource, GateId, GateSpec, HarnessResourceId, HarnessSpec, HttpMethod,
+    KernelCapabilities, KnulConnection, KnulEndpoint, KnulStream, LogRedacted, NdKind,
     NonDeterminismFinding, PanelType, PanicReport, PriorityLevel, QuicServerStats, ReleasePolicy,
-    Remedy, ResourceConfig, ResourceSpec, RuntimeStats, SourceError, SourceErrorCode,
-    SovereignContext, SovereignRuntime, SovereignTransport, SrcLoc, StepOutcome, StepOutcomeFfi,
-    StepOutcomeTag, TelemetryConfig, TelemetryDomain, TelemetryEvent, TelemetrySink,
-    TenantMetadata, TenantTier, ThreadAction, ThreadSpec, Tier, TransportError, TransportFactory,
-    TransportHandle, TransportPacket, TransportStats, TuiCapabilities, VirtualRequest,
-    VirtualResponse, VirtualTransport, YieldKind, NO_TURBO_SLOT, VUID,
+    Remedy, ResourceConfig, ResourceSpec, RuntimeStats, SourceError, SovereignContext,
+    SovereignRuntime, SovereignTransport, SrcLoc, StepOutcome, TelemetryConfig, TelemetryDomain,
+    TelemetryEvent, TelemetrySink, TenantMetadata, TenantTier, ThreadAction, ThreadSpec, Tier,
+    TransportError, TransportFactory, TransportHandle, TransportPacket, TransportStats,
+    TuiCapabilities, VirtualRequest, VirtualResponse, VirtualTransport, YieldKind, NO_TURBO_SLOT,
+    VUID,
 };
 
 #[cfg(test)]

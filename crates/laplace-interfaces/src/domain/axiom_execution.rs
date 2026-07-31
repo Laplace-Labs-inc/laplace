@@ -7,7 +7,6 @@
 
 use crate::domain::resource::{ResourceId, ThreadId};
 use serde::{Deserialize, Serialize};
-use std::ffi::c_void;
 
 /// DPOR-compatible synchronization operation.
 ///
@@ -186,69 +185,6 @@ pub trait ExecutionSource {
     fn determinism_class(&self) -> DeterminismClass;
 }
 
-/// FFI-safe source error code for vtable wrappers.
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SourceErrorCode {
-    /// No error occurred.
-    Ok = 0,
-    /// Invalid thread ID.
-    InvalidThread = 1,
-    /// Non-deterministic input was observed.
-    NonDeterministicInput = 2,
-    /// Unsupported feature was requested.
-    Unsupported = 3,
-}
-
-/// FFI-safe step outcome tag.
-#[repr(u8)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum StepOutcomeTag {
-    /// Operation outcome.
-    Op = 0,
-    /// Blocked outcome.
-    Blocked = 1,
-    /// Finished outcome.
-    Finished = 2,
-    /// Panicked outcome.
-    Panicked = 3,
-    /// Yield outcome.
-    Yield = 4,
-}
-
-/// FFI-safe representation of a step outcome.
-#[repr(C)]
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub struct StepOutcomeFfi {
-    /// Outcome tag.
-    pub tag: StepOutcomeTag,
-    /// Operation value when `tag == Op`.
-    pub operation: AxiomOperation,
-    /// Resource index for operation or blocked outcomes.
-    pub resource: usize,
-    /// Yield kind when `tag == Yield`.
-    pub yield_kind: YieldKind,
-}
-
-/// FFI vtable shape for execution sources.
-///
-/// W1 freezes the signatures only. Concrete vtable construction is owned by the
-/// source implementation crates.
-#[repr(C)]
-#[derive(Clone, Copy)]
-pub struct ExecutionSourceVTable {
-    /// Starts a new schedule exploration.
-    pub reset: unsafe extern "C" fn(*mut c_void) -> SourceErrorCode,
-    /// Advances the supplied thread by one boundary.
-    pub step: unsafe extern "C" fn(*mut c_void, usize) -> StepOutcomeFfi,
-    /// Returns raw enabled-thread bits.
-    pub enabled: unsafe extern "C" fn(*const c_void) -> u64,
-    /// Returns the source thread count.
-    pub thread_count: unsafe extern "C" fn(*const c_void) -> usize,
-    /// Returns the determinism class.
-    pub determinism_class: unsafe extern "C" fn(*const c_void) -> DeterminismClass,
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -281,7 +217,5 @@ mod tests {
         assert_eq!(YieldKind::Cancelled as u8, 2);
         assert_eq!(std::mem::size_of::<StepOutcome>(), 40);
         assert_eq!(std::mem::align_of::<StepOutcome>(), 8);
-        assert_eq!(std::mem::size_of::<StepOutcomeFfi>(), 24);
-        assert_eq!(std::mem::align_of::<StepOutcomeFfi>(), 8);
     }
 }

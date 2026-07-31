@@ -61,9 +61,8 @@ pub mod transport;
 pub mod tui;
 
 pub use axiom_execution::{
-    AxiomOperation, AxiomThreadSet, DeterminismClass, ExecutionSource, ExecutionSourceVTable,
-    PanicReport, SourceError, SourceErrorCode, StepOutcome, StepOutcomeFfi, StepOutcomeTag,
-    YieldKind,
+    AxiomOperation, AxiomThreadSet, DeterminismClass, ExecutionSource, PanicReport, SourceError,
+    StepOutcome, YieldKind,
 };
 pub use context::{SovereignContext, NO_TURBO_SLOT};
 pub use determinism::{
