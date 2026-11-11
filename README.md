@@ -193,7 +193,7 @@ Enterprise and sales: `enterprise@laplace-labs.com`
 
 MIT — see [LICENSE](LICENSE).
 
-Engine source (`laplace-ki-dpor`, `laplace-kraken`, `laplace-probe`) is proprietary and distributed as compiled binaries only. See [laplace-labs.com/docs/open-core](https://laplace-labs.com/docs/open-core) for the open-core boundary specification.
+Engine source (laplace-ki-dpor, laplace-kraken, laplace-probe) is kept in a separate private repository; the compiled binaries are distributed under the MIT license. See [laplace-labs.com/docs/open-core](https://laplace-labs.com/docs/open-core) for the open-core boundary specification.
 
 ---
 
