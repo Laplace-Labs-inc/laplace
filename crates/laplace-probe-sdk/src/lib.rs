@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 #![allow(clippy::all, clippy::pedantic)]
 #![allow(unexpected_cfgs)]
 

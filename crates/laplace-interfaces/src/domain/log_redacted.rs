@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Redacted wrapper for values that must never be exposed in logs.
 
 use std::fmt;

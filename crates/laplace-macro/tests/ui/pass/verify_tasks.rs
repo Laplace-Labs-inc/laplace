@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 #![allow(dead_code)]
 
 #[laplace_macro::laplace_verify(tasks)]

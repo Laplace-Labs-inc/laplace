@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `TrackedRwLock<T>` — `tokio::sync::RwLock` wrapper.
 //!
 //! `read()` emits `RwLockReadAcquired`, and `write()` emits

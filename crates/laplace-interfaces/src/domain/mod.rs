@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # Domain Model: Core Business Abstractions
 //!
 //! This module contains the authoritative definitions of business-critical types

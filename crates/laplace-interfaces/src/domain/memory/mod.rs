@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Memory domain contracts.
 //!
 //! Provides the canonical type and trait definitions for the Laplace memory abstraction.

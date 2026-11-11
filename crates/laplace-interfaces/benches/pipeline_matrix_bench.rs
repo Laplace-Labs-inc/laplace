@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! SSOT-aligned local benchmark matrix for `laplace-interfaces`.
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};

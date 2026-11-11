@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `std::sync::Mutex`-compatible model mutex.
 
 use std::ops::{Deref, DerefMut};

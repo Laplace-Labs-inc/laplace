@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Shared telemetry configuration contract.
 
 use super::{LogRedacted, TelemetryDomain};

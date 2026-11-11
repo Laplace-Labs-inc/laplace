@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Scheduler domain contracts.
 //!
 //! Canonical type and trait definitions for the Laplace thread scheduling subsystem.

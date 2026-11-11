@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! deadpool-hunt example crate.
 
 /// Single-source AB-BA controlled-reexecution program body shared by the public

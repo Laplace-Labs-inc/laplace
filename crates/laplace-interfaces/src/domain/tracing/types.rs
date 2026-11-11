@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Core type definitions for deterministic event tracing.
 //!
 //! Foundational types for capturing and analysing causal relationships in the

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `TrackedParkingLotRwLock<T>` — `parking_lot::RwLock` wrapper.
 //!
 //! Emits the same events as `TrackedStdRwLock`, while using

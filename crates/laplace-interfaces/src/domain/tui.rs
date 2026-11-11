@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # TUI Capabilities: Data-Driven UI Permission Model
 //!
 //! This module defines the `TuiCapabilities` structure, which implements the "Dumb UI & Closed Kernel"

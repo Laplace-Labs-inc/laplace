@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Function-like convenience macros for BYOC tracked primitives.
 
 use proc_macro::TokenStream;

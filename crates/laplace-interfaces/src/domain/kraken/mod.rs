@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # Kraken Domain Contracts
 //!
 //! Interface definitions for the Kraken load-testing and digital-twin DSL.

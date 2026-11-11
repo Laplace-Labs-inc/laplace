@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! quilkin QCMP nonce waiter dispatch 프로토콜의 고객 소유 analog.
 //!
 //! Quilkin 코드를 복사하지 않고 계약만 재표현한다. response source가

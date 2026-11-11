@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 
 use crate::hooks::{task_observer_hook, TaskPollOutcome};
 use std::future::Future;
@@ -10,8 +10,8 @@ use std::task::{Context, Poll, Waker};
 /// Maximum number of tasks one [`TaskSet`] accepts.
 ///
 /// Kept level with the private engine's `MAX_ASYNC_TASKS`. This crate is
-/// Apache-2.0 and cannot name a constant in the Elastic-2.0 engine, so the two
-/// numbers are bound from the other side: `laplace-compose` carries a
+/// in the public workspace and cannot name a constant in the private engine, so
+/// the two numbers are bound from the other side: `laplace-compose` carries a
 /// `const _: () = assert!` against this value, which makes a raise on one side
 /// a compile failure in the workspace where raises happen.
 ///

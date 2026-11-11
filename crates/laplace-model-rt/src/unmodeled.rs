@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Compile-time markers for concurrency primitives that `#[laplace::model]`
 //! recognizes but cannot model.
 //!

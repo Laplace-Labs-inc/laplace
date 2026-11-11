@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Model-thread spawn seam.
 //!
 //! [`spawn`] routes a unit-returning model thread through an installed

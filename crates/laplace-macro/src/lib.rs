@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 #![deny(clippy::all, clippy::pedantic)]
 // Proc-macro parser/emitter functions keep token contracts local for auditability.
 #![allow(clippy::items_after_statements, clippy::too_many_lines)]

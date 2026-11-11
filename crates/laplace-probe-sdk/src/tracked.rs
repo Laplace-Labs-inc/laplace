@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `TrackedMutex<T>` — `Mutex` wrapper that automatically emits `ProbeEvent` on
 //! lock/unlock.
 //!

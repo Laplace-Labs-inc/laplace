@@ -9,7 +9,7 @@
 <br>
 
 [![Version](https://img.shields.io/badge/version-0.1.0--alpha--1-orange)](Cargo.toml)
-[![License: Apache-2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/Laplace-Labs-inc/laplace/actions/workflows/ci.yml/badge.svg)](https://github.com/Laplace-Labs-inc/laplace/actions/workflows/ci.yml)
 [![Built with Rust](https://img.shields.io/badge/built%20with-Rust-dea584?logo=rust)](https://www.rust-lang.org/)
 
@@ -191,9 +191,9 @@ Enterprise and sales: `enterprise@laplace-labs.com`
 
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
 
-Engine source (`laplace-ki-dpor`, `laplace-kraken`, `laplace-probe`) is proprietary and distributed as compiled binaries only. See [laplace-labs.com/docs/open-core](https://laplace-labs.com/docs/open-core) for the open-core boundary specification.
+Engine source (laplace-ki-dpor, laplace-kraken, laplace-probe) is kept in a separate private repository; the compiled binaries are distributed under the MIT license. See [laplace-labs.com/docs/open-core](https://laplace-labs.com/docs/open-core) for the open-core boundary specification.
 
 ---
 

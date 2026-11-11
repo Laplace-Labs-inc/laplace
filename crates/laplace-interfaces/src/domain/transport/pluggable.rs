@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # Pluggable Network Abstractions
 //!
 //! Defines the three Dependency Injection (DI) traits that enable Distributed Axiom

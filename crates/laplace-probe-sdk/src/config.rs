@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Automatic discovery and parsing of laplace.toml.
 //!
 //! In a `cargo test` context, finds `laplace.toml` in the project root and

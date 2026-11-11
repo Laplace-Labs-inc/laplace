@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Single-source AB-BA controlled-reexecution program body.
 //!
 //! This is the **one** definition of the deadpool-hunt AB-BA lock-order program.

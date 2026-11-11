@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Evidence-only wrap-real surface for `arc_swap` 1.9.
 //!
 //! ## Provided surface

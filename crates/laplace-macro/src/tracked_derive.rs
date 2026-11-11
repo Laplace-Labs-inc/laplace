@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `#[laplace_tracked]` — attribute macro for automatic Tracked* type substitution.
 //!
 //! Transforms fields with `#[track]` attributes from standard sync primitives

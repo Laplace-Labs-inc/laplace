@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Customer-owned analog of quilkin's xDS control-plane stream fan-out.
 //!
 //! The model keeps one subscriber and one resource type. It composes the

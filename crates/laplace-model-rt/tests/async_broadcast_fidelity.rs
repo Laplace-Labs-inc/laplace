@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //
 // Broadcast is modeled as of BCAST G4 keep (LEP-0027); these differential
 // tests are the fidelity gate for the wrap-real model channel.

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `std::sync::RwLock`-compatible model reader-writer lock.
 //!
 //! Both [`ModelRwLock::read`] and [`ModelRwLock::write`] route through the

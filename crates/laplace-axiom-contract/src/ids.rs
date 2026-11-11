@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! The identities every contract operation is expressed in terms of.
 //!
 //! These moved here from `laplace-interfaces::domain::resource::types` unchanged

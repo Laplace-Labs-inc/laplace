@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # Domain Model: Tenant Error Types
 //!
 //! Business rule violations and operational failures at the domain level.

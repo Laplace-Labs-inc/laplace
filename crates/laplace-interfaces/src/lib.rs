@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # Laplace Interfaces
 //!
 //! Pure interface definitions for Laplace (FFI, Types, Traits).

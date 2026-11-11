@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 
 #[laplace_macro::laplace_verify(tasks, threads = 2)]
 fn composition_with_two_modes(_tasks: &mut laplace_model_rt::TaskSet) {}

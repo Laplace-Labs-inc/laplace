@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `tokio::sync::mpsc`-compatible model channel (bounded and unbounded).
 //!
 //! ## Honesty contract
