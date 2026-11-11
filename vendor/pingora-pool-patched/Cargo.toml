@@ -18,7 +18,7 @@ path = "src/lib.rs"
 crossbeam-queue = "0.3"
 laplace-model-rt = { path = "../../crates/laplace-model-rt" }
 log = "0.4"
-lru = "0.16.3"
+lru = "0.18.2"
 parking_lot = "0.12"
 thread_local = "1.0"
 tokio = { version = "1", features = ["sync", "io-util", "macros", "rt"] }
