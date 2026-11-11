@@ -3,6 +3,8 @@ name: Supply Chain Security
 on:
   push:
     branches: [main, dev]
+  pull_request:
+    branches: [main]
   schedule:
     - cron: '0 6 * * 1'
 
