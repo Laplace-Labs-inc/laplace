@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! TrackedAtomic* — `std::sync::atomic` wrappers.
 //!
 //! `load` emits `AtomicLoad`, `store` emits `AtomicStore`, and CAS/fetch_* emit

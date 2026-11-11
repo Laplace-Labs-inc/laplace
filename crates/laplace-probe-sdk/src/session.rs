@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Public in-memory probe event collection.
 
 use std::cell::Cell;

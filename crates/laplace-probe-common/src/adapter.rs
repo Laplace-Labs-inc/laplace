@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # Laplace Probe Adapter
 //!
 //! Boundary helpers for converting compact public probe identifiers into the

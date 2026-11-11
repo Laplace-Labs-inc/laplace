@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //
 // `serial()`의 guard는 프로세스 전역 async-spawn hook/id 상태를 보호한다.
 #![allow(clippy::await_holding_lock)]

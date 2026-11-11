@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `#[laplace_byoc_test]` — BYOC test boilerplate eliminator.
 //!
 //! Generates a single `#[test]` wrapper that:

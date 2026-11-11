@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! v1 compatibility surface for the Axiom execution contract.
 //!
 //! The contract itself moved to the `laplace-axiom-contract` crate, which is a

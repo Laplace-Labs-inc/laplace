@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # Domain Model: Tenant Subscription Tier Classification
 //!
 //! Pure business logic for tenant subscription tiers and their capabilities.

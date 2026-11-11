@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `tokio::sync::RwLock`-compatible model async rwlock.
 //!
 //! ## Honesty contract

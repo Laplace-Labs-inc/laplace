@@ -1,6 +1,6 @@
 # Laplace (Public SDK)
 
-Apache-2.0 공개 크레이트. Ki-DPOR 엔진은 `laplace-cloud` 전용 — 이 레포에 없음.
+MIT 공개 크레이트. Ki-DPOR 엔진은 `laplace-cloud` 전용 — 이 레포에 없음.
 
 ## 규칙
 - engine 크레이트(laplace-core, laplace-axiom, laplace-ki-dpor 등) 추가 금지

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! The Axiom execution contract.
 //!
 //! # What this crate owns
@@ -27,13 +27,14 @@
 //! dependency cycle, and Cargo rejects it. The alphabet travels with the
 //! contract because it *is* part of the contract.
 //!
-//! ## Why Apache-2.0
+//! ## Why the contract is public
 //!
 //! [`ExecutionSource`] is a trait **customers implement**. If the contract moved
-//! into the private engine workspace it would inherit that workspace's license
-//! tier, and customer code would link an Elastic-2.0 surface in order to hand
-//! operations to the engine. The contract stays Apache-2.0 for that reason; the
-//! decision is recorded in LEP-0035 §2.4(다).
+//! into the private engine workspace, customer code would have to depend on that
+//! workspace in order to hand operations to the engine. The contract stays in
+//! this public leaf crate for that reason; the original decision is recorded in
+//! LEP-0035 §2.4(다). The crate is MIT-licensed, like the rest of Laplace's own
+//! code.
 //!
 //! ## The ownership rule
 //!

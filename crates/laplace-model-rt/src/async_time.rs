@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `tokio::time::{sleep,timeout,interval}`-compatible model virtual-clock
 //! shadow.
 //!

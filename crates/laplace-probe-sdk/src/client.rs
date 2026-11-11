@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! laplace-probe-client — probe-edge WebSocket client.
 //!
 //! [Ghost Constraint]: emit() must never block. Silently drop on try_send() failure.

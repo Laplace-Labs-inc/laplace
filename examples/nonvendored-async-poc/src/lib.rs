@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Customer-owned capacity-one lease/idle-pool protocol.
 //!
 //! This is intentionally a small protocol written for the PoC. It is not a

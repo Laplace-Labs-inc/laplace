@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Time domain contracts.
 //!
 //! Canonical type and trait definitions for the Laplace virtual clock abstraction.

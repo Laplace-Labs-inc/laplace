@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Determinism-declaration report contracts (#89 = M1-PROD-1).
 //!
 //! These types are the public data model for the determinism-declaration UX.

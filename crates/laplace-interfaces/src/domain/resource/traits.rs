@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Resource tracking trait contracts
 
 use super::types::{RequestResult, ResourceError, ResourceId, ResourceType, ThreadId};

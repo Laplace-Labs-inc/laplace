@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 
 use std::future::poll_fn;
 use std::sync::{Arc, Mutex, MutexGuard, PoisonError};

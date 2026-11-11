@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Telemetry sink routing domains.
 
 /// Domain for routing telemetry events to sinks.

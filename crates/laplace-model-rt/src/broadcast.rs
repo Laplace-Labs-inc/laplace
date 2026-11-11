@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `tokio::sync::broadcast`-compatible wrap-real model channel.
 //!
 //! Modeled as of BCAST G4 keep (LEP-0027): `#[laplace::model]` rewrites

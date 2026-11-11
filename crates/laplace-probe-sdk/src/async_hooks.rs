@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! 런타임 async lock, notify, channel seam을 위한 probe hook이다.
 //!
 //! Timer hook은 의도적으로 여기서 설치하지 않는다. `AsyncTimerHook`에는

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Builder API for concise deadlock probe specifications.
 
 use super::spec::{

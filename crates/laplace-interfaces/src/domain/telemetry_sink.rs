@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Object-safe telemetry sink contract.
 
 use super::{TelemetryDomain, TelemetryEvent};

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `TrackedStdRwLock<T>` — `std::sync::RwLock` wrapper (synchronous version).
 //!
 //! `read()` emits `RwLockReadAcquired`, and `write()` emits

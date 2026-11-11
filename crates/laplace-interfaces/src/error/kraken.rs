@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Kraken error types (Axiom verification layer)
 //!
 //! `KrakenError` covers all error variants from Kraken DNA operations:

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Resource domain contracts — types and traits for resource tracking and quota enforcement
 
 pub mod traits;

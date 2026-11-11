@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 // Pins the `max_depth` emission contract: `ProbeSessionConfig.max_depth` is a
 // plain `usize`, so the macro must emit `max_depth: N` (not `Some(N)`).
 #![allow(dead_code)]

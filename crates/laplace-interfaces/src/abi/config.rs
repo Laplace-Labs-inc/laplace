@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # QUIC Server Configuration
 //!
 //! FFI-safe configuration structures for QUIC server initialization.

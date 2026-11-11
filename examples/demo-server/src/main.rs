@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Demo Server — intentional concurrency bugs for Laplace Axiom / Kraken demos.
 //!
 //! Endpoints:

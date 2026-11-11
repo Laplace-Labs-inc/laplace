@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Route A: `verify(tasks)`로 bb8 0.9.1 실코드를 캡처하는 BB2 예제.
 #![allow(dead_code, deprecated)]
 

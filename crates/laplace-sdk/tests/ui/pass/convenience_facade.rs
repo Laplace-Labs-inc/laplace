@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 
 fn main() {
     let _counter = laplace_sdk::mutex!(1usize, "counter");

@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # Primitive ABI Types
 //!
 //! Core FFI structures for Rust-Deno zero-copy bridge.

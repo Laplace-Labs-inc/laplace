@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Deterministic-select gate: [`laplace_select`] and the flag that drives it.
 //!
 //! See [`crate::set_deterministic_select`] for the runtime gate this macro

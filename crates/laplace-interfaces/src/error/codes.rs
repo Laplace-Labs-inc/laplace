@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # FFI-Compatible Error Codes
 //!
 //! Unified error codes for the Rust-TypeScript FFI boundary.

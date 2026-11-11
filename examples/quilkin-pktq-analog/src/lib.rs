@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Customer-owned analog of quilkin's packet-queue push/notify/drain protocol.
 //!
 //! This is a contract re-expression, not copied quilkin code. The public

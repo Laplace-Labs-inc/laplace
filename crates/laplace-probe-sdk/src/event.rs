@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Public probe events emitted by tracked synchronization primitives.
 
 use serde::{Deserialize, Serialize};

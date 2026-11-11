@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Process-local engine hooks and deterministic model resource-id allocation.
 //!
 //! The engine installs a [`SpawnHook`], [`AsyncSpawnHook`], and/or [`LockHook`]

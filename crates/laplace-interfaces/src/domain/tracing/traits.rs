@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Tracer backend trait definition.
 //!
 //! Defines the abstract interface that all event-storage backends must implement.

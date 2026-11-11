@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! MockProbeSource: deterministic synthetic `RawProbeEvent` generator.
 //!
 //! Produces realistic event sequences that simulate the output of the eBPF kernel

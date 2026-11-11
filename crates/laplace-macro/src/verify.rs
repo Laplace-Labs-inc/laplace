@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `#[laplace_sdk::verify]` — improved DPOR verification harness.
 //!
 //! The `#[laplace_sdk::verify(threads = N)]` attribute is an enhanced version of

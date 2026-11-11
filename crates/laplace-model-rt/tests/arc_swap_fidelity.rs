@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 #![cfg(feature = "arc-swap")]
 
 //! Native-vs-model fidelity and version-honesty tests for the A-1 surface.

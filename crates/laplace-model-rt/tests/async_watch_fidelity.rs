@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //
 // `serial()`'s `std::sync::MutexGuard` is deliberately held across the W8
 // `.await` points below (it is process-wide *test* serialization, not

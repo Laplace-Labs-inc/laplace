@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! Entropy domain contracts — seed primitives and trait definitions
 
 pub mod traits;

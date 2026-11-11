@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # Domain Model: Tenant Metadata and Resource Configuration
 //!
 //! Core domain entities representing tenant identity and resource quotas.

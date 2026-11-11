@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # Kraken DSL Domain Types
 //!
 //! All public data types for the Kraken load-testing and digital-twin DSL.

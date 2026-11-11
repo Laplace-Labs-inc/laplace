@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! `#[axiom_target]` — automated DPOR verification harness.
 //!
 //! The `#[axiom_target(threads = N)]` attribute automatically generates a test

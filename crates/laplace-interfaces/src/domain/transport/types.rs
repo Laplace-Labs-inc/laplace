@@ -1,4 +1,4 @@
-// SPDX-License-Identifier: Apache-2.0
+// SPDX-License-Identifier: MIT
 //! # Transport Data Types
 //!
 //! Defines all data structures, enumerations, and opaque handles used by
